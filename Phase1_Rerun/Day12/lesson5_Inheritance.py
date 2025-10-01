@@ -1,0 +1,143 @@
+class Animal:
+ 
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        self.energy = 100
+
+    def eat(self, food):
+        print(f"{self.name} is eating {food}")
+
+    def sleep(self, hours):
+        print(f"{self.name} slept for {hours} hours")
+        self.energy += hours * 5
+    
+    
+    def show_info(self):
+        print(f"Name: {self.name}, Age: {self.age}, Energy: {self.energy}")
+
+# ============================================
+# CHILD CLASS #1 - Dog inherits from Animal
+# ============================================
+
+class Dog(Animal):  # Dog IS-A Animal
+    
+    def __init__(self, name, age, breed):
+        # Call parent constructor
+        super().__init__(name, age)
+        
+        # Add dog-specific attribute
+        self.breed = breed
+    
+    
+    def bark(self):
+        print(f"{self.name} says: Woof! Woof!")
+        self.energy -= 5
+    
+    
+    def fetch(self):
+        print(f"{self.name} is fetching the ball!")
+        self.energy -= 10
+    
+    
+    # Override parent method
+    def show_info(self):
+        super().show_info()  # Call parent version
+        print(f"Breed: {self.breed}")
+
+
+# ============================================
+# CHILD CLASS #2 - Cat inherits from Animal
+# ============================================
+
+class Cat(Animal):  # Cat IS-A Animal
+    
+    def __init__(self, name, age, color):
+        super().__init__(name, age)
+        self.color = color
+    
+    
+    def meow(self):
+        print(f"{self.name} says: Meow!")
+        self.energy -= 3
+    
+    
+    def scratch(self):
+        print(f"{self.name} is scratching the furniture!")
+        self.energy -= 7
+    
+    
+    def show_info(self):
+        super().show_info()
+        print(f"Color: {self.color}")
+
+
+# ============================================
+# CHILD CLASS #3 - Bird inherits from Animal
+# ============================================
+
+class Bird(Animal):
+    
+    def __init__(self, name, age, can_fly):
+        super().__init__(name, age)
+        self.can_fly = can_fly
+    
+    
+    def chirp(self):
+        print(f"{self.name} says: Tweet tweet!")
+    
+    
+    def fly(self):
+        if self.can_fly:
+            print(f"{self.name} is flying!")
+            self.energy -= 15
+        else:
+            print(f"{self.name} cannot fly!")
+
+
+# ============================================
+# Testing Inheritance
+# ============================================
+
+print("=== Creating Animals ===")
+dog = Dog("Rex", 3, "Golden Retriever")
+cat = Cat("Whiskers", 2, "Orange")
+bird = Bird("Tweety", 1, True)
+
+
+print("\n=== Dog Actions ===")
+dog.show_info()
+dog.eat("kibble")      # Inherited from Animal
+dog.bark()             # Dog-specific method
+dog.fetch()
+dog.sleep(2)           # Inherited from Animal
+dog.show_info()
+
+
+print("\n=== Cat Actions ===")
+cat.show_info()
+cat.eat("fish")        # Inherited from Animal
+cat.meow()             # Cat-specific method
+cat.scratch()
+cat.show_info()
+
+
+print("\n=== Bird Actions ===")
+bird.show_info()
+bird.chirp()
+bird.fly()
+bird.eat("seeds")      # Inherited from Animal
+
+
+# ============================================
+# Checking Inheritance
+# ============================================
+
+print("\n=== Inheritance Check ===")
+print(f"Is dog an Animal? {isinstance(dog, Animal)}")  # True
+print(f"Is dog a Dog? {isinstance(dog, Dog)}")          # True
+print(f"Is dog a Cat? {isinstance(dog, Cat)}")          # False
+
+print(f"\nIs Dog a subclass of Animal? {issubclass(Dog, Animal)}")  # True
+print(f"Is Cat a subclass of Animal? {issubclass(Cat, Animal)}")    # True
+print(f"Is Dog a subclass of Cat? {issubclass(Dog, Cat)}")
