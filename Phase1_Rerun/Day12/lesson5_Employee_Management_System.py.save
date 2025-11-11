@@ -1,0 +1,38 @@
+class Employee:
+    def __init__(self, name, emp_id):
+        self.name = name
+        self.emp_id = emp_id
+    
+    def calculate_pay(self):
+        print (f"Name: {self.name} id: {self.emp_id}")
+
+class Manager(Employee):
+    def __init__(self, name, emp_id, department, team_size, bonus_multiplier):
+        super().__init__(name, emp_id)
+        self.department = department
+        self.team_size = team_size
+        self.bonus_multiplier = bonus_multiplier
+
+    def calculate_pay(self):
+        print(f"{self.name} in department {self.department} handling {self.team_size} employees needsincrease of{self.bonus_multiplier} in his bonus forthe outstanding work.")
+
+
+class Developer(Employee):
+    def __init__(self, name, emp_id, programming_language, projects):
+        super().__init__(name, emp_id)
+        self.programming_language = programming_language
+        self.projects = projects
+
+    def calculate_pay(self):
+        print(f"{self.name} is a developer using {self.programming_language} and has been assigned {self.project} project needs a bump in his bonuses.")
+
+class Intern(Employee):
+    def __init__ (self, name, emp_id, university, hourly_rate):
+        super().__init__(name, emp_id)
+        self.university = university
+        self.hourly_rate = hourly_rate
+
+    def calculate_pay(self):
+        print(f"{self.name} still in school at {self.university} gets a stipend of ${self.hourly_rate} per hour
+
+
