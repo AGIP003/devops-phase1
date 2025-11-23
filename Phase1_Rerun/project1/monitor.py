@@ -65,7 +65,30 @@ def get_disk_usage(path = '/'):
         'percent': disk.percent
     }
 
-
+def get_network_stats(interval = 2):
+    """Get Network Stats using psutil.
+    
+    Returns dict with:
+    - bytes_sent
+    - bytes_received
+    - packets_sent 
+    - packets_received 
+    - errin=0
+    - errout=0
+    - dropin=0 
+    - dropout=0
+    """
+    net = psutil.net_io_counters()
+    time.sleep(interval)
+    net2 = psutil.net_io_counters()
+    return {
+        'bytes sent': net.bytes_sent / (1024**3),
+        'bytes received': net.bytes_recv / (1024**3),
+        'packets sent': net.packets_sent / (1024**3),
+        'packets received': net.packets_recv / (1024**3),
+        'upload speed': net2.bytes_sent - net.bytes_sent / interval,
+        'download speed': net2.bytes_recv - net.bytes_recv / interval
+    }
 
 def display_stats():
     """Display all Stats""" 
@@ -91,6 +114,15 @@ def display_stats():
     print(f" Used(non-percent): {dsk['used']:.2f} GB")
     print(f" Free: {dsk['free']:.2f} GB")
     print(f" Used: {dsk['percent']}%")
+
+    net = get_network_stats()
+    print("NETWORK STATS")
+    print(f" Bytes sent: {net['bytes sent']:.2f}")
+    print(f" Bytes received: {net['bytes received']:.2f}")
+    print(f" Packets sent: {net['packets sent']:.2f}")
+    print(f" Packets received: {net['packets received']:.2f}")
+    print(f" Upload speeds: {net['upload speed'] /1024:.2f}")
+    print(f" Download speeds: {net['download speed'] /1024:.2f}")
     
     
     processes = get_top_processes(10)
