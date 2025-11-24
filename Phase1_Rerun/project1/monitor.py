@@ -1,6 +1,7 @@
 import psutil
 import os
 import time
+from colorama import Fore, Back, Style
 #import argparse
 #
 #parser = argparse.ArgumentParser(description="System Monitor CLI")
@@ -90,21 +91,42 @@ def get_network_stats(interval = 2):
         'download speed': net2.bytes_recv - net.bytes_recv / interval
     }
 
+def colorize(value):
+    """Adding colours"""
+    
+    
+    if value < 50:
+        colour = Fore.GREEN
+    elif value < 80:
+        colour = Fore.YELLOW
+    else:
+        colour = Fore.RED
+
+
+    return f"{colour}{value}%{Style.RESET_ALL}"
+    
+
+    
 def display_stats():
     """Display all Stats""" 
+
+    clr = colorize
+
     cpu = get_cpu_info()
+    cpu_usage = cpu['usage percent']
     print("SYSTEM MONITOR")
     print("CPU USAGE")
-    print(f"  Usage: {cpu['usage percent']}%")
+    print(f"  Usage: {clr(cpu_usage)}")
     print(f"  Cores: {cpu['count']}")
     print(f"  Freq:  {cpu['freq']:.0f} MHz")    
-    print(f" Stats: {cpu['stats']}")     
-
+     
+    
     mem = get_memory_info()
     print("MEMORY INFORMATION")
     print(f" Total: {mem['total']:.2f} GB")
     print(f" Available: {mem['available']:.2f}")
-    print(f" Used: {mem['percent']}%")
+    used = mem['percent']
+    print(f" Used: {clr(used)}")
     print(f" Used(non-percent): {mem['used']:.2f} GB")
     print(f" Free: {mem["free"]:.2f} GB")
 
@@ -113,7 +135,8 @@ def display_stats():
     print(f" Total: {dsk['total']:.2f} GB")
     print(f" Used(non-percent): {dsk['used']:.2f} GB")
     print(f" Free: {dsk['free']:.2f} GB")
-    print(f" Used: {dsk['percent']}%")
+    used_percent = dsk['percent']
+    print(f" Used: {clr(used_percent)}")
 
     net = get_network_stats()
     print("NETWORK STATS")
@@ -123,6 +146,8 @@ def display_stats():
     print(f" Packets received: {net['packets received']:.2f}")
     print(f" Upload speeds: {net['upload speed'] /1024:.2f}")
     print(f" Download speeds: {net['download speed'] /1024:.2f}")
+
+    
     
     
     processes = get_top_processes(10)
