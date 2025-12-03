@@ -2,11 +2,9 @@ import psutil
 import os
 import time
 from colorama import Fore, Back, Style
-#import argparse
-#
-#parser = argparse.ArgumentParser(description="System Monitor CLI")
-#parser.add_argument("--save", action="store_true", help="Save snapshot to JSON file")
-#args = parser.parse_args()
+import argparse
+import json
+import datetime
 
 
 def clear_screen():
@@ -105,9 +103,58 @@ def colorize(value):
 
     return f"{colour}{value}%{Style.RESET_ALL}"
     
+def parse_arguments():
+    """Parse Command Line Arguments"""
+    parser = argparse.ArgumentParser(
+        description="System Monitor - Real time system statistics"
+    )
 
-    
-def display_stats():
+    parser.add_argument(
+        '--save',
+        metavar='FILE',
+        type=str,
+        help="Save snapshot to JSON file"
+    )
+
+    parser.add_argument(
+        '--interval',
+        type= int,
+        default=2,
+        help='Update interval in seconds (default: 2)'
+    )
+
+    parser.add_argument(
+        '--top',
+        type=int,
+        default=5,
+        help="Number of top processes to show(default=10)"
+    )
+
+    parser.add_argument(
+        '--no_color',
+        action='store_true',
+        help='Disable colored output'
+    )
+
+    return parser.parse_args()
+
+def save_to_json(filename):
+    """Save a full snapshot of system stats into a JSON file."""
+
+    snapshot = {
+        "cpu": get_cpu_info(),
+        "memory": get_memory_info(),
+        "disk": get_disk_usage(),
+        "network": get_network_stats(),
+        "top_processes": get_top_processes(10)
+    }
+    with open(filename, "w") as f:
+        json.dump(snapshot, f, indent=4)
+
+    return filename
+
+
+def display_stats(top_n=5, user_color=True):
     """Display all Stats""" 
 
     clr = colorize
@@ -163,11 +210,24 @@ def display_stats():
 
 def main():
     """Main Loop"""
+    args = parse_arguments()
+    
+    #Snapshot mode
+    if args.save:
+        save_to_json(args.save)
+        print(f"Saved snapshot to {args.save}")
+        return
+
+    #live monitor mode
     try:
         while True:
             clear_screen()
-            display_stats()
-            time.sleep(10)
+            display_stats(
+                top_n=args.top,
+                user_color=not args.no_color
+            )
+
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         print("\n Bye!")
 

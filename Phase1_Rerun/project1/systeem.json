@@ -1,0 +1,86 @@
+{
+    "cpu": {
+        "usage percent": 2.4,
+        "count": 8,
+        "freq": 1991.999,
+        "stats": [
+            4237159,
+            3145946,
+            1513109,
+            0
+        ]
+    },
+    "memory": {
+        "total": 7.691612243652344,
+        "available": 5.6939239501953125,
+        "percent": 26.0,
+        "used": 1.9976882934570312,
+        "free": 5.513225555419922
+    },
+    "disk": {
+        "total": 1006.853931427002,
+        "used": 6.231903076171875,
+        "free": 949.4064064025879,
+        "percent": 0.7
+    },
+    "network": {
+        "bytes sent": 0.06492225732654333,
+        "bytes received": 0.07607842609286308,
+        "packets sent": 5.902256816625595e-05,
+        "packets received": 6.271153688430786e-05,
+        "upload speed": 34860291.5,
+        "download speed": 40850736.0
+    },
+    "top_processes": [
+        {
+            "pid": 1,
+            "name": "systemd",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 2,
+            "name": "init-systemd(Ub",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 7,
+            "name": "init",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 57,
+            "name": "systemd-journald",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 105,
+            "name": "systemd-udevd",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 122,
+            "name": "snapfuse",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 124,
+            "name": "snapfuse",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 125,
+            "name": "snapfuse",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 132,
+            "name": "snapfuse",
+            "cpu_percent": 0.0
+        },
+        {
+            "pid": 140,
+            "name": "snapfuse",
+            "cpu_percent": 0.0
+        }
+    ]
+}
