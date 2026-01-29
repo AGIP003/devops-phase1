@@ -3,9 +3,9 @@
 from datetime import datetime
 import logging
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
-def ValidationError(Exception):
+class ValidationError(Exception):
     """Custom validation error"""
     pass
 
@@ -39,17 +39,13 @@ def validate_category(category):
     Validating category:
 
     Rules:
-    - Cannot be empty
-    - Maximum 50 chars
+    - User can only choose allowed categories
     """
+    allowed_category = ["Food", "Transport", "Rent", "Utilities"]
+
+    if category not in allowed_category:
+        raise ValidationError(f"Invalid category. Must be one of: {allowed_category}")
     
-    category = str(category).strip()
-
-    if not category:
-        raise ValidationError("Category cannot be empty")
-
-    if len(category) > 50:
-        raise ValidationError(f"Category too long (maximum is 50 characters)")
     
     logger.debug(f"Validated category: {category}")
     return category
@@ -63,7 +59,7 @@ def validate_date(date_str):
     - Must be valid date
     - Cannot be in future
     """
-    
+    #Formatting date and returning a readable string    ``
     if not date_str:
         return datetime.now().strftime('%Y-%m-%d')
     
@@ -99,6 +95,24 @@ def validate_description(description):
     
     logger.debug(f"Validated description: {description}")
     return description
+
+def validate_transaction_type(type):
+    """
+    Validation Types
+
+    Rules:
+    - User can only choose from the allowed or listed types
+    """
+
+    allowed_type = ["M-Pesa", "Cash", "Bank"]
+
+    if type not in allowed_type:
+        raise ValidationError(f"Invalid type. Must be one of: {allowed_category}")
+    
+    
+    logger.debug(f"Validated type: {type}")
+    return type
+
 
 
 
