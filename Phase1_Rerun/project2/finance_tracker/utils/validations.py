@@ -34,17 +34,21 @@ def validate_amount(amount):
     logger.debug(f"Validated Amount: {amount}")
     return amount
 
-def validate_category(category):
+def validate_category(type, category):
     """"
-    Validating category:
+    Validating category that is allowed for the given transaction type:
 
     Rules:
     - User can only choose allowed categories
     """
-    allowed_category = ["Food", "Transport", "Rent", "Utilities"]
-
-    if category not in allowed_category:
-        raise ValidationError(f"Invalid category. Must be one of: {allowed_category}")
+    allowed_pairs = {
+        'income' : ["Salary", "Business", "Freelance", "Investments", "Gifts", "Other_Income"],
+        'expense' : ["Rent", "Utilites", "Food", "Transport", "Medical", "Subscriptions", "Entertainment", "Education", "Vacations", "tools/software", "personal_care", "taxes", "black_tax", "other_expense"]
+    }
+    
+    if category not in allowed_pairs.get(type, []):
+        valid_categories = allowed_pairs.get(type, [])
+        raise ValidationError(f"Invalid category. Must be one of the listed categories")
     
     
     logger.debug(f"Validated category: {category}")
@@ -104,15 +108,30 @@ def validate_transaction_type(type):
     - User can only choose from the allowed or listed types
     """
 
-    allowed_type = ["M-Pesa", "Cash", "Bank"]
+    allowed_type = {"Income", "Expense"}
 
     if type not in allowed_type:
-        raise ValidationError(f"Invalid type. Must be one of: {allowed_category}")
+        raise ValidationError(f"Invalid type. Must be one of: {allowed_type}")
     
     
     logger.debug(f"Validated type: {type}")
     return type
 
+def validate_payment_method(payment_method):
+    """
+    Validate payment methods
+
+    Rules:
+    - User can only choose from the allowed payment options
+    """
+
+    allowed_payment_method = ["Cash", "M-Pesa", "Bank", "Paypal", "Card"]
+
+    if payment_method not in allowed_payment_method:
+        raise ValidationError(f"Invalid payment method. Must be one of: {allowed_payment_method}")
+    
+    logger.debug(f"Validated payment method: {payment_method}")
+    return payment_method
 
 
 
