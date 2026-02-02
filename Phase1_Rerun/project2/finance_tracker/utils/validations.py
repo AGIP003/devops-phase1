@@ -34,25 +34,26 @@ def validate_amount(amount):
     logger.debug(f"Validated Amount: {amount}")
     return amount
 
-def validate_category(type, category):
-    """"
+def validate_category(txn_type, category):
+    """
     Validating category that is allowed for the given transaction type:
 
     Rules:
     - User can only choose allowed categories
     """
+    clean_type = str(txn_type or "").strip().lower()
+    clean_cat = str(category or "").strip().lower()
     allowed_pairs = {
-        'income' : ["Salary", "Business", "Freelance", "Investments", "Gifts", "Other_Income"],
-        'expense' : ["Rent", "Utilites", "Food", "Transport", "Medical", "Subscriptions", "Entertainment", "Education", "Vacations", "tools/software", "personal_care", "taxes", "black_tax", "other_expense"]
+        'income' : ["salary", "business", "freelance", "investments", "gifts", "other income"],
+        'expense' : ["rent", "utilities", "food", "transport", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black_tax", "other expense"]
     }
     
-    if category not in allowed_pairs.get(type, []):
-        valid_categories = allowed_pairs.get(type, [])
-        raise ValidationError(f"Invalid category. Must be one of the listed categories")
+    allowed_for_type = allowed_pairs.get(clean_type, [])
+    if clean_cat not in allowed_for_type:
+        raise ValidationError(f"Invalid category {clean_cat}. Must be one of the listed categories")
     
-    
-    logger.debug(f"Validated category: {category}")
-    return category
+    logger.debug(f"Validated category: {clean_cat}")
+    return clean_cat
 
 def validate_date(date_str):
     """
@@ -100,7 +101,7 @@ def validate_description(description):
     logger.debug(f"Validated description: {description}")
     return description
 
-def validate_transaction_type(type):
+def validate_transaction_type(txn_type):
     """
     Validation Types
 
@@ -108,14 +109,14 @@ def validate_transaction_type(type):
     - User can only choose from the allowed or listed types
     """
 
-    allowed_type = {"Income", "Expense"}
+    allowed_type = {"income", "expense"}
+    clean_type = str(txn_type or "").strip().lower()
 
-    if type not in allowed_type:
+    if clean_type not in allowed_type:
         raise ValidationError(f"Invalid type. Must be one of: {allowed_type}")
     
-    
-    logger.debug(f"Validated type: {type}")
-    return type
+    logger.debug(f"Validated type: {clean_type}")
+    return clean_type
 
 def validate_payment_method(payment_method):
     """
@@ -125,13 +126,14 @@ def validate_payment_method(payment_method):
     - User can only choose from the allowed payment options
     """
 
-    allowed_payment_method = ["Cash", "M-Pesa", "Bank", "Paypal", "Card"]
-
-    if payment_method not in allowed_payment_method:
+    allowed_payment_method = ["cash", "m-pesa", "bank", "paypal", "card"]
+    clean_pm = str(payment_method or "").strip().lower()
+    allowed_lower = [p.lower() for p in allowed_payment_method]
+    if clean_pm not in allowed_lower:
         raise ValidationError(f"Invalid payment method. Must be one of: {allowed_payment_method}")
     
-    logger.debug(f"Validated payment method: {payment_method}")
-    return payment_method
+    logger.debug(f"Validated payment method: {clean_pm}")
+    return clean_pm
 
 
 

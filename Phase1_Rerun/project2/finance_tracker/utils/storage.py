@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 from utils.validations import (
     validate_amount, validate_transaction_type,
-    validate_category, validate_date, validate_description,
+    validate_category, validate_date, validate_description, validate_payment_method,
     ValidationError
 )
 
@@ -54,7 +54,7 @@ class Storage:
         """Save all transactions"""
         try:
             with open(self.filename, "w") as f:
-                json.dump(self.transactions, f, indent=4, sort_keys=True)
+                json.dump(transactions, f, indent=4, sort_keys=True)
 
             #Keeping the memory in sync with the file
             self.transactions = transactions
@@ -70,26 +70,30 @@ class Storage:
         #Validation
         try:
             clean_amount = validate_amount(transaction.get('amount'))
-            clean_category = validate_category(transaction.get('category'))
+            clean_type = validate_transaction_type(transaction.get('type'))
+            clean_category = validate_category(clean_type, transaction.get('category'))
             clean_date = validate_date(transaction.get('date'))
             clean_description = validate_description(transaction.get('description'))
-            clean_type = validate_transaction_type(transaction.get('type'))
+            # Accept both 'payment method' (preferred) and 'payment_method' (alternate key)
+            pm_raw = transaction.get('payment method') if transaction.get('payment method') is not None else transaction.get('payment_method')
+            clean_payment_method = validate_payment_method(pm_raw) 
 
             #Generate ID and Timestamp
             new_id = self._generate_id()
             audit_time = datetime.now().isoformat()
             record = {
                 "id": new_id,
-                "amount": clean_amount,
-                "category": clean_category,
                 "date": clean_date,
                 "description": clean_description,
                 "type": clean_type,
+                "category": clean_category,
+                "amount": clean_amount,
+                "payment method": clean_payment_method,
                 "created_at": audit_time
             }
 
             self.transactions[new_id] = record
-            logger.info(f"Added and saved {len(new_id)} successfully")
+            logger.info(f"Added and saved {new_id} successfully")
             return self.save_all(self.transactions)
         except Exception as e:
             logger.error(f"Failed to add transactions: {e} ")
@@ -98,39 +102,82 @@ class Storage:
 
     def delete(self, transaction_id):
         """Delete transaction by ID"""
-        if transaction_id not in self.transactions():
-            logger.error(f"Transaction: {transaction_id} does not exist!!")
-            self.transactions[transaction_id].pop()
+        if transaction_id in self.transactions:
+            del self.transactions[transaction_id]
 
-        for transaction_id in self.transactions.keys():
-            if self.transactions['transaction_id'] == transaction_id:
-                del self.transactions[transaction_id]
-        
-        logger.info(f"Deleted {transaction_id} successfully")
-        return self.save_all(self.transactions)
+            logger.info(f"Deleted {transaction_id} successfully")
+            return self.save_all(self.transactions)
+   
+        logger.error(f"Transaction: {transaction_id} does not exist!!")
+        return False
     
-    def update(self, transaction_id, updates):
+
+    def update(self, transaction_id, field, updates):
         """Update a specific transaction"""
+        if transaction_id not in self.transactions:
+            print("No transaction found")
+            logger.error(f"The transaction:{transaction_id} does not exist")
+            return False
+
+        #The current record  
+        record = self.transactions[transaction_id]
+      
+        #Routing
+        if field == "amount":
+            updates = validate_amount(updates)
+        if field == "category":
+            # validate_category expects (txn_type, category)
+            updates = validate_category(record.get('type'), updates)
+        if field == "date":
+            updates = validate_date(updates)
+        if field == "description":
+            updates = validate_description(updates)
+        if field == "type":
+            updates = validate_transaction_type(updates)
+        if field == "payment method":
+            updates = validate_payment_method(updates)
         
-    
-    def search(self, transaction_id):
-        """Searching transactions"""
+        #Updating the specific field
+        record[field] = updates
+        logger.info(f"Updated {field} successfully")
 
+        return self.save_all(self.transactions)
+        
 
+    def search(self, query):
+        """Searching transactions looks through categories and descriptions"""
+        query = str(query).lower().strip()
+
+        results = []
+
+        for transacrions_id, record in self.transactions.items():
+            #Check if the query is in categories or description
+            in_category = query in record['category'].lower()
+            in_description = query in record['description'].lower()
+
+            if in_category or in_description:
+                results.append(record)
+        
+        logger.info(f"Searched for{len(results)} successfully")
+        return results
 
     def display_all(self):
         """Displaying all  transactions"""
-        for transaction_id, records in self.transactions.items():
-            for record in records:
-                print(f" - ID:{record['id']}, AMOUNT:{record['amount']}, CATEGORY:{record['category']}, DATE:{record['date']}, DESCRIPTION:{record['description']}, TYPE:{record['type']} ")
+        if not self.transactions:
+            print("No transactions found.")
+            logger.error(f"The transaction {self.transactions} does not exist")
+            return 
+        for transaction_id, record in self.transactions.items():
+            print(f" - ID:{record['id']}, DATE:{record['date']}, DESCRIPTION:{record['description']},  TYPE:{record['type']}, CATEGORY:{record['category']}, AMOUNT:{record['amount']}, PAYMENT METHOD:{record['payment method']} ")
    
-    def _generate_id(self, transactions):
+
+    def _generate_id(self):
         """Generate unique ID"""
         if not self.transactions:
             return "1"
         
         # Find the highest current ID and add 1
-        existing_ids = [int(transaction_id) for transaction_id in self.transactions.keys]
+        existing_ids = [int(transaction_id) for transaction_id in self.transactions.keys()]
         return str(max(existing_ids) + 1)
         
 
