@@ -10,7 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from utils.validations import (
+from .validations import (
     validate_amount, validate_transaction_type,
     validate_category, validate_date, validate_description, validate_payment_method,
     ValidationError
@@ -19,7 +19,7 @@ from utils.validations import (
 class Storage:
     """Handle transactions in JSON"""
 
-    def __init__(self, filename='data/transactions.json'):
+    def __init__(self, filename='project2/finance_tracker/data/transactions.json'):
         self.filename = filename
         self._ensure_file_exists()
         self.transactions = self.load_all()
@@ -35,6 +35,11 @@ class Storage:
             with open(self.filename, "w") as f:
                 json.dump({}, f)
                 logger.info(f"Created new storage file: {self.filename}")
+    
+    def read_all(self):
+        self._ensure_file_exists()
+        return self.load_all()
+
         
     def load_all(self):
         """Load all transactions"""
@@ -94,7 +99,10 @@ class Storage:
 
             self.transactions[new_id] = record
             logger.info(f"Added and saved {new_id} successfully")
-            return self.save_all(self.transactions)
+            saved = self.save_all(self.transactions)
+            if saved:
+                return record
+            return False
         except Exception as e:
             logger.error(f"Failed to add transactions: {e} ")
             return False

@@ -15,16 +15,20 @@ class Library:
         """Borrowing books from the library"""
         if title not in self.books:
             raise ValueError("The title does not exist!!")
-        elif self.books[title]['copies'] <= 0:
-            raise ValueError("The copy must be positive")
+        
+        if self.books[title]['copies'] <= 0:
+            raise ValueError(f"Not available, {self.books[title]['copies']} left")
+        
         self.books[title]['copies'] -= 1
-
+        return f" Borrowed '{title}'. {self.books[title]['copies']} copies left"
+    
     def return_book(self, title):
         """Returning the borrowed boook from the library"""
         if title not in self.books:
             raise ValueError("Unknown book")
         
         self.books[title]['copies'] += 1
+        return f" Returned '{title}'. {self.books[title]['copies']} copies in the library"
 
 
     def display_books(self):

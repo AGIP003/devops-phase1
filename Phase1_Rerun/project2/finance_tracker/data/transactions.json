@@ -1,0 +1,22 @@
+{
+    "1": {
+        "amount": 100.0,
+        "category": "transport",
+        "created_at": "2026-02-03T00:23:03.117603",
+        "date": "2026-02-02",
+        "description": "Fare",
+        "id": "1",
+        "payment method": "cash",
+        "type": "expense"
+    },
+    "2": {
+        "amount": 289.0,
+        "category": "subscriptions",
+        "created_at": "2026-02-03T00:25:28.339233",
+        "date": "2026-02-02",
+        "description": "Youtube Premium",
+        "id": "2",
+        "payment method": "bank",
+        "type": "expense"
+    }
+}

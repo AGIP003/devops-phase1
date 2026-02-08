@@ -12,11 +12,12 @@ from utils.validations import (
     validate_category, validate_date, validate_description,
     ValidationError
 )
-#from utils.reports import (
-#    generate_summary, generate_category_report,
-#    generate_monthly_report, filter_by_date_range,
-#    filter_by_category
-#)
+from utils.reports import (
+    generate_summary, generate_category_report,
+    generate_monthly_report, filter_by_date_range,
+    filter_by_category
+)
+
 #Setup logging
 import os
 os.makedirs('logs', exist_ok=True)

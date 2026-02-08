@@ -1,0 +1,18 @@
+{
+    "Alice": [
+        {
+            "email": "alice555@gmail.com",
+            "phone": "555-9999"
+        },
+        {
+            "email": "Alice2@gmail.com",
+            "phone": "2312-32131"
+        }
+    ],
+    "Vee": [
+        {
+            "email": "weq12@gmail.com",
+            "phone": "211-23213"
+        }
+    ]
+}

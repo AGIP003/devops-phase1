@@ -62,7 +62,7 @@ class ContactBook:
 
         for contact in self.contacts[name]:
             if contact['phone'] == phone:
-                raise ValueError ("Contact already saved")
+                print ("Contact already saved")
             
         self.contacts[name].append({'phone':phone, 'email':email})
 
@@ -114,7 +114,7 @@ class ContactBook:
         
         raise ValueError ("Contact with this phone number not found!!")
         
-    def search_contact(self, query, field="name"):
+    def search_contact(self, query, field):
         """Searching contacts in the ContactBook"""
         results = []
 
@@ -160,9 +160,12 @@ book.add_contact("Bob", "555-5678", "bob@email.com")
 book.add_contact("Alice", "555-1234", "alice@email.com")
 book.add_contact("Alice", "2312-32131", "Alice2@gmail.com")
 book.add_contact("Vee", "211-23213", "weq12@gmail.com")
-book.update_contact("Alice", phone="555-1234", new_phone="555-9999", new_email="alice555@gmail.com")
+#book.update_contact("Alice", phone="555-1234", new_phone="555-9999", new_email="alice555@gmail.com")
 findings = book.search_contact("55 5", field="phone")
 book.display_search_results(findings)
 book.delete_contact("Bob", "555-5678")
 book.display_all()
 
+print("\n-- Reloading from file ---")
+book2 = ContactBook("test_contacts.json")
+book2.display_all()

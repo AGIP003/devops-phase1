@@ -85,8 +85,8 @@ def get_network_stats(interval = 2):
         'bytes received': net.bytes_recv / (1024**3),
         'packets sent': net.packets_sent / (1024**3),
         'packets received': net.packets_recv / (1024**3),
-        'upload speed': net2.bytes_sent - net.bytes_sent / interval,
-        'download speed': net2.bytes_recv - net.bytes_recv / interval
+        'upload speed': (net2.bytes_sent - net.bytes_sent) / interval,
+        'download speed': (net2.bytes_recv - net.bytes_recv) / interval
     }
 
 def colorize(value):

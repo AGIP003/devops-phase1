@@ -5,12 +5,12 @@ def calculator(a, b, opn):
     Args:
         a (float): First number
         b (float): Second number
-        operation (str): "add", "sub", "mul", "div"
+        opn (str): "add", "sub", "mul", "div"
 
     Returns:
         float or str: Result of operation or error message
     """
-    operation = operation.lower().strip()
+    opn = opn.lower().strip()
 
     #operation logic
     if opn == "add":
@@ -52,3 +52,25 @@ def word_stats(text):
         'unique_words': unique_words, 
         'most_common': most_common
     }
+
+def safe_divide(a, b, default=None):
+    """
+    Perform basic division on two numbers. Return default if division by zero
+
+    Args:
+        a (float) : Numerator
+        b (float) : Denominator
+        operation : 'division'
+        default: Value to return if division by zero occurs
+
+    Returns:
+       a/b if b!= 0, else default.
+    """
+  
+    if b == 0:
+        return  default
+    else:
+        return a / b
+
+
+

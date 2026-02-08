@@ -1,0 +1,23 @@
+from flask import Flask, render_template, request, redirect, url_for
+from finance_tracker.utils.storage import Storage
+from app.routes import register_routes
+import logging
+def create_app():
+    app = Flask(__name__)
+
+    configure_logging(app)
+    register_routes(app)
+    register_error_handlers(app)
+
+    return app
+
+def configure_logging(app):
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+
+    app.logger.info("Application started")
+
+def register_error_handlers(app):
+    pass

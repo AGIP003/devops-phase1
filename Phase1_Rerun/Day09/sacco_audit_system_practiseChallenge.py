@@ -35,6 +35,14 @@ def clean_and_audit(logs):
         elif clean_phone in ["None", "", "unknown"]:
             logger.warning(f"Skipping invalid user data: {raw_phone}")
             continue
+        
+        #if clean_phone in user_activity_count:
+        #    current_val = user_activity_count[clean_phone]
+        #else:
+        #    current_val = 0
+
+        #user_activity_count[clean_phone] = current_val + 1
+
 
         user_activity_count[clean_phone] = user_activity_count.get(clean_phone, 0) + 1
 
