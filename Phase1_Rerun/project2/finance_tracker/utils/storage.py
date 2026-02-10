@@ -151,7 +151,12 @@ class Storage:
 
         return self.save_all(self.transactions)
         
-
+    def get_by_id(self, transaction_id):
+        """getting a single transaction by id"""
+        if transaction_id in self.transactions:
+            return self.transactions[transaction_id]        
+        return None
+        
     def search(self, query):
         """Searching transactions looks through categories and descriptions"""
         query = str(query).lower().strip()
@@ -160,11 +165,16 @@ class Storage:
 
         for transacrions_id, record in self.transactions.items():
             #Check if the query is in categories or description
+            in_type = query in record['type'].lower()
             in_category = query in record['category'].lower()
             in_description = query in record['description'].lower()
 
-            if in_category or in_description:
+            if in_type or in_category or in_description:
                 results.append(record)
+
+        if not results:
+            print("Not Found")
+            logger.error("User has not found the searched {record} term")
         
         logger.info(f"Searched for{len(results)} successfully")
         return results

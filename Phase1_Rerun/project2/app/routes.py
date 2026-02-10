@@ -6,26 +6,11 @@ from finance_tracker.utils.validations import validate_amount, validate_category
 # Instantiate storage for the web app
 storage = Storage()
 
-def validate_transaction(payload):
-    if not isinstance(payload, dict):
-        raise ValidationError("Payload must be an object")
-    
-        
-
 def register_routes(app):
+    
     @app.route("/", methods=["GET"])
     def index():
         return jsonify({"message": "Finance Tracker API", "endpoints": ["/transactions"]}), 200
-
-    @app.route("/transactions", methods=["GET"])
-    def get_transactions():
-        try:
-            data = storage.read_all()
-            return jsonify(data), 200
-        
-        except Exception as e:
-            app.logger.exception("Failed to load transactions")
-            return jsonify(error="Internal server error"), 500
         
     @app.route("/transactions", methods=["POST"])
     def create_transaction_route():
@@ -58,16 +43,66 @@ def register_routes(app):
             app.logger.exception("Failed to create transction")
             return jsonify({"error": "Server Error"})
         
-    @app.route("/transactions/<transactions_id>", methods=["GET"])
-    def get_transaction_by_id(transactions_id):
+    @app.route("/transactions/<transaction_id>", methods=["GET"])
+    def get_transaction_by_id(transaction_id):
         try:
-            data = storage.read_all()
-            record = data.get(transactions_id)
-            if not record:
-                return jsonify({"error": "Transaction not found"}), 404
-            return jsonify(record), 200
-        except Exception:
+            transaction = storage.get_by_id(transaction_id)
+            if not transaction:
+                return({"error": "Transaction not found"}), 404
+            return jsonify(transaction), 200
+        
+        except Exception as e:
             app.logger.exception("Failed to retrieve transaction")
             return jsonify({"error": "Server Error"}), 500
+        
+    @app.route("/transactions", methods=["GET"])
+    def get_transaction():
+        try:    
+            query = request.args.get("query")
+        
+            if query:
+                transactions = storage.search(query)
+            else:
+                transactions = storage.read_all()
+            return jsonify(transactions), 200
+        
+        except Exception as e:
+            app.logger.exception("Failed to search transaction")
+            return jsonify({"Error": "Server Error"}), 500
+        
+    @app.route("/transactions/<transaction_id>", methods=["DELETE"])
+    def delete_transaction(transaction_id):
+        try:
+            transaction = storage.delete(transaction_id)
+            if not transaction:
+                return jsonify({"error": "Transaction not found"}), 404      
+            return jsonify({"message": "deleted successfully"}), 200
+        except Exception as e:
+            app.logger.exception("Failed to delete transaction")
+            return jsonify({"error": "Server Error"}), 500
+            
+    @app.route("/transactions/<transaction_id>", methods=["PUT"])
+    def update_transaction(transaction_id):
+        print(f"UPDATE: Raw request data: {request.data}")
+        print(f"DEBUG: CONTENT-TYPE: {request.content_type}")
+        try:
+            data = request.get_json(force=True)
+            print(f"DEBUG: PAssed JSON: {data}")
+            if not data:
+                return jsonify({"error": "No data provided"}), 400
+            
+            field = data.get("field")
+            updates = data.get("updates")
+            if not field or updates is None:
+                return jsonify({"error": "Both field and updates are required"}), 400
+            transaction = storage.update(transaction_id, field, updates)
 
+            if not transaction:
+                return jsonify({"error": "Transaction not found"}), 404      
+            return jsonify({"message": "updated successfully"}), 200
+        except Exception as e:
+            app.logger.exception("Failed to update transaction")
+            return jsonify({"error": "Server Error"}), 500
+         
 
+        

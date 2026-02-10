@@ -9,6 +9,16 @@
         "payment method": "cash",
         "type": "expense"
     },
+    "10": {
+        "amount": 100.0,
+        "category": "utilities",
+        "created_at": "2026-02-05T12:00:17.224479",
+        "date": "2026-02-04",
+        "description": "Bolt",
+        "id": "10",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
     "2": {
         "amount": 289.0,
         "category": "subscriptions",
@@ -17,6 +27,76 @@
         "description": "Youtube Premium",
         "id": "2",
         "payment method": "bank",
+        "type": "expense"
+    },
+    "3": {
+        "amount": 100.0,
+        "category": "food",
+        "created_at": "2026-02-03T22:06:38.151575",
+        "date": "2026-02-03",
+        "description": "Supper",
+        "id": "3",
+        "payment method": "cash",
+        "type": "expense"
+    },
+    "4": {
+        "amount": 610.0,
+        "category": "black tax",
+        "created_at": "2026-02-03T22:14:49.627490",
+        "date": "2026-02-03",
+        "description": "Ice Cream Cake",
+        "id": "4",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "5": {
+        "amount": 190.0,
+        "category": "transport",
+        "created_at": "2026-02-05T11:54:25.266450",
+        "date": "2026-02-04",
+        "description": "Fare",
+        "id": "5",
+        "payment method": "cash",
+        "type": "expense"
+    },
+    "6": {
+        "amount": 1700.0,
+        "category": "utilities",
+        "created_at": "2026-02-05T11:55:23.139188",
+        "date": "2026-02-04",
+        "description": "charging cable",
+        "id": "6",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "7": {
+        "amount": 220.0,
+        "category": "food",
+        "created_at": "2026-02-05T11:56:17.080154",
+        "date": "2026-02-04",
+        "description": "Pork & Sukuma",
+        "id": "7",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "8": {
+        "amount": 600.0,
+        "category": "utilities",
+        "created_at": "2026-02-05T11:58:39.566349",
+        "date": "2026-02-04",
+        "description": "Tokens",
+        "id": "8",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "9": {
+        "amount": 60.0,
+        "category": "food",
+        "created_at": "2026-02-05T11:59:45.987007",
+        "date": "2026-02-04",
+        "description": "Novida",
+        "id": "9",
+        "payment method": "m-pesa",
         "type": "expense"
     }
 }
