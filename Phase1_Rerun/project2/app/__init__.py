@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for
 from finance_tracker.utils.storage import Storage
 from app.routes import register_routes
+from app.errors import register_error_handlers
 import logging
+
 def create_app():
     app = Flask(__name__)
 
@@ -19,5 +21,3 @@ def configure_logging(app):
 
     app.logger.info("Application started")
 
-def register_error_handlers(app):
-    pass
