@@ -44,8 +44,8 @@ def validate_category(txn_type, category):
     clean_type = str(txn_type or "").strip().lower()
     clean_cat = str(category or "").strip().lower()
     allowed_pairs = {
-        'income' : ["salary", "business", "freelance", "investments", "gifts", "other income"],
-        'expense' : ["rent", "utilities", "food", "transport", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black tax", "other expense"]
+        'income' : ["salary", "business", "freelance", "loan", "investments", "gifts", "other income"],
+        'expense' : ["rent", "utilities", "food", "transport", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black tax", "other expense"]
     }
     
     allowed_for_type = allowed_pairs.get(clean_type, [])
@@ -93,13 +93,13 @@ def validate_description(description):
     if not description:
         return ""
     
-    description = str(description).strip().lower()
+    description = str(description).strip().lower()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 
     if len(description) >= 200:
         raise ValidationError("The description is too long, (maximum characters is 200)")
     
     logger.debug(f"Validated description: {description}")
-    return description
+    return description 
 
 def validate_transaction_type(txn_type):
     """

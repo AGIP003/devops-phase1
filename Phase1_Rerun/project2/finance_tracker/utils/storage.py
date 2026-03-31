@@ -133,6 +133,8 @@ class Storage:
         #Routing
         if field == "amount":
             updates = validate_amount(updates)
+        if field == "type":
+            updates = validate_transaction_type(updates)
         if field == "category":
             # validate_category expects (txn_type, category)
             updates = validate_category(record.get('type'), updates)
@@ -140,8 +142,6 @@ class Storage:
             updates = validate_date(updates)
         if field == "description":
             updates = validate_description(updates)
-        if field == "type":
-            updates = validate_transaction_type(updates)
         if field == "payment method":
             updates = validate_payment_method(updates)
         

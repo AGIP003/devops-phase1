@@ -77,15 +77,15 @@ class FinanceTrackerCli:
 
         #Providing the option for users to choose in type and category
         if type == "income":
-            print("Categories: salary, business, freelance, investments, gifts, other income")
+            print("Categories: salary, business, loan, freelance, investments, gifts, other income")
         elif type == "expense":
-            print("Expense: rent, utilities, food, transport, medical, subscriptions, entertainment, education, vacations, tools/software, personal_care, taxes, black tax, other expense")
+            print("Expense: rent, utilities, food, transport, medical, airtime, subscriptions, entertainment, education, vacations, tools/software, personal_care, taxes, black tax, other expense")
         else:
             print("Invalid option. Choose between income or expense")
 
         category = input("Enter the category: ").strip().lower()
         amount = input("Enter the amount: ").strip()
-        payment_method = input("Enter the payment method(bank/m-pesa,cash,paypal,card): ").strip().lower()
+        payment_method = input("Enter the payment method(bank,m-pesa,cash,paypal,card): ").strip().lower()
         
 
         data = {

@@ -19,6 +19,96 @@
         "payment method": "m-pesa",
         "type": "expense"
     },
+    "11": {
+        "amount": 15000.0,
+        "category": "other income",
+        "created_at": "2026-03-10T00:33:07.325724",
+        "date": "2026-02-05",
+        "description": "mzae",
+        "id": "11",
+        "payment method": "m-pesa",
+        "type": "income"
+    },
+    "12": {
+        "amount": 2320.0,
+        "category": "other expense",
+        "created_at": "2026-03-10T00:36:31.675479",
+        "date": "2026-02-05",
+        "description": "fuliza",
+        "id": "12",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "13": {
+        "amount": 10000.0,
+        "category": "rent",
+        "created_at": "2026-03-10T00:37:12.756138",
+        "date": "2026-02-05",
+        "description": "rent",
+        "id": "13",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "14": {
+        "amount": 300.0,
+        "category": "other expense",
+        "created_at": "2026-03-10T00:38:48.559842",
+        "date": "2026-02-05",
+        "description": "trying to buy auntie esther's phon",
+        "id": "14",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "15": {
+        "amount": 1000.0,
+        "category": "other expense",
+        "created_at": "2026-03-10T00:39:36.367650",
+        "date": "2026-02-05",
+        "description": "topping up to pay esther's phone",
+        "id": "15",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "16": {
+        "amount": 1000.0,
+        "category": "other income",
+        "created_at": "2026-03-10T00:41:14.086077",
+        "date": "2026-02-05",
+        "description": "auntie esther refunded",
+        "id": "16",
+        "payment method": "m-pesa",
+        "type": "income"
+    },
+    "17": {
+        "amount": 20.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:42:13.097037",
+        "date": "2026-02-06",
+        "description": "maandazi",
+        "id": "17",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "18": {
+        "amount": 20.0,
+        "category": "other expense",
+        "created_at": "2026-03-10T00:43:32.994082",
+        "date": "2026-02-06",
+        "description": "airtime",
+        "id": "18",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "19": {
+        "amount": 30.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:46:04.466739",
+        "date": "2026-02-06",
+        "description": "sukuma x spinach",
+        "id": "19",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
     "2": {
         "amount": 289.0,
         "category": "subscriptions",
@@ -27,6 +117,106 @@
         "description": "Youtube Premium",
         "id": "2",
         "payment method": "bank",
+        "type": "expense"
+    },
+    "20": {
+        "amount": 250.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:46:54.129020",
+        "date": "2026-02-06",
+        "description": "meat",
+        "id": "20",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "21": {
+        "amount": 65.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:47:33.221047",
+        "date": "2026-02-07",
+        "description": "mandazi",
+        "id": "21",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "22": {
+        "amount": 100.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:49:13.855315",
+        "date": "2026-02-07",
+        "description": "mukimo and soup",
+        "id": "22",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "23": {
+        "amount": 40.0,
+        "category": "food",
+        "created_at": "2026-03-10T00:50:56.217649",
+        "date": "2026-02-07",
+        "description": "ndizi",
+        "id": "23",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "24": {
+        "amount": 800.0,
+        "category": "transport",
+        "created_at": "2026-03-10T00:52:49.431614",
+        "date": "2026-02-08",
+        "description": "uber",
+        "id": "24",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "25": {
+        "amount": 50.0,
+        "category": "transport",
+        "created_at": "2026-03-10T00:53:44.301420",
+        "date": "2026-02-08",
+        "description": "bus fare",
+        "id": "25",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "26": {
+        "amount": 100.0,
+        "category": "airtime",
+        "created_at": "2026-03-10T00:54:19.808062",
+        "date": "2026-02-08",
+        "description": "airtime",
+        "id": "26",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "27": {
+        "amount": 600.0,
+        "category": "other income",
+        "created_at": "2026-03-10T00:55:46.659993",
+        "date": "2026-02-09",
+        "description": "loan - kcb",
+        "id": "27",
+        "payment method": "m-pesa",
+        "type": "income"
+    },
+    "28": {
+        "amount": 1600.0,
+        "category": "utilities",
+        "created_at": "2026-03-10T00:58:20.815110",
+        "date": "2026-02-09",
+        "description": "sneakers",
+        "id": "28",
+        "payment method": "m-pesa",
+        "type": "expense"
+    },
+    "29": {
+        "amount": 5.0,
+        "category": "airtime",
+        "created_at": "2026-03-10T00:59:14.492287",
+        "date": "2026-02-09",
+        "description": "airtime",
+        "id": "29",
+        "payment method": "m-pesa",
         "type": "expense"
     },
     "3": {
