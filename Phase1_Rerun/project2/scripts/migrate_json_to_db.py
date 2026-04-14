@@ -3,7 +3,13 @@ from dotenv import load_dotenv
 from db_config import DatabaseConnection
 from psycopg2.extras import execute_values
 import os 
-
+from helpers import(
+    get_or_create_category,
+    get_or_create_group,
+    get_or_create_method,
+    get_or_create_user,
+    insert_transaction
+)
 load_dotenv()
 
 def migrate_json_to_postgres(json_filePath):
@@ -15,84 +21,72 @@ def migrate_json_to_postgres(json_filePath):
         print(f"Loaded {len(data)} transactions from {json_filePath}")
 
         #Insert users
-        for user in data["users"]:
-            cursor.execute(
-                "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
-                (user["username"], user["email"], user["password_hash"])
-            )
-            user["db_id"] = cursor.fetchone()[0]
+        user_id = get_or_create_user(
+            cursor,
+            username="jay",
+            email="blessedmuchemi@gmail.com",
+            password_hash="hashed_password"
+        )
 
-        #Insert categories
-        for category in data["categories"]:
-            cursor.execute(
-                "INSERT INTO categories (user_id, name, type) VALUES (%s, %s, %s) RETURNING id",
-                (category["user_id"], category["name"], category["type"])
-            )
-            category["db_id"] = cursor.fetchone()[0]
-
-        #Insert payment methods
-        #payment lookup (shell)
+        print("got user id:", user_id)
+        #payment method --> group mapping
         payment_lookup = {
-            "m-pesa": "mobile",
-            "airtel money": "mobile",
-            "paypal": "digital",
-            "cash": "cash"
+            "m-pesa":"mobile",
+            "airtel money":"mobile",
+            "t-kash":"mobile",
+            "equitel":"mobile",
+            "bank transfer":"banking",
+            "debit card":"banking",
+            "credit card":"banking",
+            "paypal":"digital",
+            "cash":"cash"
         }
-        #Dynamic IDs: store DB IDs separately
-        group_ids = {}
-        method_ids = {}
-        for group in set(payment_lookup.values()):
-            cursor.execute(
-                "INSERT INTO payment_method_groups (name) VALUES (%s) ON CONFLICT (name) DO NOTHING RETURNING id",
-                (group,)
-            )
-            row = cursor.fetchone()
 
-            if row:
-                group_ids[group] = row[0]
-            else:
-                cursor.execute("SELECT id FROM payment_method_groups WHERE name=%s", (group,))
-                group_ids[group] = cursor.fetchone()[0]
-
-        for method, group in payment_lookup.items():
-            cursor.execute(
-                "INSERT  INTO payment_methods (name, group_id) VALUES (%s, %s) RETURNING id",
-                (method,)
-            )
-            row = cursor.fetchone()
-
-            if not row:
-                cursor.execute(
-                    "INSERT INTO payment_methods (name, group_id) VALUES (%s, %s) RETURNING id",
-                    (method, group_ids[group])
-                )
-                method_ids[method] = cursor.fetchone()[0]
-            else:
-                method_ids[method] = row[0]
-        
-        for txn in data["transactions"]:
+        for txn_id, txn in data.items():
             try:
-                cursor.execute(
-                    """INSERT INTO transactions (user_id, category_id, payment_method_id, amount, date, description)
-                    VALUES(%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        txn["user_id"],
-                        txn["category_id"],
-                        payment_lookup[txn["payment method"]],
-                        txn["amount"],
-                        txn["date"],
-                        txn.get("description")
-                    )
+                #Category
+                category_id = get_or_create_category(
+                    cursor,
+                    user_id,
+                    txn["category"],
+                    txn["type"]
                 )
+
+                #Payment Method + Group
+                method_name = txn.get("payment method")
+                group_name = payment_lookup.get(method_name, "cash")
+                group_id = get_or_create_group(
+                    cursor,
+                    group_name)
+                
+                method_id = get_or_create_method(
+                    cursor,
+                    method_name,
+                    group_id
+                )
+
+                #Transaction
+                insert_transaction(cursor, {
+                    "user_id": user_id,
+                    "category_id": category_id,
+                    "payment_method_id": method_id,
+                    "amount": txn["amount"],
+                    "date": txn["date"],
+                    "description": txn.get("description"),
+                    "created_at": txn.get("created_at")
+                })
+
             except Exception as e:
-                print(f"Error in inserting the transactions: {txn.get('description')}")
+                print(f"Error in inserting the transactions: {txn.get('description')}:{e}")
+                raise
+            
+        print("MIGRATION COMPLETE")
 
         
 
 
 if __name__ == "__main__":
-    json_filePath='/home/jay/devops-phase1/Phase1_Rerun/data/transactions.json'
+    json_filePath='/home/jay/devops-phase1/Phase1_Rerun/project2/finance_tracker/data/transactions.json'
 
     if  not os.path.exists(json_filePath):
         print(f"File not found: {json_filePath}")
