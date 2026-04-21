@@ -85,7 +85,7 @@ class FinanceTrackerCli:
 
         category = input("Enter the category: ").strip().lower()
         amount = input("Enter the amount: ").strip()
-        payment_method = input("Enter the payment method(bank,m-pesa,cash,paypal,card): ").strip().lower()
+        payment_method = input("Enter the payment method(bank transfer,m-pesa,cash,digital payments,card, airtel money): ").strip().lower()
         
 
         data = {

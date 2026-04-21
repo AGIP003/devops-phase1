@@ -7,8 +7,10 @@ import logging
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins=["http://localhost:3000"])
-    
+    CORS(
+        app, 
+        resources= {r"/*": {"origins":"http://localhost:3000"}}
+    )
     configure_logging(app)
     register_routes(app)
     register_error_handlers(app)

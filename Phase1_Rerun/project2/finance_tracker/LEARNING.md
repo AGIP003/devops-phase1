@@ -55,7 +55,28 @@
 
     The Skill: You stopped seeing an "ERROR" as a failure and started seeing it as a set of coordinates. You learned to look at the type of error (Value, Type, Key) and the line number to find the bug.
 
+ — Database Schema (Hands-on)
 
+- Created 3 core tables:
+  users, categories, transactions
+
+- Implemented relationships:
+  • transactions.user_id → users.id
+  • transactions.category_id → categories.id
+
+- Used DECIMAL(10,2) for financial accuracy
+
+- Practiced:
+  • CREATE TABLE
+  • INSERT INTO
+  • SELECT with JOINs
+
+- Verified schema using:
+  • \dt
+  • \d table_name
+
+Key Insight:
+A good schema allows clean JOINs and accurate financial analysis.
 
 
 

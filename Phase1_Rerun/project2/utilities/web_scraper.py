@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-
 def scrape_currency():
     # 1. THE TARGET: A simple exchange rate site
     url = "https://www.x-rates.com/table/?from=USD&amount=1"
