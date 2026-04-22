@@ -28,7 +28,7 @@ def validate_amount(amount):
     if amount <= 0:
         raise ValidationError(f"Amount must be positive, you wrote{amount}")
     
-    if round(amount, 2) != amount:
+    if not (amount * 100).is_integer():
         raise ValidationError(f"Amount cannot have more than 2 decimal places")
     
     logger.debug(f"Validated Amount: {amount}")
@@ -95,7 +95,7 @@ def validate_description(description):
     
     description = str(description).strip().lower()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 
-    if len(description) >= 200:
+    if len(description) > 200:
         raise ValidationError("The description is too long, (maximum characters is 200)")
     
     logger.debug(f"Validated description: {description}")
@@ -126,7 +126,10 @@ def validate_payment_method(payment_method):
     - User can only choose from the allowed payment options
     """
 
-    allowed_payment_method = ["cash", "m-pesa", "bank transfer", "digital payments", "card", "airtel money"]
+    allowed_payment_method = [
+        "cash", "m-pesa", "airtel money", "t-kash", "equitel",
+        "bank transfer", "debit card", "credit card", "paypal"
+    ]
     clean_pm = str(payment_method or "").strip().lower()
     allowed_lower = [p.lower() for p in allowed_payment_method]
     if clean_pm not in allowed_lower:
