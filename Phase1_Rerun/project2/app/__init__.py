@@ -3,6 +3,7 @@ from finance_tracker.utils.storage import Storage
 from app.routes import register_routes
 from app.errors import register_error_handlers
 from flask_cors import CORS
+from app.extensions import bcrypt
 import logging
 
 def create_app():
@@ -14,7 +15,8 @@ def create_app():
     configure_logging(app)
     register_routes(app)
     register_error_handlers(app)
-
+    bcrypt.init_app(app)
+    
     return app
 
 def configure_logging(app):
