@@ -1,4 +1,4 @@
-from flask import request, jsonify, abort
+from flask import request, jsonify, abort, g
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
@@ -8,7 +8,7 @@ from app.db import (
     db_get_transaction_by_id, update_transactions, delete_transactions,
     get_payment_method_id, get_category_id
 )
-
+from app.middleware import login_required
 
 def register_routes(app):
     @app.route("/", methods=["GET"])
@@ -51,7 +51,7 @@ def register_routes(app):
             except ValueError as e:
                 abort(400, description=str(e))
             
-            # Build database record (NO created_at - database sets it)
+            # database record 
             db_data = {
                 "user_id": 4,  
                 "category_id": category_id,
