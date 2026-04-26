@@ -16,6 +16,7 @@ def register_routes(app):
         return jsonify({"message": "Finance Tracker API", "endpoints": ["/transactions"]}), 200
         
     @app.route("/transactions", methods=["POST"])
+    @login_required
     def create_transaction_route():
         data = request.get_json()
 
@@ -46,14 +47,15 @@ def register_routes(app):
             
             # Now lookup the IDs from database
             try:
-                category_id = get_category_id(category_name)
+                user_id = g.current_user["user_id"]
+                category_id = get_category_id(category_name, user_id)
                 payment_method_id = get_payment_method_id(payment_method)
             except ValueError as e:
                 abort(400, description=str(e))
             
             # database record 
             db_data = {
-                "user_id": 4,  
+                "user_id": user_id,  
                 "category_id": category_id,
                 "payment_method_id": payment_method_id,
                 "amount": amount,
@@ -70,34 +72,49 @@ def register_routes(app):
             abort(500, description=f"Server error: {str(e)}")
        
     @app.route("/transactions/<transaction_id>", methods=["GET"])
+    @login_required
     def get_transaction_by_id(transaction_id):
+        user_id = g.current_user["user_id"]
         transaction = db_get_transaction_by_id(transaction_id)
         if not transaction:
             abort(404, description=f"Error!! Transaction with ID {transaction_id} not found")
+        
+        if transaction["user_id"] != g.current_user["user_id"]:
+            abort(403, description="Not allowed. Wrong ID")
         return jsonify(transaction), 200
         
     @app.route("/transactions", methods=["GET", "OPTIONS"])
+    @login_required
     def get_transaction():    
         query = request.args.get("query")
-    
+        user_id = g.current_user["user_id"]
         if query:
-            transactions = search_transactions(query)
+            transactions = search_transactions(query, user_id)
         else:
-            transactions = get_all_transactions()
+            transactions = get_all_transactions(user_id)
         return jsonify(transactions), 200
         
     @app.route("/transactions/<transaction_id>", methods=["DELETE"])
+    @login_required
     def delete_transaction(transaction_id):
-        transaction = delete_transactions(transaction_id)
+        transaction = db_get_transaction_by_id(transaction_id)
+
         if not transaction:
             abort(404, description=f"Error!! Transaction with ID {transaction_id} not found")
+        
+        if transaction["user_id"] != g.current_user["user_id"]:
+            abort(403, description="Not allowed. Wrong ID")
+
+        delete_transactions(transaction_id)
         return jsonify({"message": "deleted successfully"}), 200
        
             
     @app.route("/transactions/<transaction_id>", methods=["PUT"])
+    @login_required
     def update_transaction(transaction_id):
         data = request.get_json()
         
+        user_id = g.current_user["user_id"]
         if data is None:
             abort(400, description="Invalid JSON")
         
@@ -138,7 +155,13 @@ def register_routes(app):
             
             if not validated_updates:
                 abort(400, description="No valid fields to update")
-            
+
+            transaction = db_get_transaction_by_id(transaction_id)
+            if not transaction:
+                abort(404, description="transaction not found")
+            if transaction["user_id"] != g.current_user["user_id"]:
+                abort(403, description="Not allowed. Wrong ID")
+
             row, error = update_transactions(transaction_id, validated_updates)
             if error:
                 abort(400, description=error)

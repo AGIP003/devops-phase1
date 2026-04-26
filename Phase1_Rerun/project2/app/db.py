@@ -169,7 +169,44 @@ def delete_transactions(txn_id):
                            (txn_id,)
                            )
             rows = cursor.fetchone()
-        conn.commit()
+            conn.commit()
+        return rows
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def get_user_by_email(email):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT * FROM users WHERE email = %s",
+                           (email,)
+                           )
+            row = cursor.fetchone()
+            conn.commit()
+        return row
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def insert_user_hashed_pw(email, username, password_hash):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("""
+                           INSERT INTO users (email, username, password_hash) 
+                           VALUES (%(email)s, %(username)s, %(password_hash)s)
+                           RETURNING id, username, email, role, created_at
+                           """,
+                           {"email": email, "username":username, "password_hash": password_hash}
+            )
+            rows = cursor.fetchone()
+            conn.commit()
         return rows
     except Exception as e:
         conn.rollback()

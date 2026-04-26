@@ -54,7 +54,7 @@ def register_auth_route():
     #hashing the password
     password_hash = hash_password(password)
 
-    new_user = insert_user_hashed_pw(email, password_hash)
+    new_user = insert_user_hashed_pw(email, username, password_hash)
 
     return jsonify({"message": "User registered", "user": new_user}), 201
 
@@ -82,7 +82,7 @@ def login():
         abort(401, description="Invalid email or password")
 
     payload = {
-        "id": user["id"],
+        "user_id": user["id"],
         "username": user["username"],
         "email": user["email"],
         "role": user["role"],
@@ -90,4 +90,8 @@ def login():
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-    return jsonify({"message": "Login successful", "token": token}), 200
+    return jsonify({"message": "Login successful", "token": token,  'user': {
+            'user_id': user["id"],
+            'username': user["username"],
+            'email': user["email"],
+            'role': user["role"]}}), 200
