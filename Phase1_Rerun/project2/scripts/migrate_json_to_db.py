@@ -82,9 +82,6 @@ def migrate_json_to_postgres(json_filePath):
             
         print("MIGRATION COMPLETE")
 
-        
-
-
 if __name__ == "__main__":
     json_filePath='/home/jay/devops-phase1/Phase1_Rerun/project2/finance_tracker/data/transactions.json'
 

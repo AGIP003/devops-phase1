@@ -74,7 +74,3 @@
 - [ ] Charts (ASCII)
 
 ---
-
-**Current Task:** Get MVP working (add, list, balance)  
-**Time Budget:** 2-3 hours  
-**Blocker:** None - just code!

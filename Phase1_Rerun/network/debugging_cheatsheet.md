@@ -111,4 +111,4 @@ Connection refused → Service not running
 Timeout → Firewall / network issue
 DNS failure → Domain issue
 CORS error → Missing headers
-SSL error → Certificate / HTTPS issue
+SSL error → Certificate / HTTPS issue 

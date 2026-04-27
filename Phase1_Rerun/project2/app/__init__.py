@@ -4,6 +4,7 @@ from app.routes import register_routes
 from app.errors import register_error_handlers
 from flask_cors import CORS
 from app.extensions import bcrypt
+from app.auth_routes import auth_bp
 import logging
 
 def create_app():
@@ -16,6 +17,15 @@ def create_app():
     register_routes(app)
     register_error_handlers(app)
     bcrypt.init_app(app)
+    
+    # Register auth blueprint
+    try:
+        app.register_blueprint(auth_bp)
+        app.logger.info(f"✓ Auth blueprint registered successfully")
+    except Exception as e:
+        app.logger.error(f"✗ Failed to register auth blueprint: {e}")
+        import traceback
+        traceback.print_exc()
     
     return app
 

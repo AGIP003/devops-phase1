@@ -29,7 +29,7 @@ def register_error_handlers(app):
         app.logger.warning(f"Method not allowed: {error}")
         return jsonify({"error": "Method not allowed"}), 405
     
-    @app.errorhandlers(409)
+    @app.errorhandler(409)
     def conflict_error(error):
         """Handle conflict errors"""
         app.logger.warning(f"Conflict error: {error}")
