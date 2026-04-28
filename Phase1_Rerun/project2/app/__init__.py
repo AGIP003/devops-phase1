@@ -3,15 +3,24 @@ from finance_tracker.utils.storage import Storage
 from app.routes import register_routes
 from app.errors import register_error_handlers
 from flask_cors import CORS
-from app.extensions import bcrypt
+from app.extensions import bcrypt, mail, limiter
 from app.auth_routes import auth_bp
+from flask_talisman import Talisman
 import logging
 
 def create_app():
     app = Flask(__name__)
     CORS(
         app, 
-        resources= {r"/*": {"origins":"http://localhost:3000"}}
+        resources= {r"/api/*": {
+                                    "origins":["http://localhost:3000"],
+                                    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                                    "allow_headers": ["Content_Type", "Authorization"],
+                                    "expose_headers": ["Content-Type", "Authorization"],
+                                    "supports_credentials": True,
+                                    "max_age": 3600  # Cache preflight requests for 1 hour
+
+                                }}
     )
     configure_logging(app)
     register_routes(app)
@@ -26,6 +35,14 @@ def create_app():
         app.logger.error(f"✗ Failed to register auth blueprint: {e}")
         import traceback
         traceback.print_exc()
+    mail.init_app(app)
+    limiter.init_app(app)
+
+    Talisman(app,
+             force_https=False,
+             strict_transport_security=False,
+             content_security_policy=False
+             )
     
     return app
 
