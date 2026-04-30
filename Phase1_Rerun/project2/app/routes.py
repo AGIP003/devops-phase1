@@ -6,9 +6,9 @@ from finance_tracker.utils.validations import (
 from app.db import (
     create_transactions, get_all_transactions, search_transactions, get_db_connection,  
     db_get_transaction_by_id, update_transactions, delete_transactions,
-    get_payment_method_id, get_category_id
+    get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id
 )
-from app.middleware import login_required
+from app.middleware import login_required, admin_required
 
 def register_routes(app):
     @app.route("/", methods=["GET"])
@@ -74,7 +74,6 @@ def register_routes(app):
     @app.route("/transactions/<transaction_id>", methods=["GET"])
     @login_required
     def get_transaction_by_id(transaction_id):
-        user_id = g.current_user["user_id"]
         transaction = db_get_transaction_by_id(transaction_id)
         if not transaction:
             abort(404, description=f"Error!! Transaction with ID {transaction_id} not found")
@@ -83,7 +82,7 @@ def register_routes(app):
             abort(403, description="Not allowed. Wrong ID")
         return jsonify(transaction), 200
         
-    @app.route("/transactions", methods=["GET", "OPTIONS"])
+    @app.route("/transactions", methods=["GET"])
     @login_required
     def get_transaction():    
         query = request.args.get("query")
@@ -139,7 +138,7 @@ def register_routes(app):
                 if not txn_type:
                     abort(400, description="Must provide 'type' when updating 'category'")
                 validated_category = validate_category(txn_type, data["category"])
-                category_id = get_category_id(validated_category)
+                category_id = get_category_id(validated_category, user_id)
                 validated_updates["category_id"] = category_id
             
             if "date" in data:
@@ -175,5 +174,36 @@ def register_routes(app):
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
       
-         
+    @app.route("/admin/transactions", methods=["GET"])
+    @login_required
+    @admin_required         
+    def admin_get_all_transactions(user_id=None):
+        transactions = get_all_transactions()
+
+        return jsonify(transactions), 200
+    
+    @app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+    @login_required
+    @admin_required
+    def delete_user(user_id):
+        """Deletes a user(cascades to their transactions)"""
+
+        #Prevent self-deletion
+        if user_id == g.current_user['user_id']:
+            abort(400, description="Cannot delete yourself")
+        
+        #Check user in db
+        user = get_user_by_id(user_id)
+
+        #Validate
+        if not user:
+            return abort(404, description="User not found")
+        
+        #Get user id
+        user_id = user["id"]
+
+        delete_user_by_id(user_id)
+        return jsonify({'message': f"User {user_id} deleted"}), 200        
+
+
 

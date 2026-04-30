@@ -22,7 +22,7 @@ def get_payment_method_id(payment_method_name):
     finally:
         conn.close()
 
-def get_category_id(category_name, user_id=4):
+def get_category_id(category_name, user_id):
     """Convert category string to its database ID"""
     conn = get_db_connection()
     try:
@@ -47,7 +47,7 @@ def get_db_connection():
             password=os.getenv('DB_PASSWORD')
     )   
 
-def search_transactions(query_text):
+def search_transactions(query_text, user_id):
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -55,9 +55,9 @@ def search_transactions(query_text):
                 """
                 SELECT * 
                 FROM transactions
-                WHERE  LOWER(COALESCE(description, '')) ILIKE LOWER(%s)
+                WHERE  LOWER(COALESCE(description, '')) ILIKE LOWER(%s) AND user_id = %s
                 """,
-                (f"%{query_text}%", f"%{query_text}%")
+                (f"%{query_text}%", user_id)
             )
             rows = cursor.fetchall()
         conn.commit()
@@ -193,6 +193,35 @@ def get_user_by_email(email):
     finally:
         conn.close()
 
+def get_user_by_id(user_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("SELECT * FROM users WHERE id = %s",
+                           (user_id,)
+                           )
+            row = cursor.fetchone()
+            conn.commit()
+        return row
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def delete_user_by_id(user_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("DELETE FROM users WHERE id = %s",
+                           (user_id,)
+                           )
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 
 def insert_user_hashed_pw(email, username, password_hash):
     conn = get_db_connection()
@@ -213,3 +242,22 @@ def insert_user_hashed_pw(email, username, password_hash):
         raise e
     finally:
         conn.close()
+
+def update_reset_password(user_id, password_hash):
+    conn = get_db_connection()
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute("""
+                            UPDATE users SET password_hash = %s WHERE id=%s
+                            """,
+                           (password_hash, user_id)
+                           )
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
