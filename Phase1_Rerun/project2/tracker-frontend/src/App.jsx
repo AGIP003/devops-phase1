@@ -3,35 +3,48 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import LoginForm from './components/auth/LoginForm'
+import { getToken } from './utils/auth'
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import Dashboard from './pages/Dashboard'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [authVersion, setAuthVersion] = useState(0)
+  const token = getToken();
+  const isLoggedIn = Boolean(getToken())
 
+  function handleLoginSuccess() {
+    setAuthVersion(v => v + 1) //forces re-render
+  }
+
+  if (isLoggedIn) {
+    return (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    )
+  }
   return (
     <>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
+        {token && (
+          <div
+            style={{
+              background: '#14532d',
+              color: '#dcfce7',
+              padding: '12px 16px',
+              textAlign: 'center',
+              fontWeight: '600',
+            }}
+          >
+            JWT token found in localStorage.
+          </div>
+        )}
+
       </div>
       <div>
-        <LoginForm />
+        <LoginForm onLoginSuccess={handleLoginSuccess} />
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+
     </>
   )
 }

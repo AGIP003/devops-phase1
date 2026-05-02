@@ -4,7 +4,7 @@
 //Purpose: Avoids repeating request settings (like base URL, headers, or authentication tokens) across multiple calls.
 
 import axios from "axios";
-import { getToken, saveToken } from "../utils/auth";
+import { getToken, removeToken, saveToken } from "../utils/auth";
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 
@@ -12,7 +12,7 @@ const VITE_API_URL = import.meta.env.VITE_API_URL;
 const instance = axios.create({
     baseURL: VITE_API_URL,
     timeout: 10000,
-    headers: { "Content-Type": "application/json header" }
+    headers: { "Content-Type": "application/json " }
 })
 
 //Interceptors are powerful mechanism that can be used to intercept and modify HTTP requests and responses.
@@ -35,7 +35,12 @@ instance.interceptors.response.use(
     function (response) {
         return response
     },
+
     function (error) {
+        if (error.response.status === 401) {
+            removeToken()
+            window.location.href = '/'
+        }
         let message = "Network error: Unable to reach server"
         if (error.response) {
             message = error.response.data?.error || error.response.data?.message || error.message

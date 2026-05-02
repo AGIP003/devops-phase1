@@ -2,10 +2,12 @@ import { useState } from "react";
 import { saveToken } from "../../utils/auth";
 import api from '../../services/api'
 //useState is a react hook that lets you add a state variable to your component
+// inshort useState gives a component memory
+//useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
 //The convention is to name state variables like [something, setSomething] using array destructuring.
 // initial state value you want the state to be initially. React saves it once and ignores in the next  render
 // use state return an array with exactly two values; current state and set function
-function LoginForm() {
+function LoginForm({ onLoginSuccess }) {
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -47,6 +49,7 @@ function LoginForm() {
             //API call
             const response = await api.post('/api/auth/login', formData);
             saveToken(response.data.token);
+            if (onLoginSuccess) onLoginSuccess()
             setSuccessMessage('Login Successful');
             console.log(response)
         } catch (err) {
