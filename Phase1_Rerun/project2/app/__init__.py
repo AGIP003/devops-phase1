@@ -10,13 +10,16 @@ import logging
 
 def create_app():
     app = Flask(__name__)
+
+    
     CORS(
         app, 
-        resources= {r"/api/*": {
+        resources= {r"/api/.*": {
                                     "origins":["http://localhost:3000", 
-                                               "http://localhost:5173"],
+                                               "http://localhost:5173",
+                                               "http://127.0.0.1:5173"],
                                     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                                    "allow_headers": ["Content_Type", "Authorization"],
+                                    "allow_headers": ["Content-Type", "Authorization"],
                                     "expose_headers": ["Content-Type", "Authorization"],
                                     "supports_credentials": True,
                                     "max_age": 3600  # Cache preflight requests for 1 hour
@@ -27,7 +30,12 @@ def create_app():
     register_routes(app)
     register_error_handlers(app)
     bcrypt.init_app(app)
-    
+
+    Talisman(app,
+             force_https=False,
+             strict_transport_security=False,
+             content_security_policy=False
+             )
     # Register auth blueprint
     try:
         app.register_blueprint(auth_bp)
@@ -38,13 +46,6 @@ def create_app():
         traceback.print_exc()
     mail.init_app(app)
     limiter.init_app(app)
-
-    Talisman(app,
-             force_https=False,
-             strict_transport_security=False,
-             content_security_policy=False
-             )
-    
     return app
 
 def configure_logging(app):

@@ -68,11 +68,32 @@ def search_transactions(query_text, user_id):
     finally:
         conn.close()
 
+def get_all_transactions_for_user(user_id):
+    if user_id is None:
+        raise ValueError("user_id is required")
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                "SELECT * FROM transactions WHERE user_id = %s ORDER BY date DESC",
+                (user_id,)
+            )
+            rows = cursor.fetchall()
+        conn.commit()
+        return rows
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 def get_all_transactions():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            
             cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
+            
             rows = cursor.fetchall()
         conn.commit()
         return rows
@@ -259,5 +280,3 @@ def update_reset_password(user_id, password_hash):
         raise e
     finally:
         conn.close()
-
-

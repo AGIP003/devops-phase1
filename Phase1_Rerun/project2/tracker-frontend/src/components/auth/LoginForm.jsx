@@ -47,7 +47,7 @@ function LoginForm({ onLoginSuccess }) {
 
         try {
             //API call
-            const response = await api.post('/api/auth/login', formData);
+            const response = await api.post('/auth/login', formData);
             saveToken(response.data.token);
             if (onLoginSuccess) onLoginSuccess()
             setSuccessMessage('Login Successful');

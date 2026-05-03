@@ -4,7 +4,8 @@ from finance_tracker.utils.validations import (
     validate_payment_method, ValidationError, validate_transaction_type
 )
 from app.db import (
-    create_transactions, get_all_transactions, search_transactions, get_db_connection,  
+    create_transactions, get_all_transactions, get_all_transactions_for_user,
+    search_transactions, get_db_connection,
     db_get_transaction_by_id, update_transactions, delete_transactions,
     get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id
 )
@@ -15,7 +16,7 @@ def register_routes(app):
     def index():
         return jsonify({"message": "Finance Tracker API", "endpoints": ["/transactions"]}), 200
         
-    @app.route("/transactions", methods=["POST"])
+    @app.route("/api/transactions", methods=["POST"])
     @login_required
     def create_transaction_route():
         data = request.get_json()
@@ -71,7 +72,7 @@ def register_routes(app):
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
        
-    @app.route("/transactions/<transaction_id>", methods=["GET"])
+    @app.route("/api/transactions/<transaction_id>", methods=["GET"])
     @login_required
     def get_transaction_by_id(transaction_id):
         transaction = db_get_transaction_by_id(transaction_id)
@@ -82,7 +83,7 @@ def register_routes(app):
             abort(403, description="Not allowed. Wrong ID")
         return jsonify(transaction), 200
         
-    @app.route("/transactions", methods=["GET"])
+    @app.route("/api/transactions", methods=["GET"])
     @login_required
     def get_transaction():    
         query = request.args.get("query")
@@ -90,10 +91,10 @@ def register_routes(app):
         if query:
             transactions = search_transactions(query, user_id)
         else:
-            transactions = get_all_transactions(user_id)
+            transactions = get_all_transactions_for_user(user_id)
         return jsonify(transactions), 200
         
-    @app.route("/transactions/<transaction_id>", methods=["DELETE"])
+    @app.route("/api/transactions/<transaction_id>", methods=["DELETE"])
     @login_required
     def delete_transaction(transaction_id):
         transaction = db_get_transaction_by_id(transaction_id)
@@ -108,7 +109,7 @@ def register_routes(app):
         return jsonify({"message": "deleted successfully"}), 200
        
             
-    @app.route("/transactions/<transaction_id>", methods=["PUT"])
+    @app.route("/api/transactions/<transaction_id>", methods=["PUT"])
     @login_required
     def update_transaction(transaction_id):
         data = request.get_json()
@@ -204,6 +205,5 @@ def register_routes(app):
 
         delete_user_by_id(user_id)
         return jsonify({'message': f"User {user_id} deleted"}), 200        
-
 
 
