@@ -37,6 +37,9 @@ instance.interceptors.response.use(
     },
 
     function (error) {
+        console.error("Full error object:", error); // Log the entire error
+        console.error("Error code:", error.code);   // Log the error code (e.g., 'ERR_NETWORK')
+        console.error("Error message:", error.message);
         if (error.response.status === 401) {
             removeToken()
             window.location.href = '/'

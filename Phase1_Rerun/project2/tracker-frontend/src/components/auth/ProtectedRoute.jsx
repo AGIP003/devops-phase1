@@ -1,9 +1,9 @@
 import { getToken } from "../../utils/auth";
+import { Navigate } from "react-router-dom";
 
 function ProtectedRoute({ children }) {
     if (!getToken()) {
-        window.location.href = '/';
-        return null;
+        return <Navigate to="/" replace />;
     }
     return children;
 }

@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { saveToken } from "../../utils/auth";
+import { getToken, saveToken } from "../../utils/auth";
 import api from '../../services/api'
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
 //useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
 //The convention is to name state variables like [something, setSomething] using array destructuring.
 // initial state value you want the state to be initially. React saves it once and ignores in the next  render
 // use state return an array with exactly two values; current state and set function
-function LoginForm({ onLoginSuccess }) {
+function LoginForm() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (getToken()) {
+            navigate('/dashboard');
+        }
+    }, [navigate]);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -31,6 +40,7 @@ function LoginForm({ onLoginSuccess }) {
         return '';
     }
 
+    
     async function handleSubmit(e) {
         //Prevent page reload
         e.preventDefault();
@@ -49,7 +59,7 @@ function LoginForm({ onLoginSuccess }) {
             //API call
             const response = await api.post('/auth/login', formData);
             saveToken(response.data.token);
-            if (onLoginSuccess) onLoginSuccess()
+            navigate('/dashboard');
             setSuccessMessage('Login Successful');
             console.log(response)
         } catch (err) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
-
+import { Navigate, useNavigate } from "react-router-dom";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -36,10 +36,11 @@ function Dashboard() {
     }, [])
 
     const username = getUsernameFromToken();
+    const navigate = useNavigate();
     return (
         <div>
             <h1>Welcome, {username} </h1>
-            <button onClick={() => { removeToken(); window.location.href = '/'; }}>Logout</button>
+            <button onClick={() => { removeToken(); navigate('/'); }}>Logout</button>
 
             {loading && <p>Loading...</p>}
             {error && ( 
