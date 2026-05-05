@@ -12,7 +12,7 @@ const VITE_API_URL = import.meta.env.VITE_API_URL;
 const instance = axios.create({
     baseURL: VITE_API_URL,
     timeout: 10000,
-    headers: { "Content-Type": "application/json " }
+    headers: { "Content-Type": "application/json" }
 })
 
 //Interceptors are powerful mechanism that can be used to intercept and modify HTTP requests and responses.
@@ -40,7 +40,7 @@ instance.interceptors.response.use(
         console.error("Full error object:", error); // Log the entire error
         console.error("Error code:", error.code);   // Log the error code (e.g., 'ERR_NETWORK')
         console.error("Error message:", error.message);
-        if (error.response.status === 401) {
+        if (error.response?.status === 401) {
             removeToken()
             window.location.href = '/'
         }

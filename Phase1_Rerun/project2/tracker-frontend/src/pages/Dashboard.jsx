@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
 import { Navigate, useNavigate } from "react-router-dom";
+import DeleteButton from "../components/auth/DeleteButton";
+import AddTransactionForm from "../components/auth/AddTransactionForm";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -17,10 +19,9 @@ function Dashboard() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showForm, setShowForm] = useState(false);
 
-    useEffect(() => {
-        //Define async function inside
-        async function fetchTransaction() {
+    async function fetchTransactions() {
             setLoading(true);
             setError(''); // reset the previous errors     nm 
             try {
@@ -32,7 +33,8 @@ function Dashboard() {
                 setLoading(false);
             }
         }
-        fetchTransaction()
+    useEffect(() => {
+        fetchTransactions();
     }, [])
 
     const username = getUsernameFromToken();
@@ -40,8 +42,17 @@ function Dashboard() {
     return (
         <div>
             <h1>Welcome, {username} </h1>
+           
+            <button onClick={() => setShowForm(prev => !prev)}>
+                {showForm ? 'Cancel' : 'Add Transaction'}
+            </button>
             <button onClick={() => { removeToken(); navigate('/'); }}>Logout</button>
-
+            {showForm && (
+                <AddTransactionForm onSuccess={() => {
+                    fetchTransactions();
+                    setShowForm(false);
+                }} />
+            )}
             {loading && <p>Loading...</p>}
             {error && ( 
                 <p style={{ color: 'red' }}>
@@ -55,6 +66,7 @@ function Dashboard() {
                             <th>Date</th>
                             <th>Description</th>
                             <th>Amount</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,6 +75,12 @@ function Dashboard() {
                                 <td>{tx.date}</td>
                                 <td>{tx.description}</td>
                                 <td>{tx.amount}</td>
+                                <td>
+                                    <DeleteButton 
+                                        transactionId={tx.id} 
+                                        onDeleted={fetchTransactions} 
+                                    />
+                                </td>
                             </tr>
                         ))}
                     </tbody>
