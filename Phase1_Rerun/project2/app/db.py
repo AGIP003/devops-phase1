@@ -22,7 +22,7 @@ def get_payment_method_id(payment_method_name):
     finally:
         conn.close()
 
-def get_category_id(category_name, user_id):
+def get_category_id(category_name, user_id, category_type=None):
     """Convert category string to its database ID"""
     conn = get_db_connection()
     try:
@@ -32,6 +32,17 @@ def get_category_id(category_name, user_id):
                 (category_name, user_id)
             )
             row = cursor.fetchone()
+            if not row and category_type:
+                cursor.execute(
+                    """
+                    INSERT INTO categories (user_id, name, type)
+                    VALUES (%s, %s, %s)
+                    RETURNING id
+                    """,
+                    (user_id, category_name, category_type)
+                )
+                row = cursor.fetchone()
+                conn.commit()
             if not row:
                 raise ValueError(f"Category '{category_name}' not found for user {user_id}")
             return row['id']
@@ -128,10 +139,10 @@ def create_transactions(data):
             cursor.execute(
                 """
                 INSERT INTO transactions 
-                    (user_id, category_id, payment_method_id, amount, date, description, type, created_at)
+                    (user_id, category_id, payment_method_id, amount, date, description, created_at)
                 VALUES
                     (%(user_id)s, %(category_id)s, %(payment_method_id)s,
-                     %(amount)s, %(date)s, %(description)s, %(type)s, CURRENT_TIMESTAMP)
+                     %(amount)s, %(date)s, %(description)s, CURRENT_TIMESTAMP)
                 RETURNING *
                 """,
                 data,
@@ -149,7 +160,6 @@ ALLOWED_UPDATE_FIELDS = {
     "amount",
     "date",
     "description",
-    "type",
     "category_id",
     "payment_method_id",
 }

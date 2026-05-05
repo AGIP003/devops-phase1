@@ -67,14 +67,14 @@ def migrate_json_to_postgres(json_filePath):
 
                 #Transaction
                 insert_transaction(cursor, {
-                    "user_id": user_id,
-                    "category_id": category_id,
-                    "payment_method_id": method_id,
-                    "amount": txn["amount"],
-                    "date": txn["date"],
-                    "description": txn.get("description"),
-                    "created_at": txn.get("created_at")
-                })
+                        "user_id": user_id,
+                        "category_id": category_id,
+                        "payment_method_id": method_id,
+                        "amount": txn["amount"],
+                        "date": txn["date"],
+                        "description": txn.get("description"),
+                        "created_at": txn.get("created_at")
+                    })
 
             except Exception as e:
                 print(f"Error in inserting the transactions: {txn.get('description')}:{e}")

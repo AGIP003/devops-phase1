@@ -8,6 +8,7 @@ import os
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
+from flask_cors import CORS
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")

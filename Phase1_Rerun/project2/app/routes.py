@@ -1,4 +1,5 @@
 from flask import request, jsonify, abort, g
+from werkzeug.exceptions import HTTPException
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
@@ -49,7 +50,7 @@ def register_routes(app):
             # Now lookup the IDs from database
             try:
                 user_id = g.current_user["user_id"]
-                category_id = get_category_id(category_name, user_id)
+                category_id = get_category_id(category_name, user_id, txn_type)
                 payment_method_id = get_payment_method_id(payment_method)
             except ValueError as e:
                 abort(400, description=str(e))
@@ -61,14 +62,15 @@ def register_routes(app):
                 "payment_method_id": payment_method_id,
                 "amount": amount,
                 "date": date,
-                "description": description,
-                "type": txn_type
+                "description": description
             }
             saved_record = create_transactions(db_data)
             return jsonify({"data": saved_record, "status": "success"}), 201
             
         except ValidationError as e:
             abort(400, description=str(e))
+        except HTTPException:
+            raise
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
        
@@ -129,17 +131,17 @@ def register_routes(app):
             if "amount" in data:
                 validated_updates["amount"] = validate_amount(data["amount"])
             
+            txn_type = None
             if "type" in data:
-                validated_updates["type"] = validate_transaction_type(data["type"])
+                txn_type = validate_transaction_type(data["type"])
             
             if "category" in data:
                 # If updating category, we need the type
                 # Use the updated type if provided, otherwise require it
-                txn_type = validated_updates.get("type")
                 if not txn_type:
                     abort(400, description="Must provide 'type' when updating 'category'")
                 validated_category = validate_category(txn_type, data["category"])
-                category_id = get_category_id(validated_category, user_id)
+                category_id = get_category_id(validated_category, user_id, txn_type)
                 validated_updates["category_id"] = category_id
             
             if "date" in data:
@@ -172,6 +174,8 @@ def register_routes(app):
             abort(400, description=str(e))
         except ValueError as e:
             abort(400, description=str(e))
+        except HTTPException:
+            raise
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
       
@@ -205,5 +209,3 @@ def register_routes(app):
 
         delete_user_by_id(user_id)
         return jsonify({'message': f"User {user_id} deleted"}), 200        
-
-
