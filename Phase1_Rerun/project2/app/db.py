@@ -58,15 +58,30 @@ def get_db_connection():
             password=os.getenv('DB_PASSWORD')
     )   
 
+TRANSACTION_SELECT = """
+    SELECT
+        t.id,
+        t.user_id,
+        t.date,
+        t.description,
+        c.type,
+        c.name AS category,
+        t.amount,
+        pm.name AS payment_method
+    FROM transactions t
+    LEFT JOIN categories c ON t.category_id = c.id
+    LEFT JOIN payment_methods pm ON t.payment_method_id = pm.id
+"""
+
 def search_transactions(query_text, user_id):
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                """
-                SELECT * 
-                FROM transactions
-                WHERE  LOWER(COALESCE(description, '')) ILIKE LOWER(%s) AND user_id = %s
+                TRANSACTION_SELECT + """
+                WHERE LOWER(COALESCE(t.description, '')) ILIKE LOWER(%s)
+                    AND t.user_id = %s
+                ORDER BY t.date DESC
                 """,
                 (f"%{query_text}%", user_id)
             )
@@ -87,7 +102,10 @@ def get_all_transactions_for_user(user_id):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute(
-                "SELECT * FROM transactions WHERE user_id = %s ORDER BY date DESC",
+                TRANSACTION_SELECT + """
+                WHERE t.user_id = %s
+                ORDER BY t.date DESC
+                """,
                 (user_id,)
             )
             rows = cursor.fetchall()
@@ -103,7 +121,7 @@ def get_all_transactions():
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
             
-            cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
+            cursor.execute(TRANSACTION_SELECT + " ORDER BY t.date DESC")
             
             rows = cursor.fetchall()
         conn.commit()
@@ -118,12 +136,10 @@ def db_get_transaction_by_id(txn_id):
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute("SELECT * FROM transactions WHERE id = %s",
+            cursor.execute(TRANSACTION_SELECT + " WHERE t.id = %s",
                            (txn_id,)
                            )
             rows = cursor.fetchone()
-            if rows is None:
-                raise RuntimeError("Failed to retrieve the transaction")
         conn.commit()
         return rows
     except Exception as e:
@@ -149,7 +165,7 @@ def create_transactions(data):
                 )
             row = cursor.fetchone()
             conn.commit()
-        return row
+        return db_get_transaction_by_id(row["id"])
     except Exception as e:
         conn.rollback()
         raise e
@@ -175,7 +191,7 @@ def update_transactions(txn_id, updates):
     if not set_parts:
         return None
     
-    query = f"UPDATE transactions set {', '.join(set_parts)} WHERE id = %s RETURNING *"
+    query = f"UPDATE transactions set {', '.join(set_parts)} WHERE id = %(id)s RETURNING id"
     params = {**updates, "id": txn_id}
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -183,7 +199,7 @@ def update_transactions(txn_id, updates):
             row = cursor.fetchone()
             conn.commit()
         if row:
-            return row, None     
+            return db_get_transaction_by_id(row["id"]), None     
         else:
             return None, "Transaction not found"   
     except Exception as e:
