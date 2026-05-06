@@ -77,44 +77,55 @@ function AddTransactionForm({ onSuccess }) {
       "bank transfer", "debit card", "credit card", "paypal"
     ];
     return(
-        <div>
+        <div className="add-transaction-panel">
             <h3>Add Transaction</h3>
-            <form onSubmit={handleSubmit}>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                />
-                <input
-                  type="text"
-                  name="description"
-                  placeholder="Description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                />
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Select type</option>
-                  <option value="income">Income</option>
-                  <option value="expense">Expense</option>
-                </select>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  disabled={loading || !formData.type}
-                  required
-                >
+            <form className="add-transaction-form" onSubmit={handleSubmit}>
+                <label className="transaction-field">
+                  <span>Date</span>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    disabled={loading}
+                    required
+                  />
+                </label>
+                <label className="transaction-field transaction-field-wide">
+                  <span>Description</span>
+                  <input
+                    type="text"
+                    name="description"
+                    placeholder="e.g. Lunch, salary, fuel"
+                    value={formData.description}
+                    onChange={handleChange}
+                    disabled={loading}
+                    required
+                  />
+                </label>
+                <label className="transaction-field">
+                  <span>Type</span>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleChange}
+                    disabled={loading}
+                    required
+                  >
+                    <option value="">Select type</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                </label>
+                <label className="transaction-field">
+                  <span>Category</span>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    disabled={loading || !formData.type}
+                    required
+                  >
 
                   <option value="">{formData.type ? "Select category" : "Select income/expense type first"}</option>
                   {currentCategories.map((cat) => (
@@ -122,35 +133,42 @@ function AddTransactionForm({ onSuccess }) {
                       {cat}
                     </option>
                   ))}
-                </select>
-                <input
-                  type="number"
-                  name="amount"
-                  placeholder="Amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                />
+                  </select>
+                </label>
+                <label className="transaction-field">
+                  <span>Amount</span>
+                  <input
+                    type="number"
+                    name="amount"
+                    placeholder="0"
+                    value={formData.amount}
+                    onChange={handleChange}
+                    disabled={loading}
+                    required
+                  />
+                </label>
 
-                <select
-                  name="payment_method"   // matches state key
-                  value={formData.payment_method}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                >
-                  <option value="">Select payment method</option>
-                  {paymentMethodOptions.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
-                  ))}
-                </select>
+                <label className="transaction-field">
+                  <span>Payment method</span>
+                  <select
+                    name="payment_method"   // matches state key
+                    value={formData.payment_method}
+                    onChange={handleChange}
+                    disabled={loading}
+                    required
+                  >
+                    <option value="">Select payment method</option>
+                    {paymentMethodOptions.map((method) => (
+                      <option key={method} value={method}>
+                        {method}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                {success && <p style={{ color: 'green' }}>{success}</p>}
-                <button type="submit" disabled={loading}>
+                {error && <p className="transaction-form-message transaction-form-error">{error}</p>}
+                {success && <p className="transaction-form-message transaction-form-success">{success}</p>}
+                <button className="transaction-submit-button" type="submit" disabled={loading}>
                   {loading ? 'Adding...' : 'Add Transaction'}
                 </button>
             </form>

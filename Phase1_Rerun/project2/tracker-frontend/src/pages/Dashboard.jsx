@@ -30,9 +30,9 @@ function Dashboard() {
         //Search filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            const matchesDesc = transactions.description?.toLowerCase().includes(query);
-            const matchesCat = transactions.category?.toLowerCase().includes(query);
-            const matchesPM = transactions.payment_method?.toLowerCase().includes(query);
+            const matchesDesc = transaction.description?.toLowerCase().includes(query);
+            const matchesCat = transaction.category?.toLowerCase().includes(query);
+            const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
             if (!matchesCat && !matchesDesc && !matchesPM) return false;
         }
 
@@ -40,9 +40,18 @@ function Dashboard() {
     });
 
     //summary cards
-    const totalAmount = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const incomeTotal = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const expenseTotal = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const totalAmount = filteredTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const incomeTotal = filteredTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const expenseTotal = filteredTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const currencyFormatter = new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES',
+        maximumFractionDigits: 0,
+    });
 
     //Fetch transactions
     async function fetchTransactions() {
@@ -79,32 +88,50 @@ function Dashboard() {
     const username = getUsernameFromToken();
     const navigate = useNavigate();
     return (
-        <div>
-            <h1>Welcome, {username} </h1>
-
-            <p> Showing {filteredTransactions.length} of {transactions.length} transactions</p>
-            <div style={{ display: '', gap: '1rem' }}>
-                <div>Total: KES {totalAmount}</div>
-                <div>Income: KES{incomeTotal}</div>
-                <div>Expense: KES{expenseTotal}</div>
+        <div className="dashboard-page">
+            <div className="dashboard-header">
+                <div>
+                    <h1>Welcome, {username} </h1>
+                    <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>
+                </div>
             </div>
 
-            <input
-                type='text'
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                <option value="all">All</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-            </select>
+            <div className="summary-grid">
+                <div className="summary-card summary-card-total">
+                    <span>Total</span>
+                    <strong>{currencyFormatter.format(totalAmount)}</strong>
+                    <small>Current view</small>
+                </div>
+                <div className="summary-card summary-card-income">
+                    <span>Income</span>
+                    <strong>{currencyFormatter.format(incomeTotal)}</strong>
+                    <small>{filteredTransactions.filter(t => t.type === 'income').length} transactions</small>
+                </div>
+                <div className="summary-card summary-card-expense">
+                    <span>Expense</span>
+                    <strong>{currencyFormatter.format(expenseTotal)}</strong>
+                    <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
+                </div>
+            </div>
 
-            <button onClick={() => setShowForm(prev => !prev)}>
-                {showForm ? 'Cancel' : 'Add Transaction'}
-            </button>
-            <button onClick={() => { removeToken(); navigate('/'); }}>Logout</button>
+            <div className="dashboard-toolbar">
+                <input
+                    type='text'
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                    <option value="all">All</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                </select>
+
+                <button onClick={() => setShowForm(prev => !prev)}>
+                    {showForm ? 'Cancel' : 'Add Transaction'}
+                </button>
+                <button onClick={() => { removeToken(); navigate('/'); }}>Logout</button>
+            </div>
             {showForm && (
                 <AddTransactionForm onSuccess={() => {
                     fetchTransactions();
