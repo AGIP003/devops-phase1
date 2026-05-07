@@ -4,6 +4,7 @@ import { getToken, removeToken } from "../utils/auth";
 import { Navigate, useNavigate } from "react-router-dom";
 import DeleteButton from "../components/auth/DeleteButton";
 import AddTransactionForm from "../components/auth/AddTransactionForm";
+import { useMemo } from "react";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -75,9 +76,9 @@ function Dashboard() {
     function TransactionSkelton() {
         return (
             <tr>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#1e293b', borderRadius: '4px', width: '80px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
                 <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#1e293b', borderRadius: '4px', width: '120px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
                 <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
                 <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
                 <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
@@ -85,7 +86,9 @@ function Dashboard() {
             </tr>
         )
     }
-    const username = getUsernameFromToken();
+    //useMemo catches the results and only computes when dependencies change
+    //USED WHEN COMPUTING IS EXPENSIVE OR WANT GUARANTTEE IT ONLY RUNS ONCE
+    const username = useMemo (() => getUsernameFromToken(), []);
     const navigate = useNavigate();
     return (
         <div className="dashboard-page">
@@ -143,7 +146,7 @@ function Dashboard() {
             {loading && <p>Loading...</p>}
             {error && (
                 <p style={{ color: 'red' }}>
-                    Error: {error} <button onClick={() => window.location.reload()}>Retry</button>
+                    Error: {error} <button onClick={fetchTransactions}>Retry</button>
                 </p>
             )}
 
