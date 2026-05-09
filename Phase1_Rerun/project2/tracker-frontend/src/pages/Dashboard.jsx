@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import DeleteButton from "../components/auth/DeleteButton";
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo } from "react";
+import ChartsSection from "../components/auth/ChartsSection";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -72,8 +73,13 @@ function Dashboard() {
         fetchTransactions();
     }, [])
 
+    function ChartSection({ transactions }) {
+        if (transactions.length === 0 ) return null // to avoid rendering empty charts
+    }
+
     //SkeltonRow
     function TransactionSkelton() {
+
         return (
             <tr>
                 <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
@@ -116,6 +122,12 @@ function Dashboard() {
                     <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
                 </div>
             </div>
+            
+            <ChartsSection 
+            transactions={filteredTransactions} 
+            filterType={filterType}
+            
+            />
 
             <div className="dashboard-toolbar">
                 <input
@@ -166,6 +178,7 @@ function Dashboard() {
                     <tbody>
                         {loading ? (
                             [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
+                            
                         ) : filteredTransactions.length === 0 ? (
                             <tr>
                                 <td colSpan={7} style={{ textAlign: 'center' }}>

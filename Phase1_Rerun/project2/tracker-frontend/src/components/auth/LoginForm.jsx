@@ -64,6 +64,11 @@ function LoginForm() {
             console.log(response)
         } catch (err) {
             setErrorMessage(err.message);
+            setFormData((prevFormData) => ({
+                ...prevFormData,
+                password: ''
+            }));
+            
         } finally {
             setLoading(false);
         }

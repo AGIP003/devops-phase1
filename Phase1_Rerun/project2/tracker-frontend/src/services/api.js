@@ -40,7 +40,7 @@ instance.interceptors.response.use(
         console.error("Full error object:", error); // Log the entire error
         console.error("Error code:", error.code);   // Log the error code (e.g., 'ERR_NETWORK')
         console.error("Error message:", error.message);
-        if (error.response?.status === 401) {
+        if (error.response?.status === 401 && !error.config.url.includes('/auth/login')) {
             removeToken()
             window.location.href = '/'
         }
