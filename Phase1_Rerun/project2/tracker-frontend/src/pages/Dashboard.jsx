@@ -6,6 +6,7 @@ import DeleteButton from "../components/auth/DeleteButton";
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo } from "react";
 import ChartsSection from "../components/auth/ChartsSection";
+import { Eye,  EyeOff } from "lucide-react";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -96,6 +97,19 @@ function Dashboard() {
     //USED WHEN COMPUTING IS EXPENSIVE OR WANT GUARANTTEE IT ONLY RUNS ONCE
     const username = useMemo (() => getUsernameFromToken(), []);
     const navigate = useNavigate();
+
+    //Privacy feature
+    const [hideAmounts, setHideAmounts] = useState(() => {
+        return localStorage.getItem("hideAmounts") === "true";
+    });
+    //update from the value in localstorage
+    function toggleHideAmounts() {
+        setHideAmounts(prev => {
+            const nextValue = !prev;
+            localStorage.setItem("hideAmounts", String(nextValue));
+            return nextValue;
+        });
+    }
     return (
         <div className="dashboard-page">
             <div className="dashboard-header">
@@ -105,29 +119,40 @@ function Dashboard() {
                 </div>
             </div>
 
-            <div className="summary-grid">
-                <div className="summary-card summary-card-total">
-                    <span>Total</span>
-                    <strong>{currencyFormatter.format(totalAmount)}</strong>
-                    <small>Current view</small>
+            <div className="dashboard-overview">
+                <div className="summary-grid">
+                    <div className="summary-card summary-card-total">
+                        
+                        <button 
+                            type="button"
+                            className="summary-privacy-toggle"
+                            onClick={toggleHideAmounts}
+                            aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
+                        >
+                            {hideAmounts ? <Eye size={16} /> : <EyeOff size ={16} />}       
+                        </button>
+                        <span>Total</span>
+                        <strong>{hideAmounts ? "••••••" : currencyFormatter.format(totalAmount)}</strong>
+                        <small>Current view</small>
+                    </div>
+                    <div className="summary-card summary-card-income">
+                        <span>Income</span>
+                        <strong>{hideAmounts ? "••••••" :currencyFormatter.format(incomeTotal)}</strong>
+                        <small>{filteredTransactions.filter(t => t.type === 'income').length} transactions</small>
+                    </div>
+                    <div className="summary-card summary-card-expense">
+                        <span>Expense</span>
+                        <strong>{hideAmounts ? "••••••" :currencyFormatter.format(expenseTotal)}</strong>
+                        <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
+                    </div>
                 </div>
-                <div className="summary-card summary-card-income">
-                    <span>Income</span>
-                    <strong>{currencyFormatter.format(incomeTotal)}</strong>
-                    <small>{filteredTransactions.filter(t => t.type === 'income').length} transactions</small>
-                </div>
-                <div className="summary-card summary-card-expense">
-                    <span>Expense</span>
-                    <strong>{currencyFormatter.format(expenseTotal)}</strong>
-                    <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
-                </div>
+
+                <ChartsSection
+                    transactions={filteredTransactions}
+                    filterType={filterType}
+                   
+                />
             </div>
-            
-            <ChartsSection 
-            transactions={filteredTransactions} 
-            filterType={filterType}
-            
-            />
 
             <div className="dashboard-toolbar">
                 <input

@@ -44,8 +44,8 @@ def validate_category(txn_type, category):
     clean_type = str(txn_type or "").strip().lower()
     clean_cat = str(category or "").strip().lower()
     allowed_pairs = {
-        'income' : ["salary", "business", "freelance", "loan", "investments", "gifts", "other income"],
-        'expense' : ["rent", "utilities", "food", "transport", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black tax", "other expense"]
+        'income' : ["salary", "business", "freelance", "loan", "investments", "gifts", "debts_paid", "other_income"],
+        'expense' : ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black_tax", "other_expense"]
     }
     
     allowed_for_type = allowed_pairs.get(clean_type, [])
@@ -137,7 +137,6 @@ def validate_payment_method(payment_method):
     
     logger.debug(f"Validated payment method: {clean_pm}")
     return clean_pm
-
 
 
 
