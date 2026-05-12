@@ -88,10 +88,6 @@ function Dashboard() {
         fetchTransactions();
     }, [])
 
-    function ChartSection({ transactions }) {
-        if (transactions.length === 0 ) return null // to avoid rendering empty charts
-    }
-
     //SkeltonRow
     function TransactionSkelton() {
 
@@ -224,45 +220,68 @@ function Dashboard() {
                     />
                 </div>
             </div>
-            
-            <section className="recent-card">
-                <div className="section-heading">
-                    <div>
-                        <h2>Recent Transactions</h2>
-                    </div>
-
-                    <button type="button">
-                        View all
-                    </button>
-                </div>
-
-                <div className="recent-table-head">
-                    <span>S/N</span>
-                    <span>Transaction</span>
-                    <span>Amount</span>
-                </div>
-
-                <div className="recent-list">
-                    {recentTransactions.map((tx, index) => (
-                        <div className="recent-row" key={tx.id}>
-                            <span className="recent-index">
-                                {String(index + 1)}
-                            </span>
-                    
-                            <div className="recent-main">
-                                <strong>{tx.description}</strong>
-                                <span>{tx.category} • {dateFormatter.format(new Date(tx.date))}</span>
+            <div className="dashboard-main-grid">
+                <div className="dashboard-bills-recent">
+                    <section className="recent-card">
+                        <div className="section-heading">
+                            <div>
+                                <h2>Recent Transactions</h2>
                             </div>
-                    
-                            <span className={`recent-amount recent-amount-${tx.type}`}>
-                                {tx.type === 'expense' ? '-' : '+'}
-                                {currencyFormatter.format(Number(tx.amount || 0))}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </section>
 
+                            <button type="button">
+                                View all
+                            </button>
+                        </div>
+
+                        <div className="recent-table-head">
+                            <span>S/N</span>
+                            <span>Description</span>
+                            <span>Category</span>
+                            <span>Date</span>
+                            <span>Amount</span>
+                        </div>
+
+                        <div className="recent-list">
+                            {loading ? (
+                            [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
+                            ) : recentTransactions.map((tx, index) => (
+                                <div className="recent-row" key={tx.id}>
+                                    <span className="recent-index">
+                                        {String(index + 1)}
+                                    </span>
+                            
+                                    <span className="recent-description">{tx.description}</span>
+
+                                    <span className="recent-category">{tx.category}</span>
+
+                                    <span className="recent-date">
+                                        {dateFormatter.format(new Date(tx.date))}
+                                    </span>
+                            
+                                    <span className={`recent-amount recent-amount-${tx.type}`}>
+                                        {tx.type === 'expense' ? '-' : '+'}
+                                        {currencyFormatter.format(Number(tx.amount || 0))}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                    <aside className="dashboard-side-stack">
+
+                        <section className="bills-card">
+                            <div className="section-heading">
+                                <div>
+                                    <h2>Bills & Subscription</h2>
+                                    <p>Upcoming recurring payments</p>
+                                </div>
+                            </div>
+                            <div className="bills-placeholder">
+                                No bills added yet
+                            </div>
+                        </section>
+                    </aside>
+                </div>
+            </div>
             <div className="dashboard-toolbar">
                 <input
                     type='text'

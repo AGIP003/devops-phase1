@@ -338,13 +338,27 @@ body {
   gap: 0.55rem;
 }
 
+.recent-date,
+.recent-description,
+.recent-category {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.recent-table-head span:last-child,
+.recent-amount {
+  text-align: right;
+  justify-self: end; 
+}
 .recent-row {
   align-items: center;
   border-bottom: 1px solid rgba(223, 229, 220, 0.75);
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  padding: 0.85rem 0.75rem;
+  grid-template-columns: 36px minmax(100px, 1fr) minmax(100px, 1fr) minmax(90px, 1fr) minmax(90px, 0.6fr);
+  padding: 0.5rem 0.75rem;
 }
 
 .recent-row:last-child {
@@ -367,10 +381,44 @@ body {
   font-size: 0.75rem;
   font-weight: 800;
   gap: 0.75rem;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(100px, 1fr) minmax(100px, 1.2fr) minmax(90px, 1fr) minmax(90px, 0.6fr);
   margin-bottom: 0.35rem;
   padding: 0 0.75rem 0.65rem;
   text-transform: uppercase;
+}
+
+.dashboard-main-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-bills-recent {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+}
+.dashboard-side-stack {
+  display: grid;
+  gap: 1rem;
+}
+.bills-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-main);
+  padding: 1rem;
+}
+
+.bills-placeholder {
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  color: var(--text-muted);
+  padding: 1rem;
+  text-align: center;
 }
 
 .dashboard-toolbar input,
@@ -387,6 +435,8 @@ body {
 .dashboard-toolbar input {
   min-width: min(320px, 100%);
 }
+
+
 
 .add-transaction-panel {
   background: #f8fafc;
@@ -500,6 +550,10 @@ body {
     width: 100%;
   }
 
+  .dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-header-actions input {
     min-width: 100%;
   }
@@ -507,6 +561,11 @@ body {
   .donut-chart {
     grid-template-columns: 1fr;
   }
+
+  .dashboard-bills-recent {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-overview {
     grid-template-columns: 1fr;
   }
