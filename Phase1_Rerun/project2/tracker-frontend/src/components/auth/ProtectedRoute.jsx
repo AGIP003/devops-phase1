@@ -1,9 +1,12 @@
 import { getToken } from "../../utils/auth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 function ProtectedRoute({ children }) {
-    if (!getToken()) {
-        return <Navigate to="/" replace />;
+    const token = getToken();
+    const location = useLocation();
+
+    if (!token) {
+        return <Navigate to="/" state={{ from: location }} replace />;
     }
     return children;
 }

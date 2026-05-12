@@ -5,7 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import DeleteButton from "../components/auth/DeleteButton";
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo } from "react";
-import ChartsSection from "../components/auth/ChartsSection";
+import ChartsSection from "../components/ui/ChartsSection";
 import { Eye,  EyeOff } from "lucide-react";
 
 function getUsernameFromToken() {
