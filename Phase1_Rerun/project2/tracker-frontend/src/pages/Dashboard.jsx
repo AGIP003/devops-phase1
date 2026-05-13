@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
 import { Navigate, useNavigate } from "react-router-dom";
-import DeleteButton from "../components/auth/DeleteButton";
+
 import AddTransactionForm from "../components/auth/AddTransactionForm";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import ChartsSection from "../components/ui/ChartsSection";
-import { Eye,  EyeOff } from "lucide-react";
+
+import SummaryCards from "../components/ui/SummaryCard";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -31,7 +32,7 @@ function Dashboard() {
 
 
     //Derived filtered list
-    const filteredTransactions = transactions.filter(transaction => {
+    const filteredTransactions = useMemo(() => {transactions.filter(transaction => {
         //Type filter
         if (filterType !== 'all' && transaction.type !== filterType) return false;
         //Search filter
@@ -44,7 +45,7 @@ function Dashboard() {
         }
 
         return true;
-    });
+    })}, [transactions, filterType, searchQuery]);
     
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
@@ -55,23 +56,10 @@ function Dashboard() {
         month: 'short',
         year: "numeric",
     });
-
-    //summary cards
-    const totalAmount = filteredTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const incomeTotal = filteredTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const expenseTotal = filteredTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const currencyFormatter = new Intl.NumberFormat('en-KE', {
-        style: 'currency',
-        currency: 'KES',
-        maximumFractionDigits: 0,
-    });
+    
 
     //Fetch transactions
-    async function fetchTransactions() {
+    const fetchTransactions = useCallback(async () => {
         setLoading(true);
         setError(''); // reset the previous errors     
         try {
@@ -83,7 +71,7 @@ function Dashboard() {
         } finally {
             setLoading(false);
         }
-    }
+    }, []);
     useEffect(() => {
         fetchTransactions();
     }, [])
@@ -106,7 +94,13 @@ function Dashboard() {
     //useMemo catches the results and only computes when dependencies change
     //USED WHEN COMPUTING IS EXPENSIVE OR WANT GUARANTTEE IT ONLY RUNS ONCE
     const username = useMemo (() => getUsernameFromToken(), []);
-   
+    
+    //summary cards
+    const currencyFormatter = new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES',
+        maximumFractionDigits: 0,
+    });
 
     //Privacy feature
     const [hideAmounts, setHideAmounts] = useState(() => {
@@ -178,37 +172,11 @@ function Dashboard() {
                 </div>
             </div>
             <div className="dashboard-overview">
-                <div className="summary-grid">
-                    <div className="summary-card summary-card-total">
-                        
-                        <button 
-                            type="button"
-                            className="summary-privacy-toggle"
-                            onClick={toggleHideAmounts}
-                            aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
-                        >
-                            {hideAmounts ? <Eye size={16} /> : <EyeOff size ={16} />}       
-                        </button>
-                        <span>Total</span>
-                        <strong>{hideAmounts ? "••••••" : currencyFormatter.format(totalAmount)}</strong>
-                        <small>Current view</small>
-                    </div>
-                    <div className="summary-card summary-card-income">
-                        <span>Income</span>
-                        <strong>{hideAmounts ? "••••••" :currencyFormatter.format(incomeTotal)}</strong>
-                        <small>{filteredTransactions.filter(t => t.type === 'income').length} transactions</small>
-                    </div>
-                    <div className="summary-card summary-card-expense">
-                        <span>Expense</span>
-                        <strong>{hideAmounts ? "••••••" :currencyFormatter.format(expenseTotal)}</strong>
-                        <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
-                    </div>
-                    <div className = "summary-card summary-card-goal">
-                        <span>Goal</span>
-                        <strong>{hideAmounts ? "••••••" : "Not set"}</strong>
-                        <small>Coming Soon</small>         
-                    </div>
-                </div>
+                <SummaryCards
+                    filteredTransactions = {filteredTransactions}
+                    hideAmounts = {hideAmounts}
+                    currencyFormatter = {currencyFormatter}
+                />
                 <div className="dashboard-charts-row">
                     <div className="chart-card chart-card-placeholder">
                         <h3>Monthly Trend</h3>
@@ -216,7 +184,8 @@ function Dashboard() {
                     </div>
                     <ChartsSection
                         transactions={filteredTransactions}
-                        filterType={filterType}                   
+                        filterType={filterType}     
+                        toggleHideAmounts={toggleHideAmounts}              
                     />
                 </div>
             </div>
@@ -283,12 +252,6 @@ function Dashboard() {
                 </div>
             </div>
             <div className="dashboard-toolbar">
-                <input
-                    type='text'
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
                 <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                     <option value="all">All</option>
                     <option value="income">Income</option>

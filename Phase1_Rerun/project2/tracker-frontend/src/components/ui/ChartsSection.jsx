@@ -26,7 +26,7 @@ function CategoryPieChart({ transactions, filterType }) {
         //Toolformatter shows what appears when you hover over a slice. Without it shows raw numbers
         <div className="donut-chart">
             <ResponsiveContainer width="100%" height={240}>
-                <PieChart margin={{ top: 10, right: 28, bottom: 4, left: 8 }}>
+                <PieChart margin={{ top: 10, right: 13, bottom: 4, left: 8 }}>
                     <Pie
                         data={categoryData}
                         dataKey="value"

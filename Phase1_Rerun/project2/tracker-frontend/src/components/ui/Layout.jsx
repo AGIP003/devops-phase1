@@ -13,10 +13,26 @@ function Layout() {
     return (
         <div className="app-shell">
             <aside className="sidebar">
-                <div className="app-name">Finance Tracker</div>
-                <nav>
-                    <NavLink to="/dashboard">Dashboard</NavLink>
-                    <NavLink to="/transactions">Transactions</NavLink>
+                <div className="sidebar-brand">
+                    <div className="brand-mark">F</div>
+                    <div>
+                        <strong>Finance</strong>
+                        <span>Tracker</span>
+                    </div>
+                </div>
+                <nav className="sidebar-nav">
+                    <NavLink 
+                        to="/dashboard"
+                        className={({ isActive }) => isActive ? "sidebar-link active": "sidebar-link"}
+                    >
+                        Dashboard
+                    </NavLink>
+                    <NavLink 
+                        to="/transactions"
+                        className={({ isActive }) => isActive ? "sidebar-link active": "sidebar-link"}
+                    >
+                        Transactions
+                    </NavLink>
                 </nav>
                 <button className="logout-btn" onClick={handleLogout}>Logout</button>
             </aside>
