@@ -463,6 +463,18 @@ body {
   border-bottom: 0;
 }
 
+.recent-row-skeleton {
+  pointer-events: none;
+}
+
+.recent-skeleton-block {
+  background: #e2e8f0;
+  border-radius: 999px;
+  display: block;
+  height: 18px;
+  min-width: 0;
+}
+
 .recent-index {
   align-items: center;
   background: #ffffff;

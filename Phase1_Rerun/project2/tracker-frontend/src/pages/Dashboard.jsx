@@ -32,7 +32,8 @@ function Dashboard() {
 
 
     //Derived filtered list
-    const filteredTransactions = useMemo(() => {transactions.filter(transaction => {
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(transaction => {
         //Type filter
         if (filterType !== 'all' && transaction.type !== filterType) return false;
         //Search filter
@@ -45,7 +46,8 @@ function Dashboard() {
         }
 
         return true;
-    })}, [transactions, filterType, searchQuery]);
+    })
+}, [transactions, filterType, searchQuery]);
     
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
@@ -76,19 +78,16 @@ function Dashboard() {
         fetchTransactions();
     }, [])
 
-    //SkeltonRow
-    function TransactionSkelton() {
-
+    // Skeleton row for the div-based recent transactions list.
+    function RecentTransactionSkeleton() {
         return (
-            <tr>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-            </tr>
+            <div className="recent-row recent-row-skeleton">
+                <span className="recent-index recent-skeleton-block" />
+                <span className="recent-description recent-skeleton-block" />
+                <span className="recent-category recent-skeleton-block" />
+                <span className="recent-date recent-skeleton-block" />
+                <span className="recent-amount recent-skeleton-block" />
+            </div>
         )
     }
     //useMemo catches the results and only computes when dependencies change
@@ -212,7 +211,7 @@ function Dashboard() {
 
                         <div className="recent-list">
                             {loading ? (
-                            [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
+                            [...Array(5)].map((_, i) => <RecentTransactionSkeleton key={i} />)
                             ) : recentTransactions.map((tx, index) => (
                                 <div className="recent-row" key={tx.id}>
                                     <span className="recent-index">
