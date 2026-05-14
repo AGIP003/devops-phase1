@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api from '../../services/api';
 
-function DeleteButton({ transactionId, onDeleted }) {
+function DeleteButton({ transactionId,  onDeleted }) {
     const [loading, setLoading] = useState(false);
 
     async function handleDelete(){
@@ -27,4 +27,4 @@ function DeleteButton({ transactionId, onDeleted }) {
     );
 }
 
-export default DeleteButton;
+

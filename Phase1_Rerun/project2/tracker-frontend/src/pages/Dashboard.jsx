@@ -23,7 +23,7 @@ function Dashboard() {
     const navigate = useNavigate();
     const accountMenuRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading  , setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -175,6 +175,7 @@ function Dashboard() {
                     filteredTransactions = {filteredTransactions}
                     hideAmounts = {hideAmounts}
                     currencyFormatter = {currencyFormatter}
+                    toggleHideAmounts = {toggleHideAmounts}
                 />
                 <div className="dashboard-charts-row">
                     <div className="chart-card chart-card-placeholder">
@@ -188,6 +189,12 @@ function Dashboard() {
                     />
                 </div>
             </div>
+            {showForm && (
+                            <AddTransactionForm onSuccess={() => {
+                                fetchTransactions();
+                                setShowForm(false);
+                            }} />
+                        )}
             <div className="dashboard-main-grid">
                 <div className="dashboard-bills-recent">
                     <section className="recent-card">
@@ -196,7 +203,10 @@ function Dashboard() {
                                 <h2>Recent Transactions</h2>
                             </div>
 
-                            <button type="button">
+                            <button 
+                                type="button"
+                                onClick={()=> navigate(`/transactions`)}
+                            >
                                 View all
                             </button>
                         </div>
@@ -208,6 +218,8 @@ function Dashboard() {
                             <span>Date</span>
                             <span>Amount</span>
                         </div>
+                        
+                        
 
                         <div className="recent-list">
                             {loading ? (
@@ -257,12 +269,7 @@ function Dashboard() {
                     <option value="expense">Expense</option>
                 </select>
             </div>
-            {showForm && (
-                <AddTransactionForm onSuccess={() => {
-                    fetchTransactions();
-                    setShowForm(false);
-                }} />
-            )}
+            
             
         </div>
 

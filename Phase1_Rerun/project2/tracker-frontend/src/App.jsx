@@ -7,7 +7,8 @@ import NotFound from './components/auth/NotFound';
 import { lazy, Suspense} from 'react';
 import Transaction from './pages/Transactions';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-
+import EditTransaction from './components/auth/EditTransaction';
+import Register from './components/auth/Register';
 function App() {
  
     return (
@@ -15,12 +16,15 @@ function App() {
           <Routes>
              {/* public routes */}
             <Route path='/' element={<LoginForm />} />
+            <Route path="/register" element={<Register />} />
 
              {/* protected routes – all share the same Layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
 
                 <Route path="/dashboard" element={<Dashboard />}/>
                 <Route path="/transactions" element={<Transaction />}/>
+                <Route path="transactions/edit/:id" element={<EditTransaction />} />
+                
             </Route>
 
              {/* 404 – catch all unmatched routes */}

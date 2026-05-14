@@ -1,23 +1,34 @@
-import DeleteButton from "../components/auth/DeleteButton";
-import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useCallback, useEffect, useRef,  useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import api from '../services/api';
+import { Navigate,useNavigate } from "react-router-dom";
 
 
 function Transaction  () {
+    const navigate = useNavigate();
     const [transactions, setTransactions] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState("all");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
+        year: "numeric",
         day:'2-digit',
         month: 'short',
-        year: "numeric",
+        
     });
+    const [filterDate, setFilterDate] = useState('');
+
     //Derived filtered list
     const filteredTransactions = transactions.filter(transaction => {
         //Type filter
         if (filterType !== 'all' && transaction.type !== filterType) return false;
+        //date filter
+        if (filterDate) {
+            const transactionDate = new Date(transaction.date).toISOString().slice(0, 10);
+         if (transactionDate !== filterDate) return false;
+}
         //Search filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
@@ -65,19 +76,54 @@ function Transaction  () {
             </tr>
         )
     }
+
+    //Delete optimistic
+    const handleDeleteOptimistic = async (id) => {
+        // Assigning current state for rollback
+        const previousTransactions = transactions
+        //optimistic update to remove the transaction from UI immediately
+        setTransactions(prev => prev.filter(t => t.id !== id));
+
+        try {
+            await api.delete(`/transactions/${id}`);
+        } catch (err) {
+            //rollback on error
+            setTransactions(previousTransactions);
+            alert(err.message || 'Delete failed');
+        }
+    };
+   
     return (
-        <div>
-            <div>
-                <h1 className="transactions-header">Transactions</h1>
+        <div className="transactions-page">
+            <div className="transactions-page-header">
+                <div>
+                    <h1 className="transactions-header">Transactions</h1>
+                    <p>Search, filter and manage records</p>
+                </div>
+                
+            </div>
+            <div className="transactions-toolbar">
                 <input
                     type='text'
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                <div className="transactions-filter-group">
+                    <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                    />
+                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                    <option value="all">All</option>
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                </select>
+                </div>
             </div>
 
-            <div className="transactions-table">
+            <div className="transactions-table-card">
                 {loading && <p>Loading...</p>}
                        {error && (
                            <p style={{ color: 'red' }}>
@@ -86,16 +132,16 @@ function Transaction  () {
                        )}
 
                        {!error && (
-                           <table border="1">
+                           <table className="transactions-table">
                                <thead>
                                    <tr>
-                                       <th>Date</th>
                                        <th>Description</th>
                                        <th>Type</th>
                                        <th>Category</th>
-                                       <th>Amount</th>
-                                       <th>Payment Method</th>
-                                       <th>Actions</th>
+                                       <th>Date</th>
+                                       <th>Payment</th>
+                                       <th className="amount-cell">Amount</th>
+                                       <th className="actions-cell">Actions</th>
                                    </tr>
                                </thead>
                                <tbody>
@@ -113,17 +159,32 @@ function Transaction  () {
 
                                    ) : (filteredTransactions.map((tx) => (
                                        <tr key={tx.id}>
-                                           <td>{dateFormatter.format(new Date(tx.date))}</td>
-                                           <td>{tx.description}</td>
-                                           <td>{tx.type}</td>
-                                           <td>{tx.category}</td>
-                                           <td>{tx.amount}</td>
-                                           <td>{tx.payment_method}</td>
+                                           <td className="transaction-description">{tx.description}</td>
                                            <td>
-                                               <DeleteButton
-                                                   transactionId={tx.id}
-                                                   onDeleted={fetchTransactions}
-                                               />
+                                               <span className={`type-pill type-pill-${tx.type}`}>
+                                                   {tx.type}
+                                               </span>
+                                           </td>
+                                           <td>{tx.category}</td>
+                                           <td>{dateFormatter.format(new Date(tx.date))}</td>
+                                           <td>{tx.payment_method}</td>
+                                           <td className={`amount-cell amount-${tx.type}`}>
+                                               {tx.type === 'expense' ? '-' : '+'}
+                                               {Number(tx.amount || 0).toLocaleString('en-KE')}
+                                           </td>
+                                           <td className="actions-cell">
+                                               <button
+                                                    onClick={() => navigate(`/transactions/edit/${tx.id}`)}
+                                                    className="btn-edit"
+                                                >
+                                                    <Pencil size={16}></Pencil>
+                                                </button>
+                                                <button  
+                                                    className="btn-delete"
+                                                    onClick={() => handleDeleteOptimistic(tx.id)}
+                                                >
+                                                    <Trash2 size={16}></Trash2>
+                                                </button>
                                            </td>
                                        </tr>
                                    ))

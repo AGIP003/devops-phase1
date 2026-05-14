@@ -4,6 +4,7 @@ import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { formToJSON } from "axios";
+import { Link } from 'react-router-dom';
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
 //useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
@@ -78,30 +79,33 @@ function LoginForm() {
 
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input
-                type="email"
-                name="email"
-                placeholder="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={loading}
-            />
-            <input
-                type="password"
-                name="password"
-                placeholder="password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={loading}
-            />
-            {errorMessage && <div style={{ color: 'red', border: '1px solid red', padding: '8px', marginBottom: '10px' }}>{errorMessage}</div>}
-            {successMessage && <div style={{ color: 'green', border: '1px solid green', padding: '8px', marginBottom: '10px' }}>{successMessage}</div>}
-            <button type="submit" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
-            </button>
-        </form>
-    );
+        <div>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={loading}
+                />
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    disabled={loading}
+                />
+                {errorMessage && <div style={{ color: 'red', border: '1px solid red', padding: '8px', marginBottom: '10px' }}>{errorMessage}</div>}
+                {successMessage && <div style={{ color: 'green', border: '1px solid green', padding: '8px', marginBottom: '10px' }}>{successMessage}</div>}
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Login'}
+                </button>
+            </form>
+            <p>Don't have an account? <Link to="/register">Sign up</Link></p>
+        </div>
+    )
 }
 
 export default LoginForm;

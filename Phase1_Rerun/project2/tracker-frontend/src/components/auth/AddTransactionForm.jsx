@@ -129,7 +129,7 @@ function AddTransactionForm({ onSuccess }) {
 
                   <option value="">{formData.type ? "Select category" : "Select income/expense type first"}</option>
                   {currentCategories.map((cat) => (
-                    <option key={cat} value={cat.toLowerCase().replace(/ /g, '_')}>
+                    <option key={cat} value={cat.toLowerCase()}>
                       {cat}
                     </option>
                   ))}
