@@ -5,6 +5,22 @@ import api from '../services/api';
 import { Navigate,useNavigate } from "react-router-dom";
 
 
+//SkeltonRow
+    function TransactionSkelton() {
+
+        return (
+            <tr>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+            </tr>
+        )
+    }
+    
 function Transaction  () {
     const navigate = useNavigate();
     const [transactions, setTransactions] = useState([]);
@@ -61,22 +77,6 @@ function Transaction  () {
         fetchTransactions();
     }, [])
 
-    //SkeltonRow
-    function TransactionSkelton() {
-
-        return (
-            <tr>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-            </tr>
-        )
-    }
-
     //Delete optimistic
     const handleDeleteOptimistic = async (id) => {
         // Assigning current state for rollback
@@ -124,7 +124,6 @@ function Transaction  () {
             </div>
 
             <div className="transactions-table-card">
-                {loading && <p>Loading...</p>}
                        {error && (
                            <p style={{ color: 'red' }}>
                                Error: {error} <button onClick={fetchTransactions}>Retry</button>

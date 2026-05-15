@@ -19,6 +19,20 @@ function getUsernameFromToken() {
         return 'User';
     }
 }
+
+// Skeleton row for the div-based recent transactions list.
+    function RecentTransactionSkeleton() {
+        return (
+            <div className="recent-row recent-row-skeleton">
+                <span className="recent-index recent-skeleton-block" />
+                <span className="recent-description recent-skeleton-block" />
+                <span className="recent-category recent-skeleton-block" />
+                <span className="recent-date recent-skeleton-block" />
+                <span className="recent-amount recent-skeleton-block" />
+            </div>
+        )
+    }
+    
 function Dashboard() {
     const navigate = useNavigate();
     const accountMenuRef = useRef(null);

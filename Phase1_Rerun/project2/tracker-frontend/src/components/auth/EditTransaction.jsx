@@ -27,7 +27,7 @@ function EditTransaction() {
     useEffect (() => {
         async function fetchTransaction() {
             try {
-                const response = await api.get(`transactions/${id}`);
+                const response = await api.get(`/transactions/${id}`);
                 //format the date into the right format
                 const data = response.data;
                 
@@ -52,7 +52,6 @@ function EditTransaction() {
         try {
             await api.put(`/transactions/${id}`, data);
             navigate('/transactions');
-            reset();
         } catch (err) {
             setServerError(err.response?.data?.message || 'Update failed');
         }
@@ -116,6 +115,22 @@ function EditTransaction() {
                               <option key={pm} value={pm}>{pm}</option>
                             ))}
                           </select>
+                        </div>
+
+                        {/* Amount */}
+                        <div className="form-field">
+                          <label>Amount</label>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            {...register("amount", {
+                              required: "Amount is required",
+                              valueAsNumber: true,
+                              min: { value: 0.01, message: "Amount must be greater than 0"}
+                            })}
+                          />
+                            {errors.amount && <span className="error">{errors.amount.message}</span>}
+            
                         </div>
 
                         <div className="form-actions">
