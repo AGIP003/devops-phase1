@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo, useCallback } from "react";
@@ -35,6 +35,7 @@ function getUsernameFromToken() {
     
 function Dashboard() {
     const navigate = useNavigate();
+    const { toggleSidebar } = useOutletContext();
     const accountMenuRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
     const [loading  , setLoading] = useState(true);
@@ -149,8 +150,12 @@ function Dashboard() {
         <div className="dashboard-page">
             <div className="dashboard-header">
                 <div className="dashboard-header-left">
-                    <button type="button" className="icon-button" aria-label="Open sidebar">
-                        ☰
+                    <button type="button" className="icon-button" aria-label="Toggle sidebar" onClick={toggleSidebar}>
+                        <span className="menu-icon" aria-hidden="true">
+                            <span />
+                            <span />
+                            <span />
+                        </span>
                     </button>
                     <div>
                         <h1>Welcome, {username} </h1>
@@ -198,7 +203,8 @@ function Dashboard() {
                     </div>
                     <ChartsSection
                         transactions={filteredTransactions}
-                        filterType={filterType}     
+                        filterType={filterType}
+                        setFilterType={setFilterType}
                         toggleHideAmounts={toggleHideAmounts}              
                     />
                 </div>
@@ -276,15 +282,6 @@ function Dashboard() {
                     </aside>
                 </div>
             </div>
-            <div className="dashboard-toolbar">
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                    <option value="all">All</option>
-                    <option value="income">Income</option>
-                    <option value="expense">Expense</option>
-                </select>
-            </div>
-            
-            
         </div>
 
     );

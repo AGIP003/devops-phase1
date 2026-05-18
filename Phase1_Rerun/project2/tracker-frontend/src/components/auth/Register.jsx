@@ -31,15 +31,27 @@ function Register() {
   };
 
   return (
-    <div className="register-container">
-      <form className="register-form" onSubmit={handleSubmit(onSubmit)}>
-        <h2>Create account</h2>
+    <div className="auth-page">
+      <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="auth-brand">
+          <div className="brand-mark">F</div>
+          <div>
+            <strong>Finance</strong>
+            <span>Tracker</span>
+          </div>
+        </div>
 
-        {serverError && <div className="error-message">{serverError}</div>}
+        <div className="auth-heading">
+          <h2>Create account</h2>
+          <p>Start tracking your money with the same dashboard view.</p>
+        </div>
+
+        {serverError && <div className="auth-message auth-message-error">{serverError}</div>}
 
         <div className="form-field">
-          <label>Full name</label>
+          <label htmlFor="register-name">Full name</label>
           <input
+            id="register-name"
             type="text"
             {...register('name', { required: 'Name is required' })}
           />
@@ -47,8 +59,9 @@ function Register() {
         </div>
 
         <div className="form-field">
-          <label>Email</label>
+          <label htmlFor="register-email">Email</label>
           <input
+            id="register-email"
             type="email"
             {...register('email', {
               required: 'Email is required',
@@ -62,8 +75,9 @@ function Register() {
         </div>
 
         <div className="form-field">
-          <label>Password</label>
+          <label htmlFor="register-password">Password</label>
           <input
+            id="register-password"
             type="password"
             {...register('password', {
               required: 'Password is required',
@@ -77,8 +91,9 @@ function Register() {
         </div>
 
         <div className="form-field">
-          <label>Confirm password</label>
+          <label htmlFor="register-confirm-password">Confirm password</label>
           <input
+            id="register-confirm-password"
             type="password"
             {...register('confirmPassword', {
               required: 'Please confirm your password',
@@ -88,11 +103,11 @@ function Register() {
           {errors.confirmPassword && <span className="error">{errors.confirmPassword.message}</span>}
         </div>
 
-        <button type="submit" disabled={isSubmitting}>
+        <button className="auth-submit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Registering...' : 'Register'}
         </button>
 
-        <p className="login-link">
+        <p className="auth-switch">
           Already have an account? <Link to="/">Sign in</Link>
         </p>
       </form>

@@ -3,7 +3,6 @@ import { getToken, saveToken } from "../../utils/auth";
 import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { formToJSON } from "axios";
 import { Link } from 'react-router-dom';
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
@@ -79,31 +78,58 @@ function LoginForm() {
 
 
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="email"
-                    name="email"
-                    placeholder="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    disabled={loading}
-                />
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    disabled={loading}
-                />
-                {errorMessage && <div style={{ color: 'red', border: '1px solid red', padding: '8px', marginBottom: '10px' }}>{errorMessage}</div>}
-                {successMessage && <div style={{ color: 'green', border: '1px solid green', padding: '8px', marginBottom: '10px' }}>{successMessage}</div>}
-                <button type="submit" disabled={loading}>
+        <div className="auth-page">
+            <form className="auth-form" onSubmit={handleSubmit}>
+                <div className="auth-brand">
+                    <div className="brand-mark">F</div>
+                    <div>
+                        <strong>Finance</strong>
+                        <span>Tracker</span>
+                    </div>
+                </div>
+
+                <div className="auth-heading">
+                    <h2>Welcome back</h2>
+                    <p>Sign in to view your dashboard.</p>
+                </div>
+
+                <div className="form-field">
+                    <label htmlFor="login-email">Email</label>
+                    <input
+                        id="login-email"
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        disabled={loading}
+                    />
+                </div>
+
+                <div className="form-field">
+                    <label htmlFor="login-password">Password</label>
+                    <input
+                        id="login-password"
+                        type="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        disabled={loading}
+                    />
+                </div>
+
+                {errorMessage && <div className="auth-message auth-message-error">{errorMessage}</div>}
+                {successMessage && <div className="auth-message auth-message-success">{successMessage}</div>}
+
+                <button className="auth-submit" type="submit" disabled={loading}>
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
+
+                <p className="auth-switch">
+                    Don't have an account? <Link to="/register">Sign up</Link>
+                </p>
             </form>
-            <p>Don't have an account? <Link to="/register">Sign up</Link></p>
         </div>
     )
 }

@@ -1,8 +1,9 @@
 
-import { useCallback, useEffect, useRef,  useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
+import { useForm } from 'react-hook-form';
 import api from '../services/api';
-import { Navigate,useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 
 
 //SkeltonRow
@@ -20,14 +21,175 @@ import { Navigate,useNavigate } from "react-router-dom";
             </tr>
         )
     }
+
+function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
+    const [serverError, setServerError] = useState('');
+    const [loadingTransaction, setLoadingTransaction] = useState(true);
+    const {
+        register,
+        handleSubmit,
+        watch,
+        reset,
+        formState: { errors, isSubmitting, isDirty }
+    } = useForm();
+
+    const categoryOptions = {
+        income: ["salary", "business", "freelance", "loan", "investments", "gifts", "debts paid", "other income"],
+        expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+    };
+    const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
+    const selectedType = watch("type");
+    const currentCategories = selectedType ? categoryOptions[selectedType] : [];
+
+    useEffect(() => {
+        async function fetchTransaction() {
+            setLoadingTransaction(true);
+            setServerError('');
+            try {
+                const response = await api.get(`/transactions/${transactionId}`);
+                const data = response.data;
+
+                if (data.date) {
+                    const parsedDate = new Date(data.date);
+                    if (!isNaN(parsedDate)) {
+                        data.date = parsedDate.toISOString().split('T')[0];
+                    }
+                }
+
+                reset(data);
+            } catch (err) {
+                setServerError(err.response?.data?.message || 'Failed to load transaction');
+            } finally {
+                setLoadingTransaction(false);
+            }
+        }
+
+        fetchTransaction();
+    }, [transactionId, reset]);
+
+    async function onSubmit(data) {
+        setServerError('');
+        try {
+            await api.put(`/transactions/${transactionId}`, data);
+            onSaved();
+        } catch (err) {
+            setServerError(err.response?.data?.message || 'Update failed');
+        }
+    }
+
+    return (
+        <div className="drawer-backdrop" role="presentation" onClick={onClose}>
+            <aside
+                className="transaction-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="transaction-edit-title"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="drawer-header">
+                    <div>
+                        <h2 id="transaction-edit-title">Edit transaction</h2>
+                        <p>Update the details without leaving the table.</p>
+                    </div>
+                    <button type="button" className="drawer-close" onClick={onClose} aria-label="Close edit drawer">
+                        <X size={19} />
+                    </button>
+                </div>
+
+                {serverError && <div className="transaction-form-message transaction-form-error">{serverError}</div>}
+
+                {loadingTransaction ? (
+                    <div className="drawer-loading">Loading transaction...</div>
+                ) : (
+                    <form className="drawer-form" onSubmit={handleSubmit(onSubmit)}>
+                        <label className="transaction-field transaction-field-wide">
+                            <span>Description</span>
+                            <input
+                                type="text"
+                                {...register("description", {
+                                    required: "Description is required",
+                                    minLength: { value: 3, message: "At least 3 characters" }
+                                })}
+                            />
+                            {errors.description && <span className="error">{errors.description.message}</span>}
+                        </label>
+
+                        <label className="transaction-field">
+                            <span>Type</span>
+                            <select {...register("type", { required: "Type is required" })}>
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                            {errors.type && <span className="error">{errors.type.message}</span>}
+                        </label>
+
+                        <label className="transaction-field">
+                            <span>Category</span>
+                            <select {...register("category", { required: "Category is required" })} disabled={!selectedType}>
+                                <option value="">Select category</option>
+                                {currentCategories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            {errors.category && <span className="error">{errors.category.message}</span>}
+                        </label>
+
+                        <label className="transaction-field">
+                            <span>Date</span>
+                            <input
+                                type="date"
+                                {...register("date", { required: "Date is required" })}
+                            />
+                            {errors.date && <span className="error">{errors.date.message}</span>}
+                        </label>
+
+                        <label className="transaction-field">
+                            <span>Payment method</span>
+                            <select {...register("payment_method")}>
+                                <option value="">Select payment method</option>
+                                {paymentMethods.map(pm => (
+                                    <option key={pm} value={pm}>{pm}</option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className="transaction-field">
+                            <span>Amount</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                {...register("amount", {
+                                    required: "Amount is required",
+                                    valueAsNumber: true,
+                                    min: { value: 0.01, message: "Amount must be greater than 0" }
+                                })}
+                            />
+                            {errors.amount && <span className="error">{errors.amount.message}</span>}
+                        </label>
+
+                        <div className="drawer-actions">
+                            <button type="button" className="drawer-secondary-button" onClick={onClose}>
+                                Cancel
+                            </button>
+                            <button className="drawer-primary-button" type="submit" disabled={isSubmitting || !isDirty}>
+                                {isSubmitting ? 'Saving...' : 'Save changes'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </aside>
+        </div>
+    );
+}
     
 function Transaction  () {
-    const navigate = useNavigate();
+    const { toggleSidebar } = useOutletContext();
     const [transactions, setTransactions] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState("all");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [editingTransactionId, setEditingTransactionId] = useState(null);
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
         year: "numeric",
         day:'2-digit',
@@ -96,9 +258,18 @@ function Transaction  () {
     return (
         <div className="transactions-page">
             <div className="transactions-page-header">
-                <div>
-                    <h1 className="transactions-header">Transactions</h1>
-                    <p>Search, filter and manage records</p>
+                <div className="dashboard-header-left">
+                    <button type="button" className="icon-button" aria-label="Toggle sidebar" onClick={toggleSidebar}>
+                        <span className="menu-icon" aria-hidden="true">
+                            <span />
+                            <span />
+                            <span />
+                        </span>
+                    </button>
+                    <div>
+                        <h1 className="transactions-header">Transactions</h1>
+                        <p>Search, filter and manage records</p>
+                    </div>
                 </div>
                 
             </div>
@@ -172,18 +343,26 @@ function Transaction  () {
                                                {Number(tx.amount || 0).toLocaleString('en-KE')}
                                            </td>
                                            <td className="actions-cell">
+                                               <div className="transaction-actions">
                                                <button
-                                                    onClick={() => navigate(`/transactions/edit/${tx.id}`)}
-                                                    className="btn-edit"
+                                                    type="button"
+                                                    onClick={() => setEditingTransactionId(tx.id)}
+                                                    className="table-action-button table-action-edit"
+                                                    aria-label={`Edit ${tx.description || 'transaction'}`}
+                                                    title="Edit transaction"
                                                 >
-                                                    <Pencil size={16}></Pencil>
+                                                    <Pencil size={17} strokeWidth={2.2}></Pencil>
                                                 </button>
                                                 <button  
-                                                    className="btn-delete"
+                                                    type="button"
+                                                    className="table-action-button table-action-delete"
                                                     onClick={() => handleDeleteOptimistic(tx.id)}
+                                                    aria-label={`Delete ${tx.description || 'transaction'}`}
+                                                    title="Delete transaction"
                                                 >
-                                                    <Trash2 size={16}></Trash2>
+                                                    <Trash2 size={17} strokeWidth={2.2}></Trash2>
                                                 </button>
+                                               </div>
                                            </td>
                                        </tr>
                                    ))
@@ -192,6 +371,16 @@ function Transaction  () {
                            </table>
                        )}
                 </div>
+                {editingTransactionId && (
+                    <TransactionEditDrawer
+                        transactionId={editingTransactionId}
+                        onClose={() => setEditingTransactionId(null)}
+                        onSaved={() => {
+                            setEditingTransactionId(null);
+                            fetchTransactions();
+                        }}
+                    />
+                )}
         </div>
             )       
        }

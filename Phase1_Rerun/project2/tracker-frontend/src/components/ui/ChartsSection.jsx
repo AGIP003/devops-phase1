@@ -69,14 +69,26 @@ function CategoryPieChart({ transactions, filterType }) {
     )
 }
 
-function ChartsSection({ transactions, filterType }) {
+function ChartsSection({ transactions, filterType, setFilterType }) {
   if (transactions.length === 0) return null;
   
 
   return (
     <div className="charts-grid">
       <div className="chart-card">
-        <h3>Spending by Category</h3>
+        <div className="chart-card-header">
+          <h3>Spending by Category</h3>
+          <select
+            className="chart-filter-select"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            aria-label="Filter chart by transaction type"
+          >
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
         <CategoryPieChart transactions={transactions} filterType={filterType}/>
       </div>
       {/* Bar chart will come later */}
