@@ -119,6 +119,10 @@ function LoginForm() {
                     />
                 </div>
 
+                <div className="auth-row">
+                    <Link to="/forgot-password">Forgot password?</Link>
+                </div>
+
                 {errorMessage && <div className="auth-message auth-message-error">{errorMessage}</div>}
                 {successMessage && <div className="auth-message auth-message-success">{successMessage}</div>}
 

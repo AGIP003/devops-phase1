@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, current_app, request, jsonify, abort
 from app.extensions import bcrypt, mail, limiter
 from app.auth import hash_password, verify_password, validate_password_strength
 from app.db import get_db_connection,get_user_by_email, insert_user_hashed_pw, update_reset_password
@@ -118,7 +118,8 @@ def password_reset_request():
     token = serializer.dumps(email, salt='password-reset-salt')
 
     #Reset URL
-    reset_url = f"http://localhost:3000/reset-password?token={token}"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    reset_url = f"{frontend_url}/reset-password?token={token}"
 
     #Send email
     msg = Message('Password Reset Request',
@@ -134,6 +135,7 @@ def password_reset_request():
     try:
         mail.send(msg)
     except Exception as e:
+        current_app.logger.exception("Failed to send password reset email")
         abort(500, description="Failed to send email")
 
     return jsonify({"message": "A reset link has been sent"}), 200

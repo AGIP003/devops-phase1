@@ -9,6 +9,8 @@ import Transaction from './pages/Transactions';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 import EditTransaction from './components/auth/EditTransaction';
 import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 function App() {
  
     return (
@@ -17,6 +19,8 @@ function App() {
              {/* public routes */}
             <Route path='/' element={<LoginForm />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
              {/* protected routes – all share the same Layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>

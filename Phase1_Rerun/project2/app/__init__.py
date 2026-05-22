@@ -7,6 +7,7 @@ from app.extensions import bcrypt, mail, limiter
 from app.auth_routes import auth_bp
 from flask_talisman import Talisman
 import logging
+import os
 
 def create_app():
     app = Flask(__name__)
@@ -29,6 +30,7 @@ def create_app():
                                 }}
     )
     configure_logging(app)
+    configure_mail(app)
     register_routes(app)
     register_error_handlers(app)
     bcrypt.init_app(app)
@@ -49,6 +51,14 @@ def create_app():
     mail.init_app(app)
     limiter.init_app(app)
     return app
+
+def configure_mail(app):
+    app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
+    app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
+    app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.getenv("MAIL_APP_PASSWORD")
+    app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER") or os.getenv("MAIL_USERNAME")
 
 def configure_logging(app):
     logging.basicConfig(

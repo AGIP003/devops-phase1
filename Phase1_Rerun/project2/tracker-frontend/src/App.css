@@ -337,6 +337,12 @@ body {
   text-align: center;
 }
 
+.auth-row {
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.auth-row a,
 .auth-switch a {
   color: var(--accent);
   font-weight: 800;
