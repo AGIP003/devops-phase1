@@ -11,6 +11,8 @@ import EditTransaction from './components/auth/EditTransaction';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
+import ErrorBoundary from './components/ui/ErrorBoundary';
+
 function App() {
  
     return (
@@ -24,10 +26,10 @@ function App() {
 
              {/* protected routes – all share the same Layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-
-                <Route path="/dashboard" element={<Dashboard />}/>
-                <Route path="/transactions" element={<Transaction />}/>
-                <Route path="transactions/edit/:id" element={<EditTransaction />} />
+                
+                <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>}/>
+                <Route path="/transactions" element={<ErrorBoundary><Transaction /></ErrorBoundary>}/>
+                <Route path="transactions/edit/:id" element={<ErrorBoundary><EditTransaction /></ErrorBoundary>} />
                 
             </Route>
 

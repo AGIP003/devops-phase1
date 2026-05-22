@@ -66,7 +66,7 @@ function AddTransactionForm({ onSuccess }) {
 
     const categoryOptions = {
         income: ["salary", "business", "freelance", "loan", "investments", "gifts", "other income", "debts paid" ],
-        expense: ["rent", "utilities", "food", "transport", "airtime", "groceries", "loan", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+        expense: ["rent", "utilities", "food", "transport", "airtime", "groceries", "loan", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
     }
 
     const currentCategories = formData.type ? categoryOptions[formData.type] : [];

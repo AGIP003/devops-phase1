@@ -18,7 +18,7 @@ function EditTransaction() {
 
     const categoryOptions = {
       income: ["salary", "business", "freelance", "loan", "investments", "gifts", "debts paid", "other income"],
-      expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+      expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
     };
     const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
     const selectedType = watch("type");

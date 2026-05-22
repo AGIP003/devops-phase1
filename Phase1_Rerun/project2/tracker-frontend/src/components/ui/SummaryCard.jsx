@@ -9,7 +9,7 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const expenseTotal = filteredTransactions
         .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);  
     
     return (
         <div className="summary-grid">

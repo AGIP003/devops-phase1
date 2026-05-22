@@ -41,7 +41,7 @@ function LoginForm() {
         return '';
     }
 
-    
+
     async function handleSubmit(e) {
         //Prevent page reload
         e.preventDefault();
@@ -65,12 +65,12 @@ function LoginForm() {
             setSuccessMessage('Login Successful');
             console.log(response)
         } catch (err) {
-            setErrorMessage(err.message);
+            setErrorMessage(err.response?.data?.message || err.message);
             setFormData((prevFormData) => ({
                 ...prevFormData,
                 password: ''
             }));
-            
+
         } finally {
             setLoading(false);
         }
@@ -99,7 +99,7 @@ function LoginForm() {
                         id="login-email"
                         type="email"
                         name="email"
-                        placeholder="you@example.com"
+                        placeholder="Enter your email"
                         value={formData.email}
                         onChange={handleChange}
                         disabled={loading}

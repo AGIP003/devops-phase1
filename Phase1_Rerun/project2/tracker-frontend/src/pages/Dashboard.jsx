@@ -5,7 +5,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo, useCallback } from "react";
-import ChartsSection from "../components/ui/ChartsSection";
+import ChartsSection, { MonthlyTrendChart } from "../components/ui/ChartsSection";
 
 import SummaryCards from "../components/ui/SummaryCard";
 
@@ -197,10 +197,10 @@ function Dashboard() {
                     toggleHideAmounts = {toggleHideAmounts}
                 />
                 <div className="dashboard-charts-row">
-                    <div className="chart-card chart-card-placeholder">
-                        <h3>Monthly Trend</h3>
-                        <p>Bar chart coming soon</p>
-                    </div>
+                    <MonthlyTrendChart
+                        transactions={filteredTransactions}
+                        filterType={filterType}
+                    />
                     <ChartsSection
                         transactions={filteredTransactions}
                         filterType={filterType}
