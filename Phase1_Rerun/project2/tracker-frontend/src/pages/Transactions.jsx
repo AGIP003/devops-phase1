@@ -4,23 +4,25 @@ import { Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
 import { useOutletContext } from "react-router-dom";
+import toast from "react-hot-toast";
+import EmptyState from '../components/ui/EmptyState';
 
 
 //SkeltonRow
-    function TransactionSkelton() {
+function TransactionSkelton() {
 
-        return (
-            <tr>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-                <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
-            </tr>
-        )
-    }
+    return (
+        <tr>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '80px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '60px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '120px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+            <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
+        </tr>
+    )
+}
 
 function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
     const [serverError, setServerError] = useState('');
@@ -92,7 +94,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
                         <p>Update the details without leaving the table.</p>
                     </div>
                     <button type="button" className="drawer-close" onClick={onClose} aria-label="Close edit drawer">
-                        <X size={19} />
+                        <X size={19} aria-hidden="true" />
                     </button>
                 </div>
 
@@ -181,8 +183,8 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
         </div>
     );
 }
-    
-function Transaction  () {
+
+function Transaction() {
     const { toggleSidebar } = useOutletContext();
     const [transactions, setTransactions] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -192,9 +194,9 @@ function Transaction  () {
     const [editingTransactionId, setEditingTransactionId] = useState(null);
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
         year: "numeric",
-        day:'2-digit',
+        day: '2-digit',
         month: 'short',
-        
+
     });
     const [filterDate, setFilterDate] = useState('');
 
@@ -205,8 +207,8 @@ function Transaction  () {
         //date filter
         if (filterDate) {
             const transactionDate = new Date(transaction.date).toISOString().slice(0, 10);
-         if (transactionDate !== filterDate) return false;
-}
+            if (transactionDate !== filterDate) return false;
+        }
         //Search filter
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
@@ -218,8 +220,8 @@ function Transaction  () {
 
         return true;
     });
-    
-   
+
+
 
     //Fetch transactions
     async function fetchTransactions() {
@@ -245,16 +247,17 @@ function Transaction  () {
         const previousTransactions = transactions
         //optimistic update to remove the transaction from UI immediately
         setTransactions(prev => prev.filter(t => t.id !== id));
+        toast.success("Transaction deleted");
 
         try {
             await api.delete(`/transactions/${id}`);
         } catch (err) {
             //rollback on error
             setTransactions(previousTransactions);
-            alert(err.message || 'Delete failed');
+            toast.error(err.message || 'Delete failed');
         }
     };
-   
+
     return (
         <div className="transactions-page">
             <div className="transactions-page-header">
@@ -271,118 +274,121 @@ function Transaction  () {
                         <p>Search, filter and manage records</p>
                     </div>
                 </div>
-                
+
             </div>
             <div className="transactions-toolbar">
                 <input
                     type='text'
                     placeholder="Search..."
+                    aria-label="Search transactions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <div className="transactions-filter-group">
                     <input
                         type="date"
+                        aria-label="Filter transactions by date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
                     />
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                    <option value="all">All</option>
-                    <option value="income">Income</option>
-                    <option value="expense">Expense</option>
-                </select>
+                    <select
+                        value={filterType}
+                        onChange={(e) => setFilterType(e.target.value)}
+                        aria-label="Filter transactions by type"
+                    >
+                        <option value="all">All</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
                 </div>
             </div>
 
             <div className="transactions-table-card">
-                       {error && (
-                           <p style={{ color: 'red' }}>
-                               Error: {error} <button onClick={fetchTransactions}>Retry</button>
-                           </p>
-                       )}
+                {error && (
+                    <p style={{ color: 'red' }}>
+                        Error: {error} <button type="button" onClick={fetchTransactions} aria-label="Retry loading transactions">Retry</button>
+                    </p>
+                )}
 
-                       {!error && (
-                           <table className="transactions-table">
-                               <thead>
-                                   <tr>
-                                       <th>Description</th>
-                                       <th>Type</th>
-                                       <th>Category</th>
-                                       <th>Date</th>
-                                       <th>Payment</th>
-                                       <th className="amount-cell">Amount</th>
-                                       <th className="actions-cell">Actions</th>
-                                   </tr>
-                               </thead>
-                               <tbody>
-                                   {loading ? (
-                                       [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
-
-                                   ) : filteredTransactions.length === 0 ? (
-                                       <tr>
-                                           <td colSpan={7} style={{ textAlign: 'center' }}>
-                                               {transactions.length === 0
-                                                   ? 'No transactions yet.'
-                                                   : 'No transactions match your search/filter'}
-                                           </td>
-                                       </tr>
-
-                                   ) : (filteredTransactions.map((tx) => (
-                                       <tr key={tx.id}>
-                                           <td className="transaction-description">{tx.description}</td>
-                                           <td>
-                                               <span className={`type-pill type-pill-${tx.type}`}>
-                                                   {tx.type}
-                                               </span>
-                                           </td>
-                                           <td>{tx.category}</td>
-                                           <td>{dateFormatter.format(new Date(tx.date))}</td>
-                                           <td>{tx.payment_method}</td>
-                                           <td className={`amount-cell amount-${tx.type}`}>
-                                               {tx.type === 'expense' ? '-' : '+'}
-                                               {Number(tx.amount || 0).toLocaleString('en-KE')}
-                                           </td>
-                                           <td className="actions-cell">
-                                               <div className="transaction-actions">
-                                               <button
+                {!error && (
+                    filteredTransactions.length === 0 && !loading ? (
+                        <EmptyState
+                            title="No transactions found"
+                            message={searchQuery ? "Try a different search term" : "Add your first transaction to get started"}
+                            actionLabel={searchQuery ? null : "Add Transaction"}
+                            actionPath="/transactions/add"
+                        />
+                    ) : (
+                        <table className="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                    <th>Category</th>
+                                    <th>Date</th>
+                                    <th>Payment</th>
+                                    <th className="amount-cell">Amount</th>
+                                    <th className="actions-cell">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
+                                ) : filteredTransactions.map((tx) => (
+                                    <tr key={tx.id}>
+                                        <td className="transaction-description">{tx.description}</td>
+                                        <td>
+                                            <span className={`type-pill type-pill-${tx.type}`}>
+                                                {tx.type}
+                                            </span>
+                                        </td>
+                                        <td>{tx.category}</td>
+                                        <td>{dateFormatter.format(new Date(tx.date))}</td>
+                                        <td>{tx.payment_method}</td>
+                                        <td className={`amount-cell amount-${tx.type}`}>
+                                            {tx.type === 'expense' ? '-' : '+'}
+                                            {Number(tx.amount || 0).toLocaleString('en-KE')}
+                                        </td>
+                                        <td className="actions-cell">
+                                            <div className="transaction-actions">
+                                                <button
                                                     type="button"
                                                     onClick={() => setEditingTransactionId(tx.id)}
                                                     className="table-action-button table-action-edit"
                                                     aria-label={`Edit ${tx.description || 'transaction'}`}
                                                     title="Edit transaction"
                                                 >
-                                                    <Pencil size={17} strokeWidth={2.2}></Pencil>
+                                                    <Pencil size={17} strokeWidth={2.2} aria-hidden="true"></Pencil>
                                                 </button>
-                                                <button  
+                                                <button
                                                     type="button"
                                                     className="table-action-button table-action-delete"
                                                     onClick={() => handleDeleteOptimistic(tx.id)}
                                                     aria-label={`Delete ${tx.description || 'transaction'}`}
                                                     title="Delete transaction"
                                                 >
-                                                    <Trash2 size={17} strokeWidth={2.2}></Trash2>
+                                                    <Trash2 size={17} strokeWidth={2.2} aria-hidden="true"></Trash2>
                                                 </button>
-                                               </div>
-                                           </td>
-                                       </tr>
-                                   ))
-                                   )}
-                               </tbody>
-                           </table>
-                       )}
-                </div>
-                {editingTransactionId && (
-                    <TransactionEditDrawer
-                        transactionId={editingTransactionId}
-                        onClose={() => setEditingTransactionId(null)}
-                        onSaved={() => {
-                            setEditingTransactionId(null);
-                            fetchTransactions();
-                        }}
-                    />
-                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ))  }
+            </div>
+            {editingTransactionId && (
+                <TransactionEditDrawer
+                    transactionId={editingTransactionId}
+                    onClose={() => setEditingTransactionId(null)}
+                    onSaved={() => {
+                        setEditingTransactionId(null);
+                        fetchTransactions();
+                    }}
+                />
+            )}
         </div>
-            )       
-       }
+    )
+}
 
 export default Transaction;

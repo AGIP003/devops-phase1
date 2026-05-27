@@ -163,7 +163,12 @@ function Dashboard() {
                     </div>
                 </div>
                 <div className="dashboard-header-actions">
-                    <button onClick={() => setShowForm(prev => !prev)}>
+                    <button
+                        type="button"
+                        onClick={() => setShowForm(prev => !prev)}
+                        aria-expanded={showForm}
+                        aria-controls="add-transaction-panel"
+                    >
                         {showForm ? 'Cancel' : 'Add Transaction'}
                     </button>
                     <div className="account-menu-wrap" ref={accountMenuRef}>
@@ -171,16 +176,18 @@ function Dashboard() {
                             type="button" 
                             className="avatar-button" 
                             aria-label="Account menu"
+                            aria-haspopup="menu"
+                            aria-expanded={showAccountMenu}
                             onClick={() => setShowAccountMenu(prev => !prev)}
                         >
                             {username.charAt(0).toUpperCase()}
                         </button>
 
                         {showAccountMenu && (
-                            <div className="account-menu">
+                            <div className="account-menu" role="menu">
                                 <p>Signed in as</p>
                                 <strong>{username}</strong>
-                                <button type="button" onClick={() => {removeToken(); navigate('/');}}>
+                                <button type="button" role="menuitem" onClick={() => {removeToken(); navigate('/');}}>
                                     Logout
                                 </button>
 
@@ -226,6 +233,7 @@ function Dashboard() {
                             <button 
                                 type="button"
                                 onClick={()=> navigate(`/transactions`)}
+                                aria-label="View all transactions"
                             >
                                 View all
                             </button>

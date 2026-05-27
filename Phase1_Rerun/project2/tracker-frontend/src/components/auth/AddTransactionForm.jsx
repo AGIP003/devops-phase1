@@ -77,7 +77,7 @@ function AddTransactionForm({ onSuccess }) {
       "bank transfer", "debit card", "credit card", "paypal"
     ];
     return(
-        <div className="add-transaction-panel">
+        <div className="add-transaction-panel" id="add-transaction-panel">
             <h3>Add Transaction</h3>
             <form className="add-transaction-form" onSubmit={handleSubmit}>
                 <label className="transaction-field">

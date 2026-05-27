@@ -1241,6 +1241,57 @@ body {
   width: 100%;
 }
 
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.empty-state svg {
+  opacity: 0.4;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.empty-state-message {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Error banner (for ErrorBoundary fallback) */
+.error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  text-align: center;
+}
+
+.error-fallback h2 {
+  color: var(--danger);
+  font-size: 1.25rem;
+}
+
+.error-fallback p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  max-width: 400px;
+}
+
 .transaction-field input:focus,
 .transaction-field select:focus {
   border-color: #2563eb;

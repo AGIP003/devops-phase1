@@ -21,7 +21,7 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
                     onClick={toggleHideAmounts}
                     aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
                 >
-                    {hideAmounts ? <Eye size={16} /> : <EyeOff size ={16} />}       
+                    {hideAmounts ? <Eye size={16} aria-hidden="true" /> : <EyeOff size ={16} aria-hidden="true" />}       
                 </button>
                 <span>Total</span>
                 <strong>{hideAmounts ? "••••••" : currencyFormatter.format(totalAmount)}</strong>

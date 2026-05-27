@@ -65,8 +65,10 @@ function EditTransaction() {
         
             <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="form-field">
-                    <label>Description</label>
-                    <input type="text" 
+                    <label htmlFor="edit-description">Description</label>
+                    <input
+                        id="edit-description"
+                        type="text" 
                         {...register("description", {
                             required: "Description is required",
                             minLength: { value: 3, message: "At least 3 characters"}
@@ -76,8 +78,8 @@ function EditTransaction() {
                 </div>
                         {/* Type (income/expense) */}
                         <div className="form-field">
-                          <label>Type</label>
-                          <select {...register("type", { required: "Type is required" })}>
+                          <label htmlFor="edit-type">Type</label>
+                          <select id="edit-type" {...register("type", { required: "Type is required" })}>
                             <option value="expense">Expense</option>
                             <option value="income">Income</option>
                           </select>
@@ -86,8 +88,8 @@ function EditTransaction() {
 
                         {/* Category */}
                         <div className="form-field">
-                          <label>Category</label>
-                          <select {...register("category", { required: "Category is required" })} disabled={!selectedType}>
+                          <label htmlFor="edit-category">Category</label>
+                          <select id="edit-category" {...register("category", { required: "Category is required" })} disabled={!selectedType}>
                             <option value="">Select category</option>
                             {currentCategories.map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
@@ -98,8 +100,9 @@ function EditTransaction() {
 
                         {/* Date */}
                         <div className="form-field">
-                          <label>Date</label>
+                          <label htmlFor="edit-date">Date</label>
                           <input
+                            id="edit-date"
                             type="date"
                             {...register("date", { required: "Date is required" })}
                           />
@@ -108,8 +111,8 @@ function EditTransaction() {
 
                         {/* Payment method */}
                         <div className="form-field">
-                          <label>Payment Method</label>
-                          <select {...register("payment_method")}>
+                          <label htmlFor="edit-payment-method">Payment Method</label>
+                          <select id="edit-payment-method" {...register("payment_method")}>
                             <option value="">Select payment method</option>
                             {paymentMethods.map(pm => (
                               <option key={pm} value={pm}>{pm}</option>
@@ -119,8 +122,9 @@ function EditTransaction() {
 
                         {/* Amount */}
                         <div className="form-field">
-                          <label>Amount</label>
+                          <label htmlFor="edit-amount">Amount</label>
                           <input 
+                            id="edit-amount"
                             type="number"
                             step="0.01"
                             {...register("amount", {
