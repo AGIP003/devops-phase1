@@ -4,6 +4,7 @@ import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
 //useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
@@ -25,6 +26,7 @@ function LoginForm() {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     function handleChange(e) {
         const { name, value } = e.target;
@@ -108,15 +110,26 @@ function LoginForm() {
 
                 <div className="form-field">
                     <label htmlFor="login-password">Password</label>
-                    <input
-                        id="login-password"
-                        type="password"
-                        name="password"
-                        placeholder="Enter your password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        disabled={loading}
-                    />
+                    <div className="password-input-wrap">
+                        <input
+                            id="login-password"
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            placeholder="Enter your password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            disabled={loading}
+                        />
+                        <button
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            className="password-toggle"
+                            type="button"
+                            onClick={() => setShowPassword((current) => !current)}
+                            disabled={loading}
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="auth-row">

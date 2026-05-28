@@ -267,6 +267,44 @@ body {
   width: 100%;
 }
 
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: background-color 0.2s, color 0.2s;
+  width: 36px;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  background: #eef0dc;
+  color: var(--text-main);
+}
+
+.password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .auth-form input:focus {
   background: #ffffff;
   border-color: var(--accent);

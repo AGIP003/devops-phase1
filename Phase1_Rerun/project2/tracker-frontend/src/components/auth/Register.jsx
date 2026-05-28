@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import api from '../../services/api';
 import { saveToken } from '../../utils/auth';
 
@@ -8,6 +9,8 @@ function Register() {
   const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const password = watch('password');
 
@@ -76,30 +79,52 @@ function Register() {
 
         <div className="form-field">
           <label htmlFor="register-password">Password</label>
-          <input
-            id="register-password"
-            type="password"
-            {...register('password', {
-              required: 'Password is required',
-              minLength: {
-                value: 8,
-                message: 'Password must be at least 8 characters',
-              },
-            })}
-          />
+          <div className="password-input-wrap">
+            <input
+              id="register-password"
+              type={showPassword ? 'text' : 'password'}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters',
+                },
+              })}
+            />
+            <button
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="password-toggle"
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              disabled={isSubmitting}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {errors.password && <span className="error">{errors.password.message}</span>}
         </div>
 
         <div className="form-field">
           <label htmlFor="register-confirm-password">Confirm password</label>
-          <input
-            id="register-confirm-password"
-            type="password"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
-              validate: value => value === password || 'Passwords do not match',
-            })}
-          />
+          <div className="password-input-wrap">
+            <input
+              id="register-confirm-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: value => value === password || 'Passwords do not match',
+              })}
+            />
+            <button
+              aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              className="password-toggle"
+              type="button"
+              onClick={() => setShowConfirmPassword((current) => !current)}
+              disabled={isSubmitting}
+            >
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {errors.confirmPassword && <span className="error">{errors.confirmPassword.message}</span>}
         </div>
 

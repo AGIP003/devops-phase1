@@ -7,9 +7,27 @@ export default defineConfig({
   plugins: [
     react(),
     visualizer({
-      open: true,
+      open: false,
       filename: 'dist/stats.html',
       gzipSize: true,
     })
   ],
-})
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+  },
+  rollupOptions: {
+      output: {
+        // Splitting vendor code into separate chunk
+        // React, ReactDOM, React Router stay in 'vendor' chunk
+        // App code stays in 'index' chunk
+        // Result: users who revisit don't re-download React (it's cached)
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+        }
+      }
+    }
+  }
+)
