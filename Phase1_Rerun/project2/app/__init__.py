@@ -12,15 +12,16 @@ import os
 def create_app():
     app = Flask(__name__)
 
-    
+    cors_origins_str = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173"
+    )
+    allowed_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
+
     CORS(
         app, 
         resources= {r"/api/.*": {
-                                    "origins":["http://localhost:3000", 
-                                               "http://localhost:5173",
-                                               "http://127.0.0.1:5173",
-                                               "http://localhost:5174",
-                                               "http://127.0.0.1:5174"],
+                                    "origins": allowed_origins,
                                     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                                     "allow_headers": ["Content-Type", "Authorization"],
                                     "expose_headers": ["Content-Type", "Authorization"],

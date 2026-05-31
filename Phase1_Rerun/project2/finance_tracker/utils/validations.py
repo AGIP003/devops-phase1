@@ -44,8 +44,8 @@ def validate_category(txn_type, category):
     clean_type = str(txn_type or "").strip().lower()
     clean_cat = str(category or "").strip().lower()
     allowed_pairs = {
-        'income' : ["salary", "business", "freelance", "loan", "investments", "gifts", "debts_paid", "other_income"],
-        'expense' : ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal_care", "taxes", "black_tax", "other_expense"]
+        'income' : ["salary", "business", "freelance", "loan", "investments", "gifts", "debts paid", "other income"],
+        'expense' : ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
     }
     
     allowed_for_type = allowed_pairs.get(clean_type, [])

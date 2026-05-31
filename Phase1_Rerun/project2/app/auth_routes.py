@@ -93,7 +93,7 @@ def login():
             'role': user.get("role", "user")}}), 200
 
 @auth_bp.route('/password_reset_request', methods=['POST'])
-@limiter.limit("3 per hour")
+@limiter.limit("5 per hour")
 def password_reset_request():
     data =request.get_json()
 
@@ -184,7 +184,5 @@ def password_reset_verify():
     update_reset_password(user_id, password_hash)
 
     return jsonify({"message": "Password reset succesfully"}), 200
-
-
 
 

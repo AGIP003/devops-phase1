@@ -11,12 +11,19 @@ from app.db import (
     get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id
 )
 from app.middleware import login_required, admin_required
+import os
 
 def register_routes(app):
     @app.route("/", methods=["GET"])
     def index():
         return jsonify({"message": "Finance Tracker API", "endpoints": ["/transactions"]}), 200
         
+    @app.route('/health', methods=['GET'])
+    def health_check():
+        return {
+            "status" : "ok",
+            "environment": os.getenv("FLASK_ENV", "development")
+        }, 200
     @app.route("/api/transactions", methods=["POST"])
     @login_required
     def create_transaction_route():
