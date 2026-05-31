@@ -7,3 +7,5 @@ __pycache__/
 *.sql
 *.sql.gz
 *.dump
+!requirements.txt
+!runtime.txt
