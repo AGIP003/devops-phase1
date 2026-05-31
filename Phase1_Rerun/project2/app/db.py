@@ -50,14 +50,18 @@ def get_category_id(category_name, user_id, category_type=None):
         conn.close()
 
 def get_db_connection():
-    return psycopg2.connect(
-        host = os.getenv('DB_HOST', 'localhost'),
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        return psycopg2.connect(database_url)
+    else:
+        return psycopg2.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
             port=os.getenv('DB_PORT', '5432'),
             database=os.getenv('DB_NAME'),
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD')
-    )   
-
+        )
+    
 TRANSACTION_SELECT = """
     SELECT
         t.id,
