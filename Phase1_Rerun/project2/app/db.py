@@ -281,12 +281,14 @@ def insert_user_hashed_pw(email, username, password_hash):
             cursor.execute("""
                            INSERT INTO users (email, username, password_hash) 
                            VALUES (%(email)s, %(username)s, %(password_hash)s)
-                           RETURNING id, username, email, role, created_at
+                           RETURNING id, username, email
                            """,
                            {"email": email, "username":username, "password_hash": password_hash}
             )
             rows = cursor.fetchone()
             conn.commit()
+        if rows is not None:
+            rows.setdefault("role", "user")
         return rows
     except Exception as e:
         conn.rollback()

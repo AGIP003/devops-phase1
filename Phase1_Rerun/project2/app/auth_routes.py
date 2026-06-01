@@ -51,7 +51,21 @@ def register_auth_route():
 
     new_user = insert_user_hashed_pw(email, username, password_hash)
 
-    return jsonify({"message": "User registered", "user": new_user}), 201
+    payload = {
+        "user_id": new_user["id"],
+        "username": new_user["username"],
+        "email": new_user["email"],
+        "role": new_user.get("role", "user"),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+    return jsonify({"message": "User registered", "token": token, "user": {
+        "user_id": new_user["id"],
+        "username": new_user["username"],
+        "email": new_user["email"],
+        "role": new_user.get("role", "user")
+    }}), 201
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -184,5 +198,4 @@ def password_reset_verify():
     update_reset_password(user_id, password_hash)
 
     return jsonify({"message": "Password reset succesfully"}), 200
-
 
