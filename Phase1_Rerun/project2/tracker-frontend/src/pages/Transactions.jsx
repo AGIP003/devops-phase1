@@ -336,20 +336,20 @@ function Transaction() {
                                     [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
                                 ) : filteredTransactions.map((tx) => (
                                     <tr key={tx.id}>
-                                        <td className="transaction-description">{tx.description}</td>
-                                        <td>
+                                        <td className="transaction-description" data-label="Description">{tx.description}</td>
+                                        <td data-label="Type">
                                             <span className={`type-pill type-pill-${tx.type}`}>
                                                 {tx.type}
                                             </span>
                                         </td>
-                                        <td>{tx.category}</td>
-                                        <td>{dateFormatter.format(new Date(tx.date))}</td>
-                                        <td>{tx.payment_method}</td>
-                                        <td className={`amount-cell amount-${tx.type}`}>
+                                        <td data-label="Category">{tx.category}</td>
+                                        <td data-label="Date">{dateFormatter.format(new Date(tx.date))}</td>
+                                        <td data-label="Payment">{tx.payment_method}</td>
+                                        <td className={`amount-cell amount-${tx.type}`} data-label="Amount">
                                             {tx.type === 'expense' ? '-' : '+'}
                                             {Number(tx.amount || 0).toLocaleString('en-KE')}
                                         </td>
-                                        <td className="actions-cell">
+                                        <td className="actions-cell" data-label="Actions">
                                             <div className="transaction-actions">
                                                 <button
                                                     type="button"
