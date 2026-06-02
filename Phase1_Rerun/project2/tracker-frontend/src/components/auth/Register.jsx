@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -6,13 +6,20 @@ import api from '../../services/api';
 import { saveToken } from '../../utils/auth';
 
 function Register() {
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm({
+    mode: 'onChange',
+  });
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const password = watch('password');
+
+  useEffect(() => {
+    document.body.classList.add('auth-screen');
+    return () => document.body.classList.remove('auth-screen');
+  }, []);
 
   const onSubmit = async (data) => {
     setServerError('');
@@ -25,10 +32,12 @@ function Register() {
       saveToken(response.data.token);
       navigate('/dashboard'); // or wherever your dashboard route is
     } catch (err) {
-      if (err.response?.status === 409) {
+      const message = err.message || 'Registration failed';
+
+      if (message.toLowerCase().includes('email')) {
         setError('email', { type: 'manual', message: 'Email already registered' });
       } else {
-        setServerError(err.response?.data?.message || 'Registration failed');
+        setServerError(message);
       }
     }
   };
@@ -88,6 +97,11 @@ function Register() {
                 minLength: {
                   value: 8,
                   message: 'Password must be at least 8 characters',
+                },
+                validate: {
+                  hasNumber: value => /\d/.test(value) || 'Password must contain at least one number',
+                  hasUppercase: value => /[A-Z]/.test(value) || 'Password must contain at least one uppercase letter',
+                  hasLowercase: value => /[a-z]/.test(value) || 'Password must contain at least one lowercase letter',
                 },
               })}
             />

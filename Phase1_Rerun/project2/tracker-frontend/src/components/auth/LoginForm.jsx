@@ -15,6 +15,11 @@ function LoginForm() {
     const navigate = useNavigate();
     const location = useLocation();
     useEffect(() => {
+        document.body.classList.add('auth-screen');
+        return () => document.body.classList.remove('auth-screen');
+    }, []);
+
+    useEffect(() => {
         if (getToken()) {
             navigate('/dashboard');
         }

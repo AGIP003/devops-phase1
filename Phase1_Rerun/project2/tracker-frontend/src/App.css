@@ -26,10 +26,26 @@
   width: 100%;
 }
 
+#root:has(.auth-page) {
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0;
+}
+
 body {
   background: var(--page-background);
   color: var(--text-main);
 
+}
+
+body:has(.auth-page),
+body.auth-screen {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(244, 248, 194, 1) 0, rgba(232, 237, 194, 0.72) 25%, transparent 48%),
+    radial-gradient(circle at 88% 18%, rgba(220, 248, 230, 0.98) 0, rgba(223, 243, 230, 0.58) 22%, transparent 44%),
+    linear-gradient(135deg, #ffffff 0%, #fbfcf4 42%, #eef2d8 100%);
+  overflow: hidden;
 }
 
 .app-shell {
@@ -175,16 +191,29 @@ body {
     radial-gradient(circle at 14% 12%, rgba(244, 248, 194, 1) 0, rgba(232, 237, 194, 0.72) 25%, transparent 48%),
     radial-gradient(circle at 88% 18%, rgba(220, 248, 230, 0.98) 0, rgba(223, 243, 230, 0.58) 22%, transparent 44%),
     linear-gradient(135deg, #ffffff 0%, #fbfcf4 42%, #eef2d8 100%);
-  border: 1px solid rgba(223, 229, 220, 0.8);
-  border-radius: 22px;
+  border: 0;
+  border-radius: 0;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
-  min-height: calc(100vh - (var(--space-page) * 2));
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   padding: clamp(1rem, 5vw, 3rem);
   position: relative;
   text-align: left;
+  width: 100%;
+}
+
+.auth-form input[type="password"]::-ms-reveal,
+.auth-form input[type="password"]::-ms-clear {
+  display: none;
+}
+
+.auth-form input[type="password"]::-webkit-credentials-auto-fill-button,
+.auth-form input[type="password"]::-webkit-caps-lock-indicator {
+  display: none !important;
+  visibility: hidden;
 }
 
 .auth-page::before {
@@ -201,9 +230,9 @@ body {
 
 .auth-form {
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(223, 229, 220, 0.95);
+  border: 0;
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 18px 42px rgba(23, 33, 27, 0.1);
   box-sizing: border-box;
   color: var(--text-main);
   display: grid;
@@ -1690,8 +1719,8 @@ body {
   }
 
   .auth-page {
-    border-radius: 12px;
-    min-height: calc(100vh - (var(--space-page) * 2));
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: 0.85rem;
   }
 

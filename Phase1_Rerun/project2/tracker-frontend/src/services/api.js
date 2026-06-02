@@ -46,7 +46,7 @@ instance.interceptors.response.use(
         }
         let message = "Network error: Unable to reach server"
         if (error.response) {
-            message = error.response.data?.error || error.response.data?.message || error.message
+            message = error.response.data?.message || error.response.data?.error || error.message
         }
         return Promise.reject(new Error(message));
     }
