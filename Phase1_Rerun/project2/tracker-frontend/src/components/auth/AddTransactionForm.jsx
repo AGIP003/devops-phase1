@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Calendar } from "lucide-react";
 import api from '../../services/api';
 
 
@@ -82,14 +83,19 @@ function AddTransactionForm({ onSuccess }) {
             <form className="add-transaction-form" onSubmit={handleSubmit}>
                 <label className="transaction-field">
                   <span>Date</span>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    disabled={loading}
-                    required
-                  />
+                  <div className={`date-input-wrap ${!formData.date ? "date-input-empty" : ""}`}>
+                    <Calendar size={16} aria-hidden="true" />
+                    {!formData.date && <span className="date-placeholder">Select date</span>}
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      disabled={loading}
+                      required
+                      aria-label="Transaction date"
+                    />
+                  </div>
                 </label>
                 <label className="transaction-field transaction-field-wide">
                   <span>Description</span>

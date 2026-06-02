@@ -457,6 +457,19 @@ body.auth-screen {
   margin-left: auto;
 }
 
+.dashboard-header-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dashboard-welcome-copy {
+  min-width: 0;
+}
+
+.dashboard-header-left .account-menu-wrap {
+  margin-left: auto;
+}
+
 .dashboard-header-actions > button:not(.avatar-button) {
   background: var(--text-main);
   border: 1px solid var(--text-main);
@@ -610,6 +623,11 @@ body.auth-screen {
 }
 
 .summary-card-total {
+  background: linear-gradient(135deg, #ffff 0%, #e8edc2 100%);
+  border-left-color: var(--accent);
+}
+
+.summary-card-balance {
   background: linear-gradient(135deg, #ffff 0%, #e8edc2 100%);
   border-left-color: var(--accent);
 }
@@ -973,7 +991,7 @@ body.auth-screen {
 }
 
 .transactions-filter-group input[type="date"] {
-  width: 168px;
+  width: 100%;
 }
 
 .transactions-filter-group select {
@@ -982,6 +1000,80 @@ body.auth-screen {
 
 .transactions-toolbar input {
   min-width: min(360px, 100%);
+}
+
+.date-input-wrap {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  display: flex;
+  height: 44px;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.transactions-toolbar .date-input-wrap {
+  background: #f9faf7;
+  border-color: var(--border-soft);
+  border-radius: 999px;
+  height: 42px;
+}
+
+.date-input-wrap-filter {
+  width: 168px;
+}
+
+.date-input-wrap svg {
+  flex: 0 0 auto;
+  left: 0.85rem;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.date-placeholder {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  left: 2.35rem;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.date-input-wrap input[type="date"] {
+  background: transparent;
+  border: 0;
+  color: var(--text-main);
+  font: inherit;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  outline: none;
+  padding: 0 0.85rem 0 2.35rem;
+  position: relative;
+  width: 100%;
+  z-index: 3;
+}
+
+.date-input-empty input[type="date"]::-webkit-datetime-edit {
+  color: transparent;
+}
+
+.date-input-wrap input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.date-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(111, 127, 63, 0.16);
 }
 
 .transactions-toolbar input:focus,
@@ -1322,6 +1414,11 @@ body.auth-screen {
   padding: 0 0.75rem;
   transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
   width: 100%;
+}
+
+.transaction-field .date-input-wrap input {
+  border: 0;
+  box-shadow: none;
 }
 
 /* Empty state */

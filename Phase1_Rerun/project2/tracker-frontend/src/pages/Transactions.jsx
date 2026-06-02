@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Calendar, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
 import { useOutletContext } from "react-router-dom";
@@ -41,6 +41,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
     };
     const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
     const selectedType = watch("type");
+    const selectedDate = watch("date");
     const currentCategories = selectedType ? categoryOptions[selectedType] : [];
 
     useEffect(() => {
@@ -138,10 +139,15 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 
                         <label className="transaction-field">
                             <span>Date</span>
-                            <input
-                                type="date"
-                                {...register("date", { required: "Date is required" })}
-                            />
+                            <div className={`date-input-wrap ${!selectedDate ? "date-input-empty" : ""}`}>
+                                <Calendar size={16} aria-hidden="true" />
+                                {!selectedDate && <span className="date-placeholder">Select date</span>}
+                                <input
+                                    type="date"
+                                    aria-label="Transaction date"
+                                    {...register("date", { required: "Date is required" })}
+                                />
+                            </div>
                             {errors.date && <span className="error">{errors.date.message}</span>}
                         </label>
 
@@ -285,12 +291,16 @@ function Transaction() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <div className="transactions-filter-group">
-                    <input
-                        type="date"
-                        aria-label="Filter transactions by date"
-                        value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
-                    />
+                    <div className={`date-input-wrap date-input-wrap-filter ${!filterDate ? "date-input-empty" : ""}`}>
+                        <Calendar size={16} aria-hidden="true" />
+                        {!filterDate && <span className="date-placeholder">Filter date</span>}
+                        <input
+                            type="date"
+                            aria-label="Filter transactions by date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                        />
+                    </div>
                     <select
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}

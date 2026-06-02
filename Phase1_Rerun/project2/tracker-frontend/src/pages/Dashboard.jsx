@@ -37,6 +37,7 @@ function Dashboard() {
     const navigate = useNavigate();
     const { toggleSidebar } = useOutletContext();
     const accountMenuRef = useRef(null);
+    const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
     const [loading  , setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -92,6 +93,15 @@ function Dashboard() {
     useEffect(() => {
         fetchTransactions();
     }, [])
+
+    useEffect(() => {
+        if (showForm && addTransactionPanelRef.current) {
+            addTransactionPanelRef.current.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }
+    }, [showForm]);
 
     // Skeleton row for the div-based recent transactions list.
     function RecentTransactionSkeleton() {
@@ -157,20 +167,10 @@ function Dashboard() {
                             <span />
                         </span>
                     </button>
-                    <div>
+                    <div className="dashboard-welcome-copy">
                         <h1>Welcome, {username} </h1>
                         <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>
                     </div>
-                </div>
-                <div className="dashboard-header-actions">
-                    <button
-                        type="button"
-                        onClick={() => setShowForm(prev => !prev)}
-                        aria-expanded={showForm}
-                        aria-controls="add-transaction-panel"
-                    >
-                        {showForm ? 'Cancel' : 'Add Transaction'}
-                    </button>
                     <div className="account-menu-wrap" ref={accountMenuRef}>
                         <button 
                             type="button" 
@@ -195,6 +195,16 @@ function Dashboard() {
                         )}
                     </div>
                 </div>
+                <div className="dashboard-header-actions">
+                    <button
+                        type="button"
+                        onClick={() => setShowForm(prev => !prev)}
+                        aria-expanded={showForm}
+                        aria-controls="add-transaction-panel"
+                    >
+                        {showForm ? 'Cancel' : 'Add Transaction'}
+                    </button>
+                </div>
             </div>
             <div className="dashboard-overview">
                 <SummaryCards
@@ -217,10 +227,12 @@ function Dashboard() {
                 </div>
             </div>
             {showForm && (
+                        <div ref={addTransactionPanelRef}>
                             <AddTransactionForm onSuccess={() => {
                                 fetchTransactions();
                                 setShowForm(false);
                             }} />
+                        </div>
                         )}
             <div className="dashboard-main-grid">
                 <div className="dashboard-bills-recent">
