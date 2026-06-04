@@ -1,9 +1,9 @@
-import psycopg2
 import os
+import psycopg2
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
+from config import get_config
 
-load_dotenv()
+config = get_config()
 
 # Helper functions to get IDs from string values
 def get_payment_method_id(payment_method_name):
@@ -50,22 +50,28 @@ def get_category_id(category_name, user_id, category_type=None):
         conn.close()
 
 def get_db_connection():
-    if os.getenv("FLASK_ENV", "development").lower() in {"production", "prod"}:
-        database_url = os.getenv("DATABASE_URL")
-    else: 
-        database_url = None
-        
-    if database_url:
+    database_url = config.DATABASE_URL.strip() if config.DATABASE_URL else None
+    use_database_url = bool(
+        database_url
+        and (config.ENV in {"production", "prod"} or config.DB_USE_URL)
+    )
+
+    if use_database_url:
         return psycopg2.connect(database_url)
-    else:
-        return psycopg2.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            port=os.getenv('DB_PORT', '5432'),
-            database=os.getenv('DB_NAME'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD')
+
+    if not config.DB_NAME or not config.DB_USER:
+        raise RuntimeError(
+            "Local database configuration is incomplete. "
+            "Set DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, or enable DB_USE_URL=True."
         )
-    
+
+    return psycopg2.connect(
+        host=config.DB_HOST,
+        port=str(config.DB_PORT),
+        database=config.DB_NAME,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+    )
 TRANSACTION_SELECT = """
     SELECT
         t.id,
