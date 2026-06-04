@@ -173,13 +173,12 @@ function Dashboard() {
                         <button
                             type="button"
                             className="profile-button"
-                            aria-label="User profile menu"
+                            aria-label="Open user profile menu"
                             aria-haspopup="menu"
                             aria-expanded={showAccountMenu}
                             onClick={() => setShowAccountMenu(prev => !prev)}
                         >
                             <span className="profile-initial">{username.charAt(0).toUpperCase()}</span>
-                            <span>Profile</span>
                         </button>
 
                         {showAccountMenu && (
