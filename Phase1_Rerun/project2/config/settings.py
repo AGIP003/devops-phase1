@@ -26,10 +26,19 @@ class BaseConfig:
 
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-    CORS_ORIGINS = get_env_list(
-        "CORS_ORIGINS",
-        default=["http://localhost:5173"],
-    )
+    _default_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ]
+
+    env_origins = get_env_list("CORS_ORIGINS", default=_default_origins)
+    if os.getenv("FLASK_ENV", "development").lower() not in {"production", "prod"}:
+        # Always allow local development hosts alongside any configured origins.
+        CORS_ORIGINS = list(dict.fromkeys(_default_origins + env_origins))
+    else:
+        CORS_ORIGINS = env_origins
 
 
 class DevelopmentConfig(BaseConfig):
