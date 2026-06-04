@@ -28,14 +28,18 @@ body,
 }
 
 #root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-page);
+  text-align: center;
   width: 100%;
-  max-width: none;
-  text-align: left;
 }
 
 #root:has(.auth-page) {
+  max-width: none;
   min-height: 100vh;
   min-height: 100dvh;
+  padding: 0;
 }
 
 body {
@@ -189,7 +193,7 @@ body.auth-screen {
 
 .auth-page {
   align-items: center;
-  background:var(--page-background);
+  background: var(--page-background);
 
   border: 0;
   border-radius: 0;
@@ -443,14 +447,10 @@ body.auth-screen {
   color: #888;
 }
 
-.dashboard-page,
-.transactions-page {
+.dashboard-page {
   background: transparent;
   color: var(--text-main);
   text-align: left;
-  width: 100%;
-  padding: 0;
-  max-width: none;
 }
 
 .dashboard-header-left,
