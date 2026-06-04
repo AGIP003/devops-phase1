@@ -21,25 +21,25 @@ function getUsernameFromToken() {
 }
 
 // Skeleton row for the div-based recent transactions list.
-    function RecentTransactionSkeleton() {
-        return (
-            <div className="recent-row recent-row-skeleton">
-                <span className="recent-index recent-skeleton-block" />
-                <span className="recent-description recent-skeleton-block" />
-                <span className="recent-category recent-skeleton-block" />
-                <span className="recent-date recent-skeleton-block" />
-                <span className="recent-amount recent-skeleton-block" />
-            </div>
-        )
-    }
-    
+function RecentTransactionSkeleton() {
+    return (
+        <div className="recent-row recent-row-skeleton">
+            <span className="recent-index recent-skeleton-block" />
+            <span className="recent-description recent-skeleton-block" />
+            <span className="recent-category recent-skeleton-block" />
+            <span className="recent-date recent-skeleton-block" />
+            <span className="recent-amount recent-skeleton-block" />
+        </div>
+    )
+}
+
 function Dashboard() {
     const navigate = useNavigate();
     const { toggleSidebar } = useOutletContext();
     const accountMenuRef = useRef(null);
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
-    const [loading  , setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -50,31 +50,31 @@ function Dashboard() {
     //Derived filtered list
     const filteredTransactions = useMemo(() => {
         return transactions.filter(transaction => {
-        //Type filter
-        if (filterType !== 'all' && transaction.type !== filterType) return false;
-        //Search filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesDesc = transaction.description?.toLowerCase().includes(query);
-            const matchesCat = transaction.category?.toLowerCase().includes(query);
-            const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
-            if (!matchesCat && !matchesDesc && !matchesPM) return false;
-        }
+            //Type filter
+            if (filterType !== 'all' && transaction.type !== filterType) return false;
+            //Search filter
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const matchesDesc = transaction.description?.toLowerCase().includes(query);
+                const matchesCat = transaction.category?.toLowerCase().includes(query);
+                const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
+                if (!matchesCat && !matchesDesc && !matchesPM) return false;
+            }
 
-        return true;
-    })
-}, [transactions, filterType, searchQuery]);
-    
+            return true;
+        })
+    }, [transactions, filterType, searchQuery]);
+
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
 
     //Date Formatter
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
-        day:'2-digit',
+        day: '2-digit',
         month: 'short',
         year: "numeric",
     });
-    
+
 
     //Fetch transactions
     const fetchTransactions = useCallback(async () => {
@@ -103,22 +103,10 @@ function Dashboard() {
         }
     }, [showForm]);
 
-    // Skeleton row for the div-based recent transactions list.
-    function RecentTransactionSkeleton() {
-        return (
-            <div className="recent-row recent-row-skeleton">
-                <span className="recent-index recent-skeleton-block" />
-                <span className="recent-description recent-skeleton-block" />
-                <span className="recent-category recent-skeleton-block" />
-                <span className="recent-date recent-skeleton-block" />
-                <span className="recent-amount recent-skeleton-block" />
-            </div>
-        )
-    }
     //useMemo catches the results and only computes when dependencies change
     //USED WHEN COMPUTING IS EXPENSIVE OR WANT GUARANTTEE IT ONLY RUNS ONCE
-    const username = useMemo (() => getUsernameFromToken(), []);
-    
+    const username = useMemo(() => getUsernameFromToken(), []);
+
     //summary cards
     const currencyFormatter = new Intl.NumberFormat('en-KE', {
         style: 'currency',
@@ -171,29 +159,6 @@ function Dashboard() {
                         <h1>Welcome, {username} </h1>
                         <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>
                     </div>
-                    <div className="account-menu-wrap" ref={accountMenuRef}>
-                        <button 
-                            type="button" 
-                            className="avatar-button" 
-                            aria-label="Account menu"
-                            aria-haspopup="menu"
-                            aria-expanded={showAccountMenu}
-                            onClick={() => setShowAccountMenu(prev => !prev)}
-                        >
-                            {username.charAt(0).toUpperCase()}
-                        </button>
-
-                        {showAccountMenu && (
-                            <div className="account-menu" role="menu">
-                                <p>Signed in as</p>
-                                <strong>{username}</strong>
-                                <button type="button" role="menuitem" onClick={() => {removeToken(); navigate('/');}}>
-                                    Logout
-                                </button>
-
-                            </div>
-                        )}
-                    </div>
                 </div>
                 <div className="dashboard-header-actions">
                     <button
@@ -204,14 +169,37 @@ function Dashboard() {
                     >
                         {showForm ? 'Cancel' : 'Add Transaction'}
                     </button>
+                    <div className="account-menu-wrap" ref={accountMenuRef}>
+                        <button
+                            type="button"
+                            className="profile-button"
+                            aria-label="User profile menu"
+                            aria-haspopup="menu"
+                            aria-expanded={showAccountMenu}
+                            onClick={() => setShowAccountMenu(prev => !prev)}
+                        >
+                            <span className="profile-initial">{username.charAt(0).toUpperCase()}</span>
+                            <span>Profile</span>
+                        </button>
+
+                        {showAccountMenu && (
+                            <div className="account-menu" role="menu">
+                                <p>Signed in as</p>
+                                <strong>{username}</strong>
+                                <button type="button" role="menuitem" onClick={() => { removeToken(); navigate('/'); }}>
+                                    Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="dashboard-overview">
                 <SummaryCards
-                    filteredTransactions = {filteredTransactions}
-                    hideAmounts = {hideAmounts}
-                    currencyFormatter = {currencyFormatter}
-                    toggleHideAmounts = {toggleHideAmounts}
+                    filteredTransactions={filteredTransactions}
+                    hideAmounts={hideAmounts}
+                    currencyFormatter={currencyFormatter}
+                    toggleHideAmounts={toggleHideAmounts}
                 />
                 <div className="dashboard-charts-row">
                     <MonthlyTrendChart
@@ -222,18 +210,18 @@ function Dashboard() {
                         transactions={filteredTransactions}
                         filterType={filterType}
                         setFilterType={setFilterType}
-                        toggleHideAmounts={toggleHideAmounts}              
+                        toggleHideAmounts={toggleHideAmounts}
                     />
                 </div>
             </div>
             {showForm && (
-                        <div ref={addTransactionPanelRef}>
-                            <AddTransactionForm onSuccess={() => {
-                                fetchTransactions();
-                                setShowForm(false);
-                            }} />
-                        </div>
-                        )}
+                <div ref={addTransactionPanelRef}>
+                    <AddTransactionForm onSuccess={() => {
+                        fetchTransactions();
+                        setShowForm(false);
+                    }} />
+                </div>
+            )}
             <div className="dashboard-main-grid">
                 <div className="dashboard-bills-recent">
                     <section className="recent-card">
@@ -242,9 +230,9 @@ function Dashboard() {
                                 <h2>Recent Transactions</h2>
                             </div>
 
-                            <button 
+                            <button
                                 type="button"
-                                onClick={()=> navigate(`/transactions`)}
+                                onClick={() => navigate(`/transactions`)}
                                 aria-label="View all transactions"
                             >
                                 View all
@@ -258,18 +246,18 @@ function Dashboard() {
                             <span>Date</span>
                             <span>Amount</span>
                         </div>
-                        
-                        
+
+
 
                         <div className="recent-list">
                             {loading ? (
-                            [...Array(5)].map((_, i) => <RecentTransactionSkeleton key={i} />)
+                                [...Array(5)].map((_, i) => <RecentTransactionSkeleton key={i} />)
                             ) : recentTransactions.map((tx, index) => (
                                 <div className="recent-row" key={tx.id}>
                                     <span className="recent-index">
                                         {String(index + 1)}
                                     </span>
-                            
+
                                     <span className="recent-description">{tx.description}</span>
 
                                     <span className="recent-category">{tx.category}</span>
@@ -277,7 +265,7 @@ function Dashboard() {
                                     <span className="recent-date">
                                         {dateFormatter.format(new Date(tx.date))}
                                     </span>
-                            
+
                                     <span className={`recent-amount recent-amount-${tx.type}`}>
                                         {tx.type === 'expense' ? '-' : '+'}
                                         {currencyFormatter.format(Number(tx.amount || 0))}

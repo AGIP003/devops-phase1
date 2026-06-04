@@ -1,21 +1,13 @@
 from flask import Flask
 from flask_mail import Mail, Message
-import os
-from dotenv import load_dotenv
-load_dotenv()
+from config import get_config
 
 app = Flask(__name__)
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_APP_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config.from_object(get_config())
 mail = Mail(app)
 
 with app.app_context():
-    msg = Message('Test Email', 
-                  recipients=['blessedmuchemi@gmail.com'])
-    msg.body= "Test email from Flask."
+    msg = Message('Test Email', recipients=['blessedmuchemi@gmail.com'])
+    msg.body = "Test email from Flask."
     mail.send(msg)
     print("Email sent successfully")

@@ -4,16 +4,16 @@ from app.auth import hash_password, verify_password, validate_password_strength
 from app.db import get_db_connection,get_user_by_email, insert_user_hashed_pw, update_reset_password
 import jwt
 from datetime import datetime, timezone, timedelta
-import os
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from flask_mail import Mail, Message
-from dotenv import load_dotenv
-from flask_cors import CORS
-load_dotenv()
+from flask_mail import Message
+from config import get_config
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+config = get_config()
+SECRET_KEY = config.SECRET_KEY
+FRONTEND_URL = config.FRONTEND_URL.rstrip("/")
+
 if SECRET_KEY is None:
-    raise RuntimeError("SECRET_KEY not found in environment variables")
+    raise RuntimeError("SECRET_KEY not found in configuration")
 
 def get_serializer():
     return URLSafeTimedSerializer(SECRET_KEY)
@@ -132,8 +132,7 @@ def password_reset_request():
     token = serializer.dumps(email, salt='password-reset-salt')
 
     #Reset URL
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
-    reset_url = f"{frontend_url}/reset-password?token={token}"
+    reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
 
     #Send email
     msg = Message('Password Reset Request',

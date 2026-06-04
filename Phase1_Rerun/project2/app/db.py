@@ -50,7 +50,11 @@ def get_category_id(category_name, user_id, category_type=None):
         conn.close()
 
 def get_db_connection():
-    database_url = os.getenv('DATABASE_URL')
+    if os.getenv("FLASK_ENV", "development").lower() in {"production", "prod"}:
+        database_url = os.getenv("DATABASE_URL")
+    else: 
+        database_url = None
+        
     if database_url:
         return psycopg2.connect(database_url)
     else:

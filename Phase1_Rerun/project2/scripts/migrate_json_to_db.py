@@ -12,6 +12,10 @@ from helpers import(
 )
 load_dotenv()
 
+PAYMENT_METHOD_ALIASES = {
+    "bank": "bank transfer",
+}
+
 def migrate_json_to_postgres(json_filePath):
     with DatabaseConnection() as cursor:
         # Read Json data
@@ -54,6 +58,7 @@ def migrate_json_to_postgres(json_filePath):
 
                 #Payment Method + Group
                 method_name = txn.get("payment method")
+                method_name = PAYMENT_METHOD_ALIASES.get(method_name, method_name)
                 group_name = payment_lookup.get(method_name, "cash")
                 group_id = get_or_create_group(
                     cursor,
@@ -90,6 +95,5 @@ if __name__ == "__main__":
         print("Kindly provide the correct path to your JSON file")
     else:
         migrate_json_to_postgres(json_filePath)
-
 
 
