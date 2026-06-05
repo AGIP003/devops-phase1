@@ -10,7 +10,7 @@
   --goal: #c0c311;
   --radius-card: 12px;
   --shadow-card: 0 14px 30px rgba(23, 33, 27, 0.08);
-  --space-page: 2rem;
+  --space-page: 1rem;
 }
 
 * {
@@ -28,7 +28,7 @@ body,
 }
 
 #root {
-  max-width: 1280px;
+  max-width: 2000px;
   margin: 0 auto;
   padding: var(--space-page);
   text-align: center;
@@ -451,6 +451,14 @@ body.auth-screen {
   background: transparent;
   color: var(--text-main);
   text-align: left;
+
+}
+
+.dashboard-header {
+  flex-wrap: nowrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .dashboard-header-left,
@@ -465,6 +473,8 @@ body.auth-screen {
   align-items: center;
   display: flex;
   gap: 0.75rem;
+  flex-shrink: 0;
+
 }
 
 .dashboard-header-left {
@@ -474,6 +484,8 @@ body.auth-screen {
 
 .dashboard-welcome-copy {
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .dashboard-header-left .account-menu-wrap {
@@ -527,16 +539,15 @@ body.auth-screen {
   height: 42px;
   justify-content: center;
   min-width: 0;
-  padding: 0 1rem;
+
 }
 
 .profile-button .profile-initial {
   align-items: center;
-  background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   color: #ffffff;
   display: inline-flex;
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   font-weight: 700;
   height: 30px;
   justify-content: center;
@@ -1583,6 +1594,8 @@ body.auth-screen {
 
   .main-content {
     width: 100%;
+    padding: 20;
+    padding: 0.65rem 0.65rem
   }
 
   .sidebar {
@@ -1634,7 +1647,8 @@ body.auth-screen {
   }
 
   .dashboard-header {
-    flex-direction: column;
+    flex-wrap: nowrap;
+
     gap: 0.85rem;
     margin-bottom: 1rem;
   }
@@ -1642,6 +1656,7 @@ body.auth-screen {
   .dashboard-header-left {
     align-items: flex-start;
     width: 100%;
+    min-width: 0;
   }
 
   .dashboard-header h1,
@@ -1657,11 +1672,12 @@ body.auth-screen {
   }
 
   .dashboard-header-actions {
-    align-items: stretch;
-    display: grid;
+    align-items: center;
+    display: flex;
     grid-template-columns: minmax(0, 1fr) auto;
     margin-left: 0;
-    width: 100%;
+    
+    flex-shrink: 0;
   }
 
   .dashboard-header-actions>button:not(.avatar-button) {
@@ -1685,10 +1701,12 @@ body.auth-screen {
   .dashboard-charts-row,
   .donut-chart {
     grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .summary-grid {
     gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .summary-card {
@@ -1936,4 +1954,41 @@ body.auth-screen {
   cursor: pointer;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
+}
+
+/* Mobile layout tweaks: keep header/menu full-width while adding
+   comfortable horizontal padding inside the main content area. */
+@media (max-width: 640px) {
+
+  /* Remove page-level root padding so top navigation and menu span edge-to-edge */
+  #root {
+    padding: 0;
+  }
+
+  /* Add horizontal padding to the main content for readable spacing */
+  .main-content {
+    padding: 0 1rem;
+  }
+
+  /* Keep the sidebar visually consistent but allow it to touch the edge */
+  .sidebar {
+    border-radius: 0.5rem;
+  }
+
+  /* Ensure dashboard header doesn't inherit extra page padding */
+  .dashboard-header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-header {
+    min-width: 0;
+  }
+
+  .dashboard-header-actions {
+    margin-left: 0;
+    margin-top: 0.75rem;
+  }
 }
