@@ -21,7 +21,6 @@ api = Api(
 # NAMESPACES
 auth_ns = Namespace('auth', description='Authentication - register, login, password reset')
 transactions_ns = Namespace('transactions', description='Transactions CRUD operations')
-admin_ns = Namespace('admin', description='Admin-only operations')
 
 # MODELS (request/response shapes)
 user_model = auth_ns.model('UserData', {
@@ -157,4 +156,3 @@ class TransactionDetailDoc(Resource):
 # Register namespaces onto the Api object
 api.add_namespace(auth_ns, path='/auth')
 api.add_namespace(transactions_ns, path='/transactions')
-api.add_namespace(admin_ns, path='/admin')
