@@ -5,6 +5,7 @@ from flask_cors import CORS
 from app.extensions import bcrypt, mail, limiter
 from app.auth_routes import auth_bp
 from flask_talisman import Talisman
+from app.docs import api 
 from config import get_config, validate_environment
 import logging
 
@@ -33,6 +34,8 @@ def create_app():
             }
         },
     )
+    #Initialize docs 
+    api.init_app(app)
     configure_logging(app)
     register_routes(app)
     register_error_handlers(app)
