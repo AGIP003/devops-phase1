@@ -66,6 +66,9 @@ function LoginForm() {
         try {
             //API call
             const response = await api.post('/auth/login', formData);
+            if (!response.data || !response.data.token) {
+                throw new Error('Invalid server response: missing token');
+            }
             saveToken(response.data.token);
             const from = location.state?.from?.pathname || '/dashboard';
             navigate(from, { replace: true });

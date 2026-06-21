@@ -1,46 +1,47 @@
 import React from "react";
-import { Eye,  EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, toggleHideAmounts, hideAmounts, currencyFormatter }) {
     //summary cards
-    const incomeTotal = filteredTransactions
+    const txList = filteredTransactions || [];
+    const incomeTotal = txList
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const expenseTotal = filteredTransactions
+    const expenseTotal = txList
         .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);  
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const balanceTotal = incomeTotal - expenseTotal;
-    
+
     return (
         <div className="summary-grid">
             <div className="summary-card summary-card-income">
-                <button 
+                <button
                     type="button"
                     className="summary-privacy-toggle"
                     onClick={toggleHideAmounts}
                     aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
                 >
-                    {hideAmounts ? <Eye size={16} aria-hidden="true" /> : <EyeOff size ={16} aria-hidden="true" />}       
+                    {hideAmounts ? <Eye size={16} aria-hidden="true" /> : <EyeOff size={16} aria-hidden="true" />}
                 </button>
                 <span>Income</span>
-                <strong>{hideAmounts ? "••••••" :currencyFormatter.format(incomeTotal)}</strong>
-                <small>{filteredTransactions.filter(t => t.type === 'income').length} transactions</small>
+                <strong>{hideAmounts ? "••••••" : currencyFormatter.format(incomeTotal)}</strong>
+                <small>{txList.filter(t => t.type === 'income').length} transactions</small>
             </div>
             <div className="summary-card summary-card-expense">
                 <span>Expense</span>
-                <strong>{hideAmounts ? "••••••" :currencyFormatter.format(expenseTotal)}</strong>
-                <small>{filteredTransactions.filter(t => t.type === 'expense').length} transactions</small>
+                <strong>{hideAmounts ? "••••••" : currencyFormatter.format(expenseTotal)}</strong>
+                <small>{txList.filter(t => t.type === 'expense').length} transactions</small>
             </div>
             <div className="summary-card summary-card-balance">
-                
+
                 <span>Balance</span>
                 <strong>{hideAmounts ? "••••••" : currencyFormatter.format(balanceTotal)}</strong>
                 <small>Current View</small>
             </div>
-            <div className = "summary-card summary-card-goal">
+            <div className="summary-card summary-card-goal">
                 <span>Goal</span>
                 <strong>{hideAmounts ? "••••••" : "Not set"}</strong>
-                <small>Coming Soon</small>         
+                <small>Coming Soon</small>
             </div>
         </div>
     )

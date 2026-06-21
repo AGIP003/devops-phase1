@@ -29,6 +29,9 @@ function Register() {
         email: data.email,
         password: data.password,
       });
+      if (!response.data || !response.data.token) {
+        throw new Error('Invalid server response: missing token');
+      }
       saveToken(response.data.token);
       navigate('/dashboard'); // or wherever your dashboard route is
     } catch (err) {

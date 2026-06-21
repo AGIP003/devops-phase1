@@ -82,10 +82,12 @@ function Dashboard() {
         setError(''); // reset the previous errors     
         try {
             const response = await api.get('/transactions');
-            setTransactions(response.data);
-            console.log('Transaction sample:', response.data[0]);
+            const data = Array.isArray(response.data) ? response.data : [];
+            setTransactions(data);
+            console.log('Transaction sample:', data[0]);
         } catch (error) {
             setError(error.message);
+            setTransactions([]);
         } finally {
             setLoading(false);
         }

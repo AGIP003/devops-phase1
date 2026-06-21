@@ -3,11 +3,13 @@ import { LayoutDashboard, LogOut, ReceiptText } from "lucide-react";
 import { useState } from "react";
 import { removeToken } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
+import TelegramLinkPanel, { TelegramIcon } from "./TelegramLinkPanel";
 
 
 function Layout() {
     const navigate = useNavigate();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [showTelegramPanel, setShowTelegramPanel] = useState(false);
 
     function handleLogout() {
         removeToken();
@@ -65,6 +67,16 @@ function Layout() {
                         <ReceiptText size={18} aria-hidden="true" />
                         <span>Transactions</span>
                     </NavLink>
+                    <button
+                        type="button"
+                        className="sidebar-link sidebar-action"
+                        aria-label="Connect Telegram"
+                        title="Connect Telegram"
+                        onClick={() => setShowTelegramPanel(true)}
+                    >
+                        <TelegramIcon size={18} />
+                        <span>Telegram</span>
+                    </button>
                 </nav>
                 <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
                     <LogOut size={18} aria-hidden="true" />
@@ -75,6 +87,10 @@ function Layout() {
 
                 <Outlet context={{ sidebarCollapsed, toggleSidebar }} />
             </main>
+            <TelegramLinkPanel
+                open={showTelegramPanel}
+                onClose={() => setShowTelegramPanel(false)}
+            />
         </div>
     );
 }
