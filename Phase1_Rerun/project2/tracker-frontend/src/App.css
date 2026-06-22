@@ -165,6 +165,38 @@ body.auth-screen {
   width: 100%;
 }
 
+.sidebar-telegram {
+  background: #e9f6fc;
+  border: 1px solid #bce3f5;
+  color: #147ca8;
+}
+
+.sidebar-telegram:hover {
+  background: #dff2fb;
+  border-color: #8fd0ed;
+  color: #0f6f99;
+}
+
+.sidebar-telegram-icon {
+  display: inline-flex;
+  position: relative;
+}
+
+.sidebar-status-dot {
+  background: #dc2626;
+  border: 2px solid #e9f6fc;
+  border-radius: 50%;
+  bottom: -3px;
+  height: 9px;
+  position: absolute;
+  right: -4px;
+  width: 9px;
+}
+
+.sidebar-telegram.is-linked .sidebar-status-dot {
+  background: #16a34a;
+}
+
 .sidebar-link svg,
 .logout-btn svg {
   flex: 0 0 auto;
@@ -189,9 +221,16 @@ body.auth-screen {
 }
 
 .sidebar-collapsed .sidebar-brand-text,
-.sidebar-collapsed .sidebar-link span,
-.sidebar-collapsed .logout-btn span {
+.sidebar-collapsed .sidebar-link-label {
   display: none;
+}
+
+.sidebar-collapsed .sidebar-telegram-icon {
+  display: inline-flex;
+}
+
+.sidebar-collapsed .sidebar-telegram-icon .sidebar-status-dot {
+  display: block;
 }
 
 .sidebar-collapsed .sidebar-link,
@@ -324,6 +363,17 @@ body.auth-screen {
   font-size: 0.78rem;
   line-height: 1.45;
   margin-top: 0.15rem;
+}
+
+.telegram-setup-error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  color: #be123c;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin-top: 0.85rem;
+  padding: 0.75rem;
 }
 
 .telegram-steps {
@@ -1880,8 +1930,7 @@ body.auth-screen {
     width: 62px;
   }
 
-  .sidebar-collapsed .sidebar-link span,
-  .sidebar-collapsed .logout-btn span {
+  .sidebar-collapsed .sidebar-link-label {
     display: inline;
   }
 

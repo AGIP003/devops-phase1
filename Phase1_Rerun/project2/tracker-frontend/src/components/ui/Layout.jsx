@@ -1,15 +1,30 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, ReceiptText } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { removeToken } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
 import TelegramLinkPanel, { TelegramIcon } from "./TelegramLinkPanel";
+import api from "../../services/api";
 
 
 function Layout() {
     const navigate = useNavigate();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [showTelegramPanel, setShowTelegramPanel] = useState(false);
+    const [telegramLinked, setTelegramLinked] = useState(false);
+
+    const refreshTelegramStatus = useCallback(async () => {
+        try {
+            const response = await api.get("/telegram/status");
+            setTelegramLinked(Boolean(response.data?.linked));
+        } catch {
+            setTelegramLinked(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        refreshTelegramStatus();
+    }, [refreshTelegramStatus]);
 
     function handleLogout() {
         removeToken();
@@ -56,7 +71,7 @@ function Layout() {
                         title="Dashboard"
                     >
                         <LayoutDashboard size={18} aria-hidden="true" />
-                        <span>Dashboard</span>
+                        <span className="sidebar-link-label">Dashboard</span>
                     </NavLink>
                     <NavLink
                         to="/transactions"
@@ -65,22 +80,28 @@ function Layout() {
                         title="Transactions"
                     >
                         <ReceiptText size={18} aria-hidden="true" />
-                        <span>Transactions</span>
+                        <span className="sidebar-link-label">Transactions</span>
                     </NavLink>
                     <button
                         type="button"
-                        className="sidebar-link sidebar-action"
+                        className={`sidebar-link sidebar-action sidebar-telegram ${telegramLinked ? "is-linked" : "is-unlinked"}`}
                         aria-label="Connect Telegram"
                         title="Connect Telegram"
-                        onClick={() => setShowTelegramPanel(true)}
+                        onClick={() => {
+                            setShowTelegramPanel(true);
+                            refreshTelegramStatus();
+                        }}
                     >
-                        <TelegramIcon size={18} />
-                        <span>Telegram</span>
+                        <span className="sidebar-telegram-icon">
+                            <TelegramIcon size={18} />
+                            <span className="sidebar-status-dot" aria-hidden="true" />
+                        </span>
+                        <span className="sidebar-link-label">Telegram</span>
                     </button>
                 </nav>
                 <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
                     <LogOut size={18} aria-hidden="true" />
-                    <span>Logout</span>
+                    <span className="sidebar-link-label">Logout</span>
                 </button>
             </aside>
             <main className="main-content">
@@ -90,6 +111,7 @@ function Layout() {
             <TelegramLinkPanel
                 open={showTelegramPanel}
                 onClose={() => setShowTelegramPanel(false)}
+                onStatusChange={setTelegramLinked}
             />
         </div>
     );

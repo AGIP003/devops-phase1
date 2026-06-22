@@ -25,24 +25,29 @@ export function TelegramIcon({ size = 18, ...props }) {
 }
 
 
-function TelegramLinkPanel({ open, onClose }) {
+function TelegramLinkPanel({ open, onClose, onStatusChange }) {
     const [status, setStatus] = useState({ linked: false, telegram_id: null });
     const [linkCode, setLinkCode] = useState("");
     const [expiresAt, setExpiresAt] = useState("");
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [setupError, setSetupError] = useState("");
 
     const fetchStatus = useCallback(async () => {
         setLoadingStatus(true);
+        setSetupError("");
         try {
             const response = await api.get("/telegram/status");
             setStatus(response.data);
+            onStatusChange(Boolean(response.data?.linked));
         } catch (error) {
-            toast.error(error.message);
+            setStatus({ linked: false, telegram_id: null });
+            onStatusChange(false);
+            setSetupError(error.message);
         } finally {
             setLoadingStatus(false);
         }
-    }, []);
+    }, [onStatusChange]);
 
     useEffect(() => {
         if (!open) return undefined;
@@ -57,13 +62,14 @@ function TelegramLinkPanel({ open, onClose }) {
 
     async function generateCode() {
         setGenerating(true);
+        setSetupError("");
         try {
             const response = await api.post("/telegram/link-token");
             setLinkCode(response.data.token);
             setExpiresAt(response.data.expires_at);
             toast.success("Telegram link code generated");
         } catch (error) {
-            toast.error(error.message);
+            setSetupError(error.message);
         } finally {
             setGenerating(false);
         }
@@ -137,6 +143,12 @@ function TelegramLinkPanel({ open, onClose }) {
                     </div>
                 </div>
 
+                {setupError && (
+                    <div className="telegram-setup-error" role="alert">
+                        {setupError}
+                    </div>
+                )}
+
                 {!status.linked && (
                     <>
                         <ol className="telegram-steps">
@@ -167,7 +179,7 @@ function TelegramLinkPanel({ open, onClose }) {
                             <button
                                 type="button"
                                 className="telegram-generate-button"
-                                disabled={generating}
+                                disabled={generating || Boolean(setupError)}
                                 onClick={generateCode}
                             >
                                 {generating ? <RefreshCw className="spin" size={17} /> : <TelegramIcon size={17} />}

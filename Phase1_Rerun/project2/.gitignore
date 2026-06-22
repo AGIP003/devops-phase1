@@ -5,6 +5,7 @@ __pycache__/
 .vscode/ 
 .env
 *.sql
+!migrations/*.sql
 *.sql.gz
 *.dump
 !requirements.txt

@@ -5,7 +5,7 @@ from finance_tracker.utils.validations import (
     validate_payment_method, ValidationError, validate_transaction_type
 )
 from app.db import (
-    create_transactions, get_all_transactions, get_all_transactions_for_user,
+    create_transaction_for_user, get_all_transactions, get_all_transactions_for_user,
     search_transactions, get_db_connection,
     db_get_transaction_by_id, update_transactions, delete_transactions,
     get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id
@@ -54,24 +54,20 @@ def register_routes(app):
             description = validate_description(data.get("description", ""))
             payment_method = validate_payment_method(data.get("payment_method"))
             
-            # Now lookup the IDs from database
             try:
                 user_id = g.current_user["user_id"]
-                category_id = get_category_id(category_name, user_id, txn_type)
-                payment_method_id = get_payment_method_id(payment_method)
+                saved_record = create_transaction_for_user(
+                    user_id=user_id,
+                    category_name=category_name,
+                    transaction_type=txn_type,
+                    payment_method_name=payment_method,
+                    amount=amount,
+                    date=date,
+                    description=description,
+                )
             except ValueError as e:
                 abort(400, description=str(e))
-            
-            # database record 
-            db_data = {
-                "user_id": user_id,  
-                "category_id": category_id,
-                "payment_method_id": payment_method_id,
-                "amount": amount,
-                "date": date,
-                "description": description
-            }
-            saved_record = create_transactions(db_data)
+
             return jsonify({"data": saved_record, "status": "success"}), 201
             
         except ValidationError as e:

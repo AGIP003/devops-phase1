@@ -4,6 +4,7 @@ from app.errors import register_error_handlers
 from flask_cors import CORS
 from app.extensions import bcrypt, mail, limiter
 from app.auth_routes import auth_bp
+from app.telegram_routes import telegram_bp
 from flask_talisman import Talisman
 from app.docs import api 
 from config import get_config, validate_environment
@@ -34,8 +35,6 @@ def create_app():
             }
         },
     )
-    #Initialize docs 
-    api.init_app(app)
     configure_logging(app)
     register_routes(app)
     register_error_handlers(app)
@@ -51,10 +50,18 @@ def create_app():
     try:
         app.register_blueprint(auth_bp)
         app.logger.info("✓ Auth blueprint registered successfully")
+        app.register_blueprint(telegram_bp)
+        app.logger.info("✓ Telegram blueprint registered successfully")
     except Exception as e:
         app.logger.error("✗ Failed to register auth blueprint: %s", e)
         import traceback
         traceback.print_exc()
+
+    # Register documentation-only Flask-RESTX routes after the real routes.
+    # Several docs resources intentionally share the same URL paths as the
+    # application. Registering them first causes their empty `post`/`get`
+    # methods to handle requests and return `null` instead of real API data.
+    api.init_app(app)
 
     mail.init_app(app)
     limiter.init_app(app)
