@@ -51,6 +51,9 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
             try {
                 const response = await api.get(`/transactions/${transactionId}`);
                 const data = response.data;
+                if (!data || typeof data !== "object") {
+                    throw new Error("The server returned an invalid transaction response");
+                }
 
                 if (data.date) {
                     const parsedDate = new Date(data.date);
@@ -61,7 +64,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 
                 reset(data);
             } catch (err) {
-                setServerError(err.response?.data?.message || 'Failed to load transaction');
+                setServerError(err.message || 'Failed to load transaction');
             } finally {
                 setLoadingTransaction(false);
             }

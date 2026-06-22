@@ -30,6 +30,9 @@ function EditTransaction() {
                 const response = await api.get(`/transactions/${id}`);
                 //format the date into the right format
                 const data = response.data;
+                if (!data || typeof data !== "object") {
+                    throw new Error("The server returned an invalid transaction response");
+                }
                 
                 if (data.date) {
                     const parsedDate = new Date(data.date);
@@ -41,7 +44,7 @@ function EditTransaction() {
                 reset(data); //sets all fields and resets the "Dirty" state - form knows the user has not changed anything
             
             }catch (err) {
-                setServerError(err.response?.data?.message || 'Failed to load transactions');
+                setServerError(err.message || 'Failed to load transaction');
             }
         }
         fetchTransaction();
