@@ -1,11 +1,12 @@
 
 import { useEffect, useState } from "react";
-import { Calendar, Pencil, Trash2, X } from "lucide-react";
+import { Calendar, FileText, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
 import { useOutletContext } from "react-router-dom";
 import toast from "react-hot-toast";
 import EmptyState from '../components/ui/EmptyState';
+import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 
 
 //SkeltonRow
@@ -195,6 +196,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 
 function Transaction() {
     const { toggleSidebar } = useOutletContext();
+    const { formatCurrency } = useAdjustedCurrency();
     const [transactions, setTransactions] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState("all");
@@ -285,6 +287,16 @@ function Transaction() {
                         <p>Search, filter and manage records</p>
                     </div>
                 </div>
+                <div className="transactions-header-actions">
+                    <button
+                        type="button"
+                        className="report-button"
+                        onClick={() => toast.success("Report generation preview")}
+                    >
+                        <FileText size={17} aria-hidden="true" />
+                        Generate Report
+                    </button>
+                </div>
 
             </div>
             <div className="transactions-toolbar">
@@ -362,7 +374,7 @@ function Transaction() {
                                         <td data-label="Payment">{tx.payment_method}</td>
                                         <td className={`amount-cell amount-${tx.type}`} data-label="Amount">
                                             {tx.type === 'expense' ? '-' : '+'}
-                                            {Number(tx.amount || 0).toLocaleString('en-KE')}
+                                            {formatCurrency(Number(tx.amount || 0))}
                                         </td>
                                         <td className="actions-cell" data-label="Actions">
                                             <div className="transaction-actions">

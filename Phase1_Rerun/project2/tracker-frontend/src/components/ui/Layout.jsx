@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, ReceiptText } from "lucide-react";
+import { CalendarClock, Coins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { removeToken } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
@@ -81,6 +81,42 @@ function Layout() {
                     >
                         <ReceiptText size={18} aria-hidden="true" />
                         <span className="sidebar-link-label">Transactions</span>
+                    </NavLink>
+                    <NavLink
+                        to="/goals"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Goals"
+                        title="Goals"
+                    >
+                        <PiggyBank size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Goals</span>
+                    </NavLink>
+                    <NavLink
+                        to="/debts"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Debts"
+                        title="Debts"
+                    >
+                        <Landmark size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Debts</span>
+                    </NavLink>
+                    <NavLink
+                        to="/bills"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Bills"
+                        title="Bills"
+                    >
+                        <CalendarClock size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Bills</span>
+                    </NavLink>
+                    <NavLink
+                        to="/forex"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Forex"
+                        title="Forex"
+                    >
+                        <Coins size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Forex</span>
                     </NavLink>
                     <button
                         type="button"

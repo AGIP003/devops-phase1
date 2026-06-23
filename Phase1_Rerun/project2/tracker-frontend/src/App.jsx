@@ -7,6 +7,10 @@ import NotFound from './components/auth/NotFound';
 import { lazy, Suspense} from 'react';
 import Transaction from './pages/Transactions';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Goals = lazy(() => import('./pages/Goals'));
+const Debts = lazy(() => import('./pages/Debts'));
+const Forex = lazy(() => import('./pages/Forex'));
+const Bills = lazy(() => import('./pages/Bills'));
 import EditTransaction from './components/auth/EditTransaction';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -29,6 +33,10 @@ function App() {
                 
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>}/>
                 <Route path="/transactions" element={<ErrorBoundary><Transaction /></ErrorBoundary>}/>
+                <Route path="/goals" element={<ErrorBoundary><Goals /></ErrorBoundary>}/>
+                <Route path="/debts" element={<ErrorBoundary><Debts /></ErrorBoundary>}/>
+                <Route path="/bills" element={<ErrorBoundary><Bills /></ErrorBoundary>}/>
+                <Route path="/forex" element={<ErrorBoundary><Forex /></ErrorBoundary>}/>
                 <Route path="transactions/edit/:id" element={<ErrorBoundary><EditTransaction /></ErrorBoundary>} />
                 
             </Route>

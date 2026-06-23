@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { Check, Copy, RefreshCw, X } from "lucide-react";
+import { Check, Copy, Link2Off, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -31,6 +31,7 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
     const [expiresAt, setExpiresAt] = useState("");
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [unlinking, setUnlinking] = useState(false);
     const [setupError, setSetupError] = useState("");
 
     const fetchStatus = useCallback(async () => {
@@ -40,6 +41,11 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
             const response = await api.get("/telegram/status");
             setStatus(response.data);
             onStatusChange(Boolean(response.data?.linked));
+            if (response.data?.linked) {
+                setLinkCode("");
+                setExpiresAt("");
+                setSetupError("");
+            }
         } catch (error) {
             setStatus({ linked: false, telegram_id: null });
             onStatusChange(false);
@@ -82,6 +88,23 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
             toast.success("Link command copied");
         } catch {
             toast.error("Could not copy the command");
+        }
+    }
+
+    async function unlinkTelegram() {
+        setUnlinking(true);
+        setSetupError("");
+        try {
+            await api.delete("/telegram/unlink");
+            setStatus({ linked: false, telegram_id: null });
+            setLinkCode("");
+            setExpiresAt("");
+            onStatusChange(false);
+            toast.success("Telegram unlinked");
+        } catch (error) {
+            setSetupError(error.message);
+        } finally {
+            setUnlinking(false);
         }
     }
 
@@ -149,7 +172,13 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
                     </div>
                 )}
 
-                {!status.linked && (
+                {loadingStatus && (
+                    <div className="telegram-loading-note">
+                        Checking Telegram connection...
+                    </div>
+                )}
+
+                {!loadingStatus && !status.linked && (
                     <>
                         <ol className="telegram-steps">
                             <li>Generate a one-time code below.</li>
@@ -187,6 +216,20 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
                             </button>
                         )}
                     </>
+                )}
+
+                {!loadingStatus && status.linked && (
+                    <div className="telegram-connected-actions">
+                        <button
+                            type="button"
+                            className="telegram-unlink-button"
+                            disabled={unlinking}
+                            onClick={unlinkTelegram}
+                        >
+                            {unlinking ? <RefreshCw className="spin" size={16} aria-hidden="true" /> : <Link2Off size={16} aria-hidden="true" />}
+                            {unlinking ? "Unlinking..." : "Unlink Telegram"}
+                        </button>
+                    </div>
                 )}
 
                 <p className="telegram-security-note">

@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useAdjustedCurrency } from '../../hooks/useAdjustedCurrency';
 
 const COLORS = ['#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#b84fc2', 'rgba(81, 14, 24, 0.66)', '#a4af42'];
 const INCOME_COLOR = '#2f8f5b';
@@ -63,6 +64,7 @@ function buildMonthlyData(transactions) {
 }
 
 export function MonthlyTrendChart({ transactions, filterType }) {
+  const { formatCurrency } = useAdjustedCurrency();
   const monthlyData = buildMonthlyData(transactions);
   const showIncome = filterType === 'all' || filterType === 'income';
   const showExpense = filterType === 'all' || filterType === 'expense';
@@ -94,7 +96,7 @@ export function MonthlyTrendChart({ transactions, filterType }) {
           />
           <Tooltip
             cursor={{ fill: 'rgba(111, 127, 63, 0.08)' }}
-            formatter={(value, name) => [`KES ${Number(value).toLocaleString('en-KE')}`, name]}
+            formatter={(value, name) => [formatCurrency(Number(value)), name]}
             labelStyle={{ color: '#17211b', fontWeight: 800 }}
           />
           {showIncome && (
@@ -128,6 +130,7 @@ export function MonthlyTrendChart({ transactions, filterType }) {
 }
 
 function CategoryPieChart({ transactions, filterType }) {
+  const { formatCurrency } = useAdjustedCurrency();
   const txList = transactions || [];
   const groupBy = filterType === "all" ? "type" : "category";
 
@@ -168,7 +171,7 @@ function CategoryPieChart({ transactions, filterType }) {
 
             ))}
           </Pie>
-          <Tooltip formatter={(value) => `KES ${value.toLocaleString()}`} />
+          <Tooltip formatter={(value) => formatCurrency(Number(value))} />
 
         </PieChart>
       </ResponsiveContainer>

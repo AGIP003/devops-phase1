@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, FileUp, PencilLine } from "lucide-react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
 import { useNavigate, useOutletContext } from "react-router-dom";
@@ -8,6 +9,11 @@ import { useMemo, useCallback } from "react";
 import ChartsSection, { MonthlyTrendChart } from "../components/ui/ChartsSection";
 
 import SummaryCards from "../components/ui/SummaryCard";
+import { debts, getDebtProgress, getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
+import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
+import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
+
+const TELEGRAM_BOT_LINK = "https://t.me/pesatiq_bot";
 
 function getUsernameFromToken() {
     const token = getToken();
@@ -33,18 +39,48 @@ function RecentTransactionSkeleton() {
     )
 }
 
+function DebtPulseLine({ progress }) {
+    return (
+        <div className="debt-pulse-line debt-pulse-line-compact" style={{ "--debt-progress": `${progress}%` }} aria-hidden="true">
+            <svg viewBox="0 0 240 34" preserveAspectRatio="none">
+                <path d="M2 20 H42 L51 10 L62 27 L75 14 L88 20 H126 L136 7 L150 29 L166 15 L180 20 H238" />
+            </svg>
+            <span className="debt-pulse-glow" />
+        </div>
+    )
+}
+
+function SubscriptionIcon({ subscription }) {
+    return (
+        <span
+            className="subscription-icon subscription-icon-small"
+            style={{
+                backgroundColor: subscription.brandColor,
+                color: subscription.accentColor,
+            }}
+            aria-hidden="true"
+        >
+            {subscription.iconLabel}
+        </span>
+    )
+}
+
 function Dashboard() {
     const navigate = useNavigate();
     const { toggleSidebar } = useOutletContext();
     const accountMenuRef = useRef(null);
+    const addMenuRef = useRef(null);
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [showAddMenu, setShowAddMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState("all");
     const [showAccountMenu, setShowAccountMenu] = useState(false);
+    const [sidePreview, setSidePreview] = useState("bills");
+    const { formatCurrency } = useAdjustedCurrency();
 
 
     //Derived filtered list
@@ -67,6 +103,8 @@ function Dashboard() {
 
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
+    const debtPreview = debts.slice(0, 3);
+    const subscriptionPreview = getSortedSubscriptions(subscriptions).slice(0, 5);
 
     //Date Formatter
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
@@ -110,11 +148,7 @@ function Dashboard() {
     const username = useMemo(() => getUsernameFromToken(), []);
 
     //summary cards
-    const currencyFormatter = new Intl.NumberFormat('en-KE', {
-        style: 'currency',
-        currency: 'KES',
-        maximumFractionDigits: 0,
-    });
+    const currencyFormatter = { format: formatCurrency };
 
     //Privacy feature
     const [hideAmounts, setHideAmounts] = useState(() => {
@@ -136,6 +170,12 @@ function Dashboard() {
                 !accountMenuRef.current.contains(e.target)
             ) {
                 setShowAccountMenu(false);
+            }
+            if (
+                addMenuRef.current &&
+                !addMenuRef.current.contains(e.target)
+            ) {
+                setShowAddMenu(false);
             }
         }
 
@@ -163,14 +203,42 @@ function Dashboard() {
                     </div>
                 </div>
                 <div className="dashboard-header-actions">
-                    <button
-                        type="button"
-                        onClick={() => setShowForm(prev => !prev)}
-                        aria-expanded={showForm}
-                        aria-controls="add-transaction-panel"
-                    >
-                        {showForm ? 'Cancel' : 'Add Transaction'}
-                    </button>
+                    <div className="add-menu-wrap" ref={addMenuRef}>
+                        <button
+                            type="button"
+                            className="add-menu-trigger"
+                            onClick={() => setShowAddMenu(prev => !prev)}
+                            aria-expanded={showAddMenu}
+                            aria-haspopup="menu"
+                        >
+                            {showForm ? 'Cancel' : 'Add Transaction'}
+                            <ChevronDown size={16} aria-hidden="true" />
+                        </button>
+                        {showAddMenu && (
+                            <div className="add-menu" role="menu">
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => {
+                                        setShowForm(prev => !prev);
+                                        setShowAddMenu(false);
+                                    }}
+                                >
+                                    <PencilLine size={16} aria-hidden="true" />
+                                    <span>Manual add</span>
+                                </button>
+                                <button type="button" role="menuitem" disabled>
+                                    <FileUp size={16} aria-hidden="true" />
+                                    <span>Import</span>
+                                    <small>Coming soon</small>
+                                </button>
+                                <a href={TELEGRAM_BOT_LINK} role="menuitem" target="_blank" rel="noreferrer">
+                                    <TelegramIcon size={16} />
+                                    <span>Telegram bot</span>
+                                </a>
+                            </div>
+                        )}
+                    </div>
                     <div className="account-menu-wrap" ref={accountMenuRef}>
                         <button
                             type="button"
@@ -280,13 +348,66 @@ function Dashboard() {
                         <section className="bills-card">
                             <div className="section-heading">
                                 <div>
-                                    <h2>Bills & Subscription</h2>
-                                    <p>Upcoming recurring payments</p>
+                                    <h2>{sidePreview === "bills" ? "Bill & Subscription" : "Debt Preview"}</h2>
+                                    <p>{sidePreview === "bills" ? "Upcoming recurring payments" : "Top balances from debt tracker"}</p>
+                                </div>
+                                <div className="preview-switcher" aria-label="Switch dashboard preview">
+                                    <button
+                                        type="button"
+                                        className={sidePreview === "bills" ? "active" : ""}
+                                        onClick={() => setSidePreview("bills")}
+                                    >
+                                        Bills
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={sidePreview === "debts" ? "active" : ""}
+                                        onClick={() => setSidePreview("debts")}
+                                    >
+                                        Debts
+                                    </button>
                                 </div>
                             </div>
-                            <div className="bills-placeholder">
-                                No bills added yet
-                            </div>
+                            {sidePreview === "bills" ? (
+                                <>
+                                    <div className="subscription-preview-list">
+                                        {subscriptionPreview.map((subscription) => (
+                                            <div className="subscription-preview-row" key={subscription.id}>
+                                                <SubscriptionIcon subscription={subscription} />
+                                                <div>
+                                                    <strong>{subscription.name}</strong>
+                                                    <small>{dateFormatter.format(new Date(subscription.dueDate))}</small>
+                                                </div>
+                                                <span>{currencyFormatter.format(subscription.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button type="button" className="preview-link-button" onClick={() => navigate("/bills")}>
+                                        View all bills
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="debt-preview-list">
+                                        {debtPreview.map((debt) => {
+                                            const progress = getDebtProgress(debt);
+                                            return (
+                                                <div className="debt-preview-row" key={debt.id}>
+                                                    <div>
+                                                        <strong>{debt.name}</strong>
+                                                        <small>{debt.type} · {debt.direction === "i_owe" ? "I owe" : "Owed to me"}</small>
+                                                    </div>
+                                                    <span>{currencyFormatter.format(debt.balance)}</span>
+                                                    <DebtPulseLine progress={progress} />
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    <button type="button" className="preview-link-button" onClick={() => navigate("/debts")}>
+                                        View all debts
+                                    </button>
+                                </>
+                            )}
                         </section>
                     </aside>
                 </div>
