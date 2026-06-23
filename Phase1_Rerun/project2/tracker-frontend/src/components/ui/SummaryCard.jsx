@@ -102,7 +102,7 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
             </div>
             <div className="summary-card summary-card-goal">
                 <div className="summary-goal-header">
-                    <span className="summary-goal-title">
+                    <span className="summary-label-with-icon summary-goal-title">
                         <Target size={16} aria-hidden="true" />
                         Goal
                     </span>

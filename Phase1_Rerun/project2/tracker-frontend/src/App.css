@@ -845,6 +845,14 @@ body.auth-screen {
   align-items: center;
   display: inline-flex;
   gap: 0.45rem;
+  justify-content: center;
+}
+
+.add-menu-trigger.is-active {
+  background: #f1f4df;
+  border-color: #cfd8a9;
+  color: var(--text-main);
+  box-shadow: inset 0 0 0 1px rgba(111, 127, 63, 0.1);
 }
 
 .add-menu {
@@ -1178,23 +1186,16 @@ body.auth-screen {
 }
 
 .summary-goal-title {
-  align-items: center;
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  gap: 0.42rem;
-  line-height: 1;
   text-transform: none;
 }
 
 .summary-goal-title svg {
   background: #fff6c7;
   border: 1px solid #f4d23c;
-  border-radius: 6px;
   color: #d49b00;
-  height: 18px;
-  padding: 0.12rem;
-  width: 18px;
 }
 
 .summary-goal-header button {
@@ -2251,8 +2252,32 @@ body.auth-screen {
 }
 
 .transaction-submit-button {
+  align-items: center;
+  background: var(--text-main);
+  border: 1px solid var(--text-main);
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 850;
   grid-column: 1 / -1;
-  justify-self: start;
+  justify-content: center;
+  justify-self: stretch;
+  min-height: 46px;
+  padding: 0 1rem;
+  width: 100%;
+}
+
+.transaction-submit-button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.transaction-submit-button:disabled {
+  background: #94a3b8;
+  border-color: #94a3b8;
+  cursor: wait;
 }
 
 .feature-page {
@@ -2917,7 +2942,9 @@ body.auth-screen {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+  max-width: 560px;
   padding: 1rem;
+  width: 100%;
 }
 
 .subscription-card-header {
@@ -2949,6 +2976,197 @@ body.auth-screen {
 .subscription-row:last-child {
   border-bottom: 0;
   padding-bottom: 0.35rem;
+}
+
+.quote-project-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.quote-project-card,
+.budget-list-card,
+.budget-side-card {
+  background: var(--card-background);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 1rem;
+}
+
+.quote-project-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.quote-project-header h2 {
+  font-size: 1.1rem;
+  margin: 0.45rem 0 0.25rem;
+}
+
+.quote-project-header p {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+.quote-pdf-button {
+  flex: 0 0 auto;
+}
+
+.quote-table-wrap {
+  overflow: auto;
+}
+
+.quote-table {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+}
+
+.quote-table th,
+.quote-table td {
+  border-bottom: 1px solid rgba(223, 229, 220, 0.86);
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.quote-table th {
+  background: #f9faf7;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.quote-table th span,
+.quote-table th small,
+.quote-table td strong,
+.quote-table td small,
+.quote-table td span,
+.quote-table tfoot small {
+  display: block;
+}
+
+.quote-table th small,
+.quote-table td small,
+.quote-table tfoot small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 0.18rem;
+  text-transform: none;
+}
+
+.quote-table td span,
+.quote-table tfoot td {
+  font-weight: 900;
+}
+
+.quote-table tfoot td {
+  background: #f9faf7;
+}
+
+.quote-table .best-quote {
+  background: #f1f4df;
+  color: var(--accent);
+}
+
+.quote-note-card {
+  margin-top: 1rem;
+  position: static;
+}
+
+.budget-layout {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.35fr);
+}
+
+.budget-progress-track {
+  background: #edf1e8;
+  border-radius: 999px;
+  height: 10px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.budget-progress-track span {
+  background: var(--accent);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.budget-checklist,
+.saved-budget-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.budget-item {
+  align-items: center;
+  background: #f9faf7;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 50px;
+  padding: 0 0.8rem;
+}
+
+.budget-item input {
+  accent-color: var(--accent);
+  height: 18px;
+  width: 18px;
+}
+
+.budget-item span {
+  font-weight: 800;
+}
+
+.budget-item strong {
+  white-space: nowrap;
+}
+
+.budget-item.checked span,
+.budget-item.checked strong {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.saved-budget-row {
+  align-items: center;
+  border-bottom: 1px solid rgba(223, 229, 220, 0.8);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-bottom: 0.7rem;
+}
+
+.saved-budget-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.saved-budget-row strong,
+.saved-budget-row small {
+  display: block;
+}
+
+.saved-budget-row small {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.saved-budget-row span {
+  font-weight: 900;
 }
 
 @media (max-width: 760px) {
@@ -2996,9 +3214,16 @@ body.auth-screen {
   }
 
   .sidebar-nav {
-    display: grid;
+    display: flex;
     gap: 0.5rem;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 0.15rem;
+    scrollbar-width: none;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .sidebar-link,
@@ -3007,6 +3232,7 @@ body.auth-screen {
     flex-direction: column;
     font-size: 0.66rem;
     gap: 0.2rem;
+    flex: 0 0 76px;
     justify-content: center;
     min-height: 54px;
     padding: 0.35rem 0.45rem;
@@ -3104,6 +3330,20 @@ body.auth-screen {
 
   .bills-layout {
     grid-template-columns: 1fr;
+  }
+
+  .budget-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-project-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-pdf-button {
+    justify-content: center;
+    width: 100%;
   }
 
   .summary-grid {

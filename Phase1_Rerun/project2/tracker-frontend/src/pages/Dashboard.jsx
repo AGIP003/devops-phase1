@@ -177,6 +177,15 @@ function Dashboard() {
             ) {
                 setShowAddMenu(false);
             }
+            if (
+                showForm &&
+                addTransactionPanelRef.current &&
+                !addTransactionPanelRef.current.contains(e.target) &&
+                addMenuRef.current &&
+                !addMenuRef.current.contains(e.target)
+            ) {
+                setShowForm(false);
+            }
         }
 
         document.addEventListener("mousedown", handleClickOutside);
@@ -184,7 +193,7 @@ function Dashboard() {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         };
-    }, []);
+    }, [showForm]);
 
     return (
         <div className="dashboard-page">
@@ -206,12 +215,12 @@ function Dashboard() {
                     <div className="add-menu-wrap" ref={addMenuRef}>
                         <button
                             type="button"
-                            className="add-menu-trigger"
+                            className={`add-menu-trigger ${showForm ? "is-active" : ""}`}
                             onClick={() => setShowAddMenu(prev => !prev)}
                             aria-expanded={showAddMenu}
                             aria-haspopup="menu"
                         >
-                            {showForm ? 'Cancel' : 'Add Transaction'}
+                            Add Transaction
                             <ChevronDown size={16} aria-hidden="true" />
                         </button>
                         {showAddMenu && (
@@ -220,7 +229,7 @@ function Dashboard() {
                                     type="button"
                                     role="menuitem"
                                     onClick={() => {
-                                        setShowForm(prev => !prev);
+                                        setShowForm(true);
                                         setShowAddMenu(false);
                                     }}
                                 >

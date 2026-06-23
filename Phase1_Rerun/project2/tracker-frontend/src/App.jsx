@@ -11,6 +11,8 @@ const Goals = lazy(() => import('./pages/Goals'));
 const Debts = lazy(() => import('./pages/Debts'));
 const Forex = lazy(() => import('./pages/Forex'));
 const Bills = lazy(() => import('./pages/Bills'));
+const Quotations = lazy(() => import('./pages/Quotations'));
+const Budgets = lazy(() => import('./pages/Budgets'));
 import EditTransaction from './components/auth/EditTransaction';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -37,6 +39,8 @@ function App() {
                 <Route path="/debts" element={<ErrorBoundary><Debts /></ErrorBoundary>}/>
                 <Route path="/bills" element={<ErrorBoundary><Bills /></ErrorBoundary>}/>
                 <Route path="/forex" element={<ErrorBoundary><Forex /></ErrorBoundary>}/>
+                <Route path="/quotations" element={<ErrorBoundary><Quotations /></ErrorBoundary>}/>
+                <Route path="/budgets" element={<ErrorBoundary><Budgets /></ErrorBoundary>}/>
                 <Route path="transactions/edit/:id" element={<ErrorBoundary><EditTransaction /></ErrorBoundary>} />
                 
             </Route>

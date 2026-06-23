@@ -1,4 +1,4 @@
-import { Bell, Bot, Plus, Tag } from "lucide-react";
+import { Bell, Plus, Tag } from "lucide-react";
 import { savingsGoals, getGoalProgress } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 
@@ -59,69 +59,53 @@ function Goals() {
         </div>
       </section>
 
-      <div className="goals-layout">
-        <section className="goals-grid">
-          {savingsGoals.map((goal) => {
-            const progress = getGoalProgress(goal);
-            return (
-              <article className="goal-card" key={goal.id}>
-                <div className="goal-card-top">
-                  <div>
-                    <span className="goal-label">Goal</span>
-                    <h2>{goal.name}</h2>
-                  </div>
-                  <GoalProgressRing progress={progress} color={goal.color} />
+      <section className="goals-grid">
+        {savingsGoals.map((goal) => {
+          const progress = getGoalProgress(goal);
+          return (
+            <article className="goal-card" key={goal.id}>
+              <div className="goal-card-top">
+                <div>
+                  <span className="goal-label">Goal</span>
+                  <h2>{goal.name}</h2>
                 </div>
+                <GoalProgressRing progress={progress} color={goal.color} />
+              </div>
 
-                <div className="goal-progress-track" aria-hidden="true">
-                  <span style={{ width: `${progress}%`, backgroundColor: goal.color }} />
+              <div className="goal-progress-track" aria-hidden="true">
+                <span style={{ width: `${progress}%`, backgroundColor: goal.color }} />
+              </div>
+
+              <div className="goal-money-row">
+                <span>{currencyFormatter.format(goal.savedAmount)}</span>
+                <span>{currencyFormatter.format(goal.targetAmount)}</span>
+              </div>
+
+              <div className="goal-meta-grid">
+                <div>
+                  <small>Monthly target</small>
+                  <strong>{currencyFormatter.format(goal.monthlyTarget)}</strong>
                 </div>
-
-                <div className="goal-money-row">
-                  <span>{currencyFormatter.format(goal.savedAmount)}</span>
-                  <span>{currencyFormatter.format(goal.targetAmount)}</span>
+                <div>
+                  <small>Target date</small>
+                  <strong>{dateFormatter.format(new Date(goal.deadline))}</strong>
                 </div>
+              </div>
 
-                <div className="goal-meta-grid">
-                  <div>
-                    <small>Monthly target</small>
-                    <strong>{currencyFormatter.format(goal.monthlyTarget)}</strong>
-                  </div>
-                  <div>
-                    <small>Target date</small>
-                    <strong>{dateFormatter.format(new Date(goal.deadline))}</strong>
-                  </div>
-                </div>
-
-                <div className="feature-action-row">
-                  <button type="button" disabled>
-                    <Tag size={16} aria-hidden="true" />
-                    Tag transaction
-                  </button>
-                  <button type="button" disabled>
-                    <Bell size={16} aria-hidden="true" />
-                    Set nudge
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        <aside className="feature-note-card">
-          <div className="feature-note-icon">
-            <Bot size={20} aria-hidden="true" />
-          </div>
-          <h2>Capture idea</h2>
-          <p>
-            The app should not guess savings automatically. A safer flow is manual tagging plus a bot nudge when there is budget surplus.
-          </p>
-          <div className="nudge-preview">
-            <span>Bot preview</span>
-            <p>Add today&apos;s KES 650 surplus to iPhone 17 Pro Max?</p>
-          </div>
-        </aside>
-      </div>
+              <div className="feature-action-row">
+                <button type="button" disabled>
+                  <Tag size={16} aria-hidden="true" />
+                  Tag transaction
+                </button>
+                <button type="button" disabled>
+                  <Bell size={16} aria-hidden="true" />
+                  Set nudge
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </section>
     </div>
   );
 }

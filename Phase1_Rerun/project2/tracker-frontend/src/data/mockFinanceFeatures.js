@@ -144,10 +144,136 @@ export const subscriptions = [
   },
 ];
 
+export const quotationProjects = [
+  {
+    id: 1,
+    title: "Warehouse shelving",
+    category: "Hardware",
+    status: "Comparing",
+    items: [
+      { id: "steel-posts", name: "Steel posts", quantity: 24, unit: "pcs" },
+      { id: "plywood", name: "18mm plywood boards", quantity: 16, unit: "boards" },
+      { id: "bolts", name: "Anchor bolts", quantity: 120, unit: "pcs" },
+    ],
+    quotations: [
+      {
+        id: 1,
+        supplier: "Kamau Hardware",
+        contact: "Industrial Area",
+        validUntil: "2026-07-10",
+        items: {
+          "steel-posts": { unitPrice: 1850 },
+          plywood: { unitPrice: 3200 },
+          bolts: { unitPrice: 45 },
+        },
+      },
+      {
+        id: 2,
+        supplier: "Metro Steel Yard",
+        contact: "Mombasa Road",
+        validUntil: "2026-07-08",
+        items: {
+          "steel-posts": { unitPrice: 1720 },
+          plywood: { unitPrice: 3400 },
+          bolts: { unitPrice: 42 },
+        },
+      },
+      {
+        id: 3,
+        supplier: "Jenga Supplies",
+        contact: "Ruiru",
+        validUntil: "2026-07-15",
+        items: {
+          "steel-posts": { unitPrice: 1900 },
+          plywood: { unitPrice: 3050 },
+          bolts: { unitPrice: 48 },
+        },
+      },
+    ],
+  },
+  {
+    id: 2,
+    title: "Rental unit paintwork",
+    category: "Fundi",
+    status: "Ready to print",
+    items: [
+      { id: "paint", name: "Paint", quantity: 12, unit: "litres" },
+      { id: "labour", name: "Labour", quantity: 4, unit: "days" },
+      { id: "brushes", name: "Brushes and rollers", quantity: 1, unit: "set" },
+    ],
+    quotations: [
+      {
+        id: 1,
+        supplier: "Otieno & Sons",
+        contact: "Site visit done",
+        validUntil: "2026-07-02",
+        items: {
+          paint: { unitPrice: 850 },
+          labour: { unitPrice: 2500 },
+          brushes: { unitPrice: 1800 },
+        },
+      },
+      {
+        id: 2,
+        supplier: "QuickBrush Crew",
+        contact: "WhatsApp quote",
+        validUntil: "2026-07-01",
+        items: {
+          paint: { unitPrice: 900 },
+          labour: { unitPrice: 2200 },
+          brushes: { unitPrice: 2100 },
+        },
+      },
+    ],
+  },
+];
+
+export const budgets = [
+  {
+    id: 1,
+    name: "Monthly supermarket run",
+    category: "Shopping",
+    targetAmount: 18500,
+    lastSpend: 20100,
+    items: [
+      { id: 1, name: "Rice 10kg", estimatedAmount: 2400, checked: true },
+      { id: 2, name: "Cooking oil", estimatedAmount: 1850, checked: true },
+      { id: 3, name: "Milk carton", estimatedAmount: 720, checked: false },
+      { id: 4, name: "Vegetables", estimatedAmount: 1600, checked: false },
+      { id: 5, name: "Cleaning supplies", estimatedAmount: 2200, checked: false },
+    ],
+  },
+  {
+    id: 2,
+    name: "Site lunch supplies",
+    category: "Work",
+    targetAmount: 7200,
+    lastSpend: 6900,
+    items: [
+      { id: 1, name: "Tea leaves", estimatedAmount: 450, checked: true },
+      { id: 2, name: "Sugar", estimatedAmount: 680, checked: false },
+      { id: 3, name: "Bread", estimatedAmount: 900, checked: false },
+      { id: 4, name: "Disposable cups", estimatedAmount: 750, checked: true },
+    ],
+  },
+];
+
 export function getSortedSubscriptions(subscriptionList = subscriptions) {
   return [...subscriptionList].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
   );
+}
+
+export function getQuotationItemTotal(item, quote) {
+  return item.quantity * Number(quote.items[item.id]?.unitPrice || 0);
+}
+
+export function getQuotationTotal(project, quote) {
+  return project.items.reduce((sum, item) => sum + getQuotationItemTotal(item, quote), 0);
+}
+
+export function getBudgetTotal(items = []) {
+  return items.reduce((sum, item) => sum + Number(item.estimatedAmount || 0), 0);
 }
 
 export function getGoalProgress(goal) {

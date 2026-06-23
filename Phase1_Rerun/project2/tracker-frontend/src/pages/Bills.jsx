@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, Plus } from "lucide-react";
 import { getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 
@@ -67,53 +67,36 @@ function Bills() {
         </div>
       </section>
 
-      <div className="bills-layout">
-        <section className="subscription-card-large">
-          <div className="subscription-card-header">
-            <div>
-              <h2>
-                <CalendarClock size={18} aria-hidden="true" />
-                Bill & Subscription
-              </h2>
-              <p>Sorted by nearest due date</p>
-            </div>
+      <section className="subscription-card-large">
+        <div className="subscription-card-header">
+          <div>
+            <h2>
+              <CalendarClock size={18} aria-hidden="true" />
+              Bill & Subscription
+            </h2>
+            <p>Sorted by nearest due date</p>
           </div>
+        </div>
 
-          <div className="subscription-list">
-            {sortedSubscriptions.map((subscription) => {
-              const remainingDays = daysUntil(subscription.dueDate);
-              return (
-                <article className="subscription-row" key={subscription.id}>
-                  <SubscriptionIcon subscription={subscription} />
-                  <div>
-                    <h3>{subscription.name}</h3>
-                    <p>
-                      {dateFormatter.format(new Date(subscription.dueDate))}
-                      {remainingDays >= 0 ? ` · in ${remainingDays} days` : " · overdue"}
-                    </p>
-                  </div>
-                  <strong>{formatCurrency(subscription.amount)}</strong>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <aside className="feature-note-card">
-          <div className="feature-note-icon">
-            <Bell size={20} aria-hidden="true" />
-          </div>
-          <h2>Capture idea</h2>
-          <p>
-            The simplest reliable flow is manual setup: name, amount, billing cycle, and due date.
-            Later, parsing can suggest recurring bills from repeated transactions.
-          </p>
-          <div className="nudge-preview">
-            <span>Reminder preview</span>
-            <p>WiFi is due in 12 days. Set money aside?</p>
-          </div>
-        </aside>
-      </div>
+        <div className="subscription-list">
+          {sortedSubscriptions.map((subscription) => {
+            const remainingDays = daysUntil(subscription.dueDate);
+            return (
+              <article className="subscription-row" key={subscription.id}>
+                <SubscriptionIcon subscription={subscription} />
+                <div>
+                  <h3>{subscription.name}</h3>
+                  <p>
+                    {dateFormatter.format(new Date(subscription.dueDate))}
+                    {remainingDays >= 0 ? ` · in ${remainingDays} days` : " · overdue"}
+                  </p>
+                </div>
+                <strong>{formatCurrency(subscription.amount)}</strong>
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
