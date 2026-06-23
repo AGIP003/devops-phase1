@@ -15,6 +15,7 @@ from app.db import (
     get_telegram_link_status,
     get_telegram_preferences,
     telegram_linking_schema_ready,
+    unlink_telegram_account,
     update_telegram_preferences,
 )
 from app.extensions import limiter
@@ -157,6 +158,26 @@ def telegram_link_status():
         {
             "linked": status["telegram_id"] is not None,
             "telegram_id": status["telegram_id"],
+        }
+    ), 200
+
+
+@telegram_bp.route("/unlink", methods=["DELETE"])
+@login_required
+def unlink_telegram():
+    setup_error = schema_not_ready_response()
+    if setup_error:
+        return setup_error
+
+    user = unlink_telegram_account(g.current_user["user_id"])
+    if user is None:
+        abort(404, description="User not found")
+
+    return jsonify(
+        {
+            "message": "Telegram account unlinked",
+            "linked": False,
+            "telegram_id": None,
         }
     ), 200
 

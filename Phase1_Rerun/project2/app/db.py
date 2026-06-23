@@ -485,6 +485,41 @@ def get_telegram_link_status(user_id):
         conn.close()
 
 
+def unlink_telegram_account(user_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                UPDATE users
+                SET telegram_id = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING id, telegram_id
+                """,
+                (user_id,),
+            )
+            user = cursor.fetchone()
+            if user is None:
+                conn.rollback()
+                return None
+
+            cursor.execute(
+                """
+                UPDATE telegram_link_tokens
+                SET used = TRUE
+                WHERE user_id = %s AND used = FALSE
+                """,
+                (user_id,),
+            )
+        conn.commit()
+        return user
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def get_user_by_telegram_id(telegram_id):
     conn = get_db_connection()
     try:
