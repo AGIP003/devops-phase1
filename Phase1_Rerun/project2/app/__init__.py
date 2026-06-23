@@ -8,7 +8,11 @@ from app.telegram_routes import telegram_bp
 from flask_talisman import Talisman
 from app.docs import api 
 from config import get_config, validate_environment
+from flask import g, request
 import logging
+import os
+import sys
+import time
 
 
 def create_app():
@@ -36,6 +40,7 @@ def create_app():
         },
     )
     configure_logging(app)
+    register_request_logging(app)
     register_routes(app)
     register_error_handlers(app)
     bcrypt.init_app(app)
@@ -70,8 +75,30 @@ def create_app():
 
 def configure_logging(app):
     logging.basicConfig(
-        level=logging.INFO,
+        level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        stream=sys.stdout,
+        force=True,
     )
-
     app.logger.info("Application started")
+
+
+def register_request_logging(app):
+    slow_request_ms = int(os.getenv("SLOW_REQUEST_MS", "1000"))
+
+    @app.before_request
+    def start_request_timer():
+        g.request_started_at = time.perf_counter()
+
+    @app.after_request
+    def log_request(response):
+        duration_ms = (time.perf_counter() - g.request_started_at) * 1000
+        log_method = app.logger.warning if duration_ms >= slow_request_ms else app.logger.info
+        log_method(
+            "request method=%s path=%s status=%s duration_ms=%.1f",
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response

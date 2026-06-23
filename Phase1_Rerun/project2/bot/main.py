@@ -1,5 +1,6 @@
 import os
 import logging
+import sys
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -24,8 +25,28 @@ from bot.handlers.help import help_handler
 from dotenv import load_dotenv
 
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
 logger = logging.getLogger(__name__)
+
+
+async def error_handler(update, context):
+    update_info = None
+    if update and getattr(update, "effective_chat", None):
+        update_info = {
+            "chat_id": update.effective_chat.id,
+            "user_id": update.effective_user.id if update.effective_user else None,
+        }
+    logger.exception("Unhandled bot error update=%s", update_info, exc_info=context.error)
+
+    if update and getattr(update, "effective_message", None):
+        await update.effective_message.reply_text(
+            "Something went wrong while handling that message. I logged the error."
+        )
 
 def main():
     token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -50,6 +71,7 @@ def main():
     app.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^addpm\|"))
     app.add_handler(CallbackQueryHandler(cancel_add_callback, pattern=r"^addcancel$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, welcome_handler))
+    app.add_error_handler(error_handler)
 
     print('Bot is running...')
     logger.info("Bot is running")
