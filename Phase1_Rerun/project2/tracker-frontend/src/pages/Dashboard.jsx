@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, FileUp, PencilLine } from "lucide-react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
@@ -40,10 +40,19 @@ function RecentTransactionSkeleton() {
 }
 
 function DebtPulseLine({ progress }) {
+    const gradientId = `dashboardDebtPulse${useId().replace(/:/g, "")}`;
     return (
         <div className="debt-pulse-line debt-pulse-line-compact" style={{ "--debt-progress": `${progress}%` }} aria-hidden="true">
             <svg viewBox="0 0 240 34" preserveAspectRatio="none">
-                <path d="M2 20 H42 L51 10 L62 27 L75 14 L88 20 H126 L136 7 L150 29 L166 15 L180 20 H238" />
+                <defs>
+                    <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#22c55e" />
+                        <stop offset={`${progress}%`} stopColor="#22c55e" />
+                        <stop offset={`${progress}%`} stopColor="#ef4444" />
+                        <stop offset="100%" stopColor="#ef4444" />
+                    </linearGradient>
+                </defs>
+                <path stroke={`url(#${gradientId})`} d="M2 20 H42 L51 10 L62 27 L75 14 L88 20 H126 L136 7 L150 29 L166 15 L180 20 H238" />
             </svg>
             <span className="debt-pulse-glow" />
         </div>
