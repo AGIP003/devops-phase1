@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { CalendarClock, ClipboardCheck, Coins, FileText, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
+import { BadgePercent, CalendarClock, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { removeToken } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
@@ -135,6 +135,24 @@ function Layout() {
                     >
                         <ClipboardCheck size={18} aria-hidden="true" />
                         <span className="sidebar-link-label">Budgets</span>
+                    </NavLink>
+                    <NavLink
+                        to="/chamas"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Chamas"
+                        title="Chamas"
+                    >
+                        <HandCoins size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Chamas</span>
+                    </NavLink>
+                    <NavLink
+                        to="/fees"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="Fees"
+                        title="Fees"
+                    >
+                        <BadgePercent size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">Fees</span>
                     </NavLink>
                     <button
                         type="button"

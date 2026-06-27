@@ -13,6 +13,8 @@ const Forex = lazy(() => import('./pages/Forex'));
 const Bills = lazy(() => import('./pages/Bills'));
 const Quotations = lazy(() => import('./pages/Quotations'));
 const Budgets = lazy(() => import('./pages/Budgets'));
+const Chamas = lazy(() => import('./pages/Chamas'));
+const Fees = lazy(() => import('./pages/Fees'));
 import EditTransaction from './components/auth/EditTransaction';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -41,6 +43,8 @@ function App() {
                 <Route path="/forex" element={<ErrorBoundary><Forex /></ErrorBoundary>}/>
                 <Route path="/quotations" element={<ErrorBoundary><Quotations /></ErrorBoundary>}/>
                 <Route path="/budgets" element={<ErrorBoundary><Budgets /></ErrorBoundary>}/>
+                <Route path="/chamas" element={<ErrorBoundary><Chamas /></ErrorBoundary>}/>
+                <Route path="/fees" element={<ErrorBoundary><Fees /></ErrorBoundary>}/>
                 <Route path="transactions/edit/:id" element={<ErrorBoundary><EditTransaction /></ErrorBoundary>} />
                 
             </Route>

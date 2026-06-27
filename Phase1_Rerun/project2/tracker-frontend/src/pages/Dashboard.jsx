@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { ChevronDown, FileUp, PencilLine } from "lucide-react";
+import { BadgePercent, ChevronDown, FileUp, HandCoins, PencilLine } from "lucide-react";
 import api from '../services/api'
 import { getToken, removeToken } from "../utils/auth";
 import { useNavigate, useOutletContext } from "react-router-dom";
@@ -9,7 +9,7 @@ import { useMemo, useCallback } from "react";
 import ChartsSection, { MonthlyTrendChart } from "../components/ui/ChartsSection";
 
 import SummaryCards from "../components/ui/SummaryCard";
-import { debts, getDebtProgress, getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
+import { chamaGroups, debts, feeEvents, getChamaProgress, getDebtProgress, getFeeSummary, getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
 
@@ -114,6 +114,8 @@ function Dashboard() {
     const recentTransactions = transactions.slice(0, 6);
     const debtPreview = debts.slice(0, 3);
     const subscriptionPreview = getSortedSubscriptions(subscriptions).slice(0, 5);
+    const chamaPreview = chamaGroups[0];
+    const feeSummary = getFeeSummary(feeEvents);
 
     //Date Formatter
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
@@ -207,6 +209,43 @@ function Dashboard() {
     return (
         <div className="dashboard-page">
             <div className="dashboard-header">
+                <div className="add-menu-wrap dashboard-add-menu" ref={addMenuRef}>
+                    <button
+                        type="button"
+                        className={`add-menu-trigger ${showForm ? "is-active" : ""}`}
+                        onClick={() => setShowAddMenu(prev => !prev)}
+                        aria-expanded={showAddMenu}
+                        aria-haspopup="menu"
+                    >
+                        <span className="add-menu-label-full">Add Transaction</span>
+                        <span className="add-menu-label-mobile">Add</span>
+                        <ChevronDown size={16} aria-hidden="true" />
+                    </button>
+                    {showAddMenu && (
+                        <div className="add-menu" role="menu">
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                    setShowForm(true);
+                                    setShowAddMenu(false);
+                                }}
+                            >
+                                <PencilLine size={16} aria-hidden="true" />
+                                <span>Manual add</span>
+                            </button>
+                            <button type="button" role="menuitem" disabled>
+                                <FileUp size={16} aria-hidden="true" />
+                                <span>Import</span>
+                                <small>Coming soon</small>
+                            </button>
+                            <a href={TELEGRAM_BOT_LINK} role="menuitem" target="_blank" rel="noreferrer">
+                                <TelegramIcon size={16} />
+                                <span>Telegram bot</span>
+                            </a>
+                        </div>
+                    )}
+                </div>
                 <div className="dashboard-header-left">
                     <button type="button" className="icon-button" aria-label="Toggle sidebar" onClick={toggleSidebar}>
                         <span className="menu-icon" aria-hidden="true">
@@ -220,65 +259,27 @@ function Dashboard() {
                         <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>
                     </div>
                 </div>
-                <div className="dashboard-header-actions">
-                    <div className="add-menu-wrap" ref={addMenuRef}>
-                        <button
-                            type="button"
-                            className={`add-menu-trigger ${showForm ? "is-active" : ""}`}
-                            onClick={() => setShowAddMenu(prev => !prev)}
-                            aria-expanded={showAddMenu}
-                            aria-haspopup="menu"
-                        >
-                            Add Transaction
-                            <ChevronDown size={16} aria-hidden="true" />
-                        </button>
-                        {showAddMenu && (
-                            <div className="add-menu" role="menu">
-                                <button
-                                    type="button"
-                                    role="menuitem"
-                                    onClick={() => {
-                                        setShowForm(true);
-                                        setShowAddMenu(false);
-                                    }}
-                                >
-                                    <PencilLine size={16} aria-hidden="true" />
-                                    <span>Manual add</span>
-                                </button>
-                                <button type="button" role="menuitem" disabled>
-                                    <FileUp size={16} aria-hidden="true" />
-                                    <span>Import</span>
-                                    <small>Coming soon</small>
-                                </button>
-                                <a href={TELEGRAM_BOT_LINK} role="menuitem" target="_blank" rel="noreferrer">
-                                    <TelegramIcon size={16} />
-                                    <span>Telegram bot</span>
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                    <div className="account-menu-wrap" ref={accountMenuRef}>
-                        <button
-                            type="button"
-                            className="profile-button"
-                            aria-label="Open user profile menu"
-                            aria-haspopup="menu"
-                            aria-expanded={showAccountMenu}
-                            onClick={() => setShowAccountMenu(prev => !prev)}
-                        >
-                            <span className="profile-initial">{username.charAt(0).toUpperCase()}</span>
-                        </button>
+                <div className="account-menu-wrap dashboard-profile-menu" ref={accountMenuRef}>
+                    <button
+                        type="button"
+                        className="profile-button"
+                        aria-label="Open user profile menu"
+                        aria-haspopup="menu"
+                        aria-expanded={showAccountMenu}
+                        onClick={() => setShowAccountMenu(prev => !prev)}
+                    >
+                        <span className="profile-initial">{username.charAt(0).toUpperCase()}</span>
+                    </button>
 
-                        {showAccountMenu && (
-                            <div className="account-menu" role="menu">
-                                <p>Signed in as</p>
-                                <strong>{username}</strong>
-                                <button type="button" role="menuitem" onClick={() => { removeToken(); navigate('/'); }}>
-                                    Logout
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    {showAccountMenu && (
+                        <div className="account-menu" role="menu">
+                            <p>Signed in as</p>
+                            <strong>{username}</strong>
+                            <button type="button" role="menuitem" onClick={() => { removeToken(); navigate('/'); }}>
+                                Logout
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="dashboard-overview">
@@ -366,8 +367,8 @@ function Dashboard() {
                         <section className="bills-card">
                             <div className="section-heading">
                                 <div>
-                                    <h2>{sidePreview === "bills" ? "Bill & Subscription" : "Debt Preview"}</h2>
-                                    <p>{sidePreview === "bills" ? "Upcoming recurring payments" : "Top balances from debt tracker"}</p>
+                                    <h2>{sidePreview === "bills" ? "Bill & Subscription" : sidePreview === "debts" ? "Debt Preview" : sidePreview === "chamas" ? "Chama Cycle" : "Fees Watch"}</h2>
+                                    <p>{sidePreview === "bills" ? "Upcoming recurring payments" : sidePreview === "debts" ? "Top balances from debt tracker" : sidePreview === "chamas" ? "Merry-go-round status mock" : "Estimated cost of moving money"}</p>
                                 </div>
                                 <div className="preview-switcher" aria-label="Switch dashboard preview">
                                     <button
@@ -383,6 +384,20 @@ function Dashboard() {
                                         onClick={() => setSidePreview("debts")}
                                     >
                                         Debts
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={sidePreview === "chamas" ? "active" : ""}
+                                        onClick={() => setSidePreview("chamas")}
+                                    >
+                                        Chama
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={sidePreview === "fees" ? "active" : ""}
+                                        onClick={() => setSidePreview("fees")}
+                                    >
+                                        Fees
                                     </button>
                                 </div>
                             </div>
@@ -404,7 +419,7 @@ function Dashboard() {
                                         View all bills
                                     </button>
                                 </>
-                            ) : (
+                            ) : sidePreview === "debts" ? (
                                 <>
                                     <div className="debt-preview-list">
                                         {debtPreview.map((debt) => {
@@ -423,6 +438,58 @@ function Dashboard() {
                                     </div>
                                     <button type="button" className="preview-link-button" onClick={() => navigate("/debts")}>
                                         View all debts
+                                    </button>
+                                </>
+                            ) : sidePreview === "chamas" ? (
+                                <>
+                                    <div className="chama-dashboard-preview">
+                                        <div className="chama-dashboard-icon" aria-hidden="true">
+                                            <HandCoins size={22} />
+                                        </div>
+                                        <div>
+                                            <strong>{chamaPreview.name}</strong>
+                                            <small>{chamaPreview.paidCount} of {chamaPreview.memberCount} paid · recipient {chamaPreview.currentRecipient}</small>
+                                        </div>
+                                    </div>
+                                    <div className="budget-progress-track chama-dashboard-track" aria-hidden="true">
+                                        <span style={{ width: `${getChamaProgress(chamaPreview)}%` }} />
+                                    </div>
+                                    <div className="chama-dashboard-meta">
+                                        <span>{currencyFormatter.format(chamaPreview.poolAmount)} collected</span>
+                                        <span>{getChamaProgress(chamaPreview)}%</span>
+                                    </div>
+                                    <button type="button" className="preview-link-button" onClick={() => navigate("/chamas")}>
+                                        View chama tracker
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="fees-dashboard-preview">
+                                        <div className="fees-dashboard-icon" aria-hidden="true">
+                                            <BadgePercent size={22} />
+                                        </div>
+                                        <div>
+                                            <strong>{currencyFormatter.format(feeSummary.totalMonth)}</strong>
+                                            <small>This month · highest: {feeSummary.highestProvider.name}</small>
+                                        </div>
+                                    </div>
+                                    <div className="fees-dashboard-bars" aria-hidden="true">
+                                        {feeSummary.providerTotals.slice(0, 4).map((provider) => (
+                                            <span
+                                                key={provider.id}
+                                                style={{
+                                                    height: `${Math.max(18, Math.round((provider.total / Math.max(feeSummary.highestProvider.total, 1)) * 72))}px`,
+                                                    backgroundColor: provider.tone,
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="chama-dashboard-meta">
+                                        <span>{currencyFormatter.format(feeSummary.totalWeek)} this week</span>
+                                        <span>Mock</span>
+                                    </div>
+                                    <button type="button" className="preview-link-button" onClick={() => navigate("/fees")}>
+                                        View fee tracker
                                     </button>
                                 </>
                             )}

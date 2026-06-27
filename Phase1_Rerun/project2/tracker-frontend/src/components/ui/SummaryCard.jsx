@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, MoreVertical, Target, TrendingDown, Wallet, Scale } from "lucide-react";
+import { Eye, EyeOff, MoreVertical, Target, TrendingDown, Wallet, Scale, CircleDollarSign } from "lucide-react";
 import { debts, getDebtSummary, getGoalProgress, savingsGoals } from "../../data/mockFinanceFeatures";
 
 function SummaryDebtPulseLine({ progress }) {
@@ -103,7 +103,7 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
             <div className="summary-card summary-card-balance">
 
                 <span className="summary-label-with-icon">
-                    <Scale size={15} aria-hidden="true" />
+                    <CircleDollarSign size={15} aria-hidden="true" />
                     Balance
                 </span>
                 <strong>{hideAmounts ? "••••••" : currencyFormatter.format(balanceTotal)}</strong>

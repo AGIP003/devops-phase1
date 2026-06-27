@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Calendar } from "lucide-react";
+import { BadgePercent, Calendar } from "lucide-react";
 import api from '../../services/api';
+import { calculateTransactionFee } from "../../data/mockFinanceFeatures";
 
 
 
@@ -75,8 +76,12 @@ function AddTransactionForm({ onSuccess }) {
 
     const paymentMethodOptions = [
       "cash", "m-pesa", "airtel money", "t-kash", "equitel",
-      "bank transfer", "debit card", "credit card", "paypal"
+      "bank transfer", "debit card", "credit card", "ipay", "pesapal", "paypal"
     ];
+    const feeEstimate = calculateTransactionFee(formData.payment_method, formData.amount);
+    const transactionAmount = Number(formData.amount || 0);
+    const showFeeEstimate = transactionAmount > 0 && formData.payment_method;
+
     return(
         <div className="add-transaction-panel" id="add-transaction-panel">
             <h3>Add Transaction</h3>
@@ -171,6 +176,23 @@ function AddTransactionForm({ onSuccess }) {
                     ))}
                   </select>
                 </label>
+
+                {showFeeEstimate && (
+                  <div className={`transaction-fee-preview ${feeEstimate.supported ? "" : "is-muted"}`}>
+                    <div className="transaction-fee-icon" aria-hidden="true">
+                      <BadgePercent size={17} />
+                    </div>
+                    <div>
+                      <span>Estimated fee</span>
+                      <strong>KES {feeEstimate.fee.toLocaleString("en-KE")}</strong>
+                      <small>
+                        {feeEstimate.supported
+                          ? `${feeEstimate.provider.name} estimate · total cost KES ${(transactionAmount + feeEstimate.fee).toLocaleString("en-KE")}`
+                          : "No fee estimate for this payment method yet"}
+                      </small>
+                    </div>
+                  </div>
+                )}
 
                 {error && <p className="transaction-form-message transaction-form-error">{error}</p>}
                 {success && <p className="transaction-form-message transaction-form-success">{success}</p>}
