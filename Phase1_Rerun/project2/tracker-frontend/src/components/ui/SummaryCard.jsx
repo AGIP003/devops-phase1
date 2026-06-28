@@ -123,8 +123,8 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
                     <SummaryGoalRing progress={goalProgress} />
                     <div className="summary-goal-copy">
                         <strong>{topGoal.name}</strong>
-                        <small>Required: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.targetAmount)}</small>
-                        <small>Collect: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.savedAmount)}</small>
+                        <small><span>Required: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.targetAmount)}</span></small>
+                        <small><span>Collected: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.savedAmount)}</span></small>
                     </div>
                 </div>
             </div>

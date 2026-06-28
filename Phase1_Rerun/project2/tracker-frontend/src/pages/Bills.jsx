@@ -63,7 +63,7 @@ function Bills() {
         <div className="feature-summary-card">
           <span>Capture</span>
           <strong>Manual first</strong>
-          <small>Parsing rules can come after backend support</small>
+          <small>Parsing rules later</small>
         </div>
       </section>
 

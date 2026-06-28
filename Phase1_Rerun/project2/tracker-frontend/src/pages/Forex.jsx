@@ -13,7 +13,7 @@ function Forex() {
         <div>
           <span className="coming-soon-pill">Mock forex</span>
           <h1>Adjusted Currency</h1>
-          <p>Choose how money appears across the app. Live rates will come from your scraper later.</p>
+          <p>Choose how money appears across the app.</p>
         </div>
         <button type="button" className="feature-primary-button" disabled>
           <RefreshCw size={17} aria-hidden="true" />

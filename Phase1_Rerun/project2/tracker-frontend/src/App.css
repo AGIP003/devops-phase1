@@ -1285,9 +1285,19 @@ body.auth-screen {
 }
 
 .summary-goal-copy small {
+  color: var(--text-muted);
   font-size: 0.72rem;
+  font-weight: 500;
   line-height: 1.35;
   text-overflow: clip;
+  text-transform: none;
+}
+
+.summary-goal-copy small span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  text-transform: none;
 }
 
 .summary-debt-pulse {
@@ -1527,6 +1537,14 @@ body.auth-screen {
 .recent-amount {
   text-align: right;
   justify-self: end;
+}
+
+.recent-amount-income {
+  color: var(--income);
+}
+
+.recent-amount-expense {
+  color: var(--expense);
 }
 
 .recent-row {
@@ -2530,7 +2548,7 @@ body.auth-screen {
 .goal-meta-grid,
 .feature-action-row {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.95rem;
 }
 
 .goal-money-row {
@@ -2899,7 +2917,7 @@ body.auth-screen {
   border: 1px solid var(--border-soft);
   border-radius: 999px;
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0.18rem;
 }
 
@@ -3603,12 +3621,26 @@ body.auth-screen {
 
 @keyframes summaryTicker {
   0%,
-  12% {
+  18% {
     transform: translateX(0);
   }
-  88%,
+  82%,
   100% {
-    transform: translateX(-55%);
+    transform: translateX(-42%);
+  }
+}
+
+@keyframes mobileIconWiggle {
+  0%,
+  70%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  78% {
+    transform: translateX(2px) rotate(-5deg);
+  }
+  88% {
+    transform: translateX(-1px) rotate(4deg);
   }
 }
 
@@ -3680,6 +3712,11 @@ body.auth-screen {
     min-height: 54px;
     padding: 0.35rem 0.45rem;
     text-align: center;
+  }
+
+  .sidebar-link svg,
+  .logout-btn svg {
+    animation: mobileIconWiggle 3.4s ease-in-out infinite;
   }
 
   .chama-layout,
@@ -3794,9 +3831,10 @@ body.auth-screen {
   }
 
   .add-menu {
-    left: 0;
-    right: auto;
-    width: min(86vw, 280px);
+    left: auto;
+    max-width: calc(100vw - 1.3rem);
+    right: 0;
+    width: min(78vw, 260px);
   }
 
   .account-menu-wrap {
@@ -3874,6 +3912,28 @@ body.auth-screen {
     padding: 0 0.35rem;
   }
 
+  .recent-card .section-heading,
+  .bills-card .section-heading {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .recent-card .section-heading button {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .bills-card .section-heading > div {
+    min-width: 0;
+  }
+
+  .bills-card .preview-switcher {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(4, minmax(38px, auto));
+    width: auto;
+  }
+
   .icon-button {
     display: none;
   }
@@ -3926,30 +3986,105 @@ body.auth-screen {
     padding: 0.9rem;
   }
 
-  .summary-goal-copy {
+  .summary-card-goal {
+    gap: 0.48rem;
     overflow: hidden;
   }
 
-  .summary-goal-copy strong,
-  .summary-goal-copy small {
-    animation: summaryTicker 8s linear infinite;
-    display: inline-block;
-    min-width: max-content;
-    padding-right: 1rem;
-    text-overflow: clip;
+  .summary-goal-header {
+    min-height: 24px;
+  }
+
+  .summary-goal-header button {
+    height: 24px;
+    width: 24px;
+  }
+
+  .summary-goal-body {
+    display: grid;
+    gap: 0.26rem 0.55rem;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    overflow: hidden;
+  }
+
+  .summary-goal-ring {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    height: 44px;
+    width: 44px;
+  }
+
+  .summary-goal-ring span {
+    height: 7px;
+    transform: translate(12px, -16px);
+    width: 7px;
+  }
+
+  .summary-goal-copy {
+    display: contents;
+    overflow: hidden;
+  }
+
+  .summary-goal-copy strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .summary-goal-copy small:nth-of-type(1) {
+  .summary-goal-copy strong {
+    font-size: 0.88rem;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .summary-goal-copy small {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 400;
+    grid-column: 2;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: clip;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .summary-goal-copy small span {
+    animation: summaryTicker 8s linear infinite;
+    color: inherit;
+    display: inline-block;
+    font-size: inherit;
+    font-weight: inherit;
+    min-width: max-content;
+    padding-right: 1.5rem;
+    text-transform: none;
+  }
+
+  .summary-goal-copy small:nth-of-type(1) span {
     animation-delay: 0.8s;
   }
 
-  .summary-goal-copy small:nth-of-type(2) {
+  .summary-goal-copy small:nth-of-type(1) {
+    grid-row: 2;
+  }
+
+  .summary-goal-copy small:nth-of-type(2) span {
     animation-delay: 1.5s;
+  }
+
+  .summary-goal-copy small:nth-of-type(2) {
+    grid-row: 3;
   }
 
   .summary-card strong {
     font-size: 1.35rem;
+  }
+
+  .summary-card-goal .summary-goal-copy strong {
+    font-size: 0.88rem;
   }
 
   .chart-card,
@@ -4006,13 +4141,13 @@ body.auth-screen {
   }
 
   .chart-card-header {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
     gap: 0.5rem;
   }
 
   .chart-filter-select {
-    width: 100%;
+    width: auto;
   }
 
   .donut-legend-item {
@@ -4042,8 +4177,10 @@ body.auth-screen {
   }
 
   .recent-amount {
-    grid-column: 3 / 4;
-    grid-row: 1 / 3;
+    grid-column: 2 / 3;
+    grid-row: auto;
+    justify-self: start;
+    text-align: left;
     white-space: nowrap;
   }
 
@@ -4210,6 +4347,16 @@ body.auth-screen {
     grid-template-columns: 1fr;
   }
 
+  .bills-card .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bills-card .preview-switcher {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+  }
+
   .dashboard-header-actions {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -4288,14 +4435,15 @@ body.auth-screen {
   .sidebar-link:hover svg,
   .sidebar-link.active svg,
   .logout-btn:hover svg,
+  .sidebar-link svg,
+  .logout-btn svg,
   .feature-primary-button:hover svg,
   .preview-link-button:hover svg,
   .summary-card:hover .summary-label-with-icon svg {
     animation: none;
   }
 
-  .summary-goal-copy strong,
-  .summary-goal-copy small {
+  .summary-goal-copy small span {
     animation: none;
   }
 }
