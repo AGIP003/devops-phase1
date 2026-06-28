@@ -460,6 +460,7 @@ body.auth-screen {
 }
 
 .telegram-code-actions button,
+.telegram-code-actions a,
 .telegram-generate-button {
   border: 0;
   cursor: pointer;
@@ -469,12 +470,14 @@ body.auth-screen {
   justify-content: center;
 }
 
-.telegram-code-actions button {
+.telegram-code-actions button,
+.telegram-code-actions a {
   align-items: center;
   background: transparent;
   color: #1686b8;
   display: inline-flex;
   gap: 0.25rem;
+  text-decoration: none;
 }
 
 .telegram-generate-button {

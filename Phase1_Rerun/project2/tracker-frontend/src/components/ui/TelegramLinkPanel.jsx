@@ -1,10 +1,11 @@
 /* eslint-disable react/prop-types */
-import { Check, Copy, Link2Off, RefreshCw, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Link2Off, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 import api from "../../services/api";
 
+const TELEGRAM_BOT_LINK = "https://t.me/pesatiq_bot";
 
 export function TelegramIcon({ size = 18, ...props }) {
     return (
@@ -116,6 +117,7 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
             minute: "2-digit",
         }).format(new Date(expiresAt))
         : "";
+    const telegramDeepLink = linkCode ? `${TELEGRAM_BOT_LINK}?start=${encodeURIComponent(linkCode)}` : TELEGRAM_BOT_LINK;
 
     return (
         <div className="telegram-panel-backdrop" onMouseDown={onClose}>
@@ -182,8 +184,8 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
                     <>
                         <ol className="telegram-steps">
                             <li>Generate a one-time code below.</li>
-                            <li>Open the Finance Tracker bot in Telegram.</li>
-                            <li>Send the generated <code>/link</code> command.</li>
+                            <li>Open Telegram with the secure link.</li>
+                            <li>If Telegram does not open, copy the <code>/link</code> command.</li>
                         </ol>
 
                         {linkCode ? (
@@ -201,6 +203,10 @@ function TelegramLinkPanel({ open, onClose, onStatusChange }) {
                                             <Copy size={15} />
                                             Copy
                                         </button>
+                                        <a href={telegramDeepLink} target="_blank" rel="noreferrer">
+                                            <ExternalLink size={15} />
+                                            Open Telegram
+                                        </a>
                                     </div>
                                 </div>
                             </div>
