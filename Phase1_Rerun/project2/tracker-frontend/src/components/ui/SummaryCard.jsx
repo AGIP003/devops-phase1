@@ -40,16 +40,27 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const balanceTotal = incomeTotal - expenseTotal;
-    const topGoal = savingsGoals[0];
-    const goalProgress = getGoalProgress(topGoal);
     const debtSummary = getDebtSummary(debts);
     const debtProgress = Math.min(100, Math.round((debtSummary.owedToYou / Math.max(debtSummary.youOwe, 1)) * 100));
     const [expenseMode, setExpenseMode] = React.useState("expenses");
+    const [activeGoalIndex, setActiveGoalIndex] = React.useState(0);
     const showingDebt = expenseMode === "debt";
+    const activeGoal = savingsGoals[activeGoalIndex] || savingsGoals[0];
+    const goalProgress = getGoalProgress(activeGoal);
 
     React.useEffect(() => {
         const intervalId = window.setInterval(() => {
             setExpenseMode(prev => prev === "expenses" ? "debt" : "expenses");
+        }, 120000);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
+
+    React.useEffect(() => {
+        if (savingsGoals.length <= 1) return undefined;
+
+        const intervalId = window.setInterval(() => {
+            setActiveGoalIndex(prev => (prev + 1) % savingsGoals.length);
         }, 120000);
 
         return () => window.clearInterval(intervalId);
@@ -121,10 +132,10 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
                 </div>
                 <div className="summary-goal-body">
                     <SummaryGoalRing progress={goalProgress} />
-                    <div className="summary-goal-copy">
-                        <strong>{topGoal.name}</strong>
-                        <small><span>Required: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.targetAmount)}</span></small>
-                        <small><span>Collected: {hideAmounts ? "••••••" : currencyFormatter.format(topGoal.savedAmount)}</span></small>
+                    <div className="summary-goal-copy" key={activeGoal.id}>
+                        <strong>{activeGoal.name}</strong>
+                        <small><span>Required: {hideAmounts ? "••••••" : currencyFormatter.format(activeGoal.targetAmount)}</span></small>
+                        <small><span>Collected: {hideAmounts ? "••••••" : currencyFormatter.format(activeGoal.savedAmount)}</span></small>
                     </div>
                 </div>
             </div>
