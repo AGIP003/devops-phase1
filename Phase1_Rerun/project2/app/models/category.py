@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base
 
 class Category(Base):
@@ -13,3 +13,10 @@ class Category(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=True
     )
+
+    transactions = relationship(
+        "Transaction",
+        back_populates="category",
+        lazy="select"
+    )
+    user = relationship("User", back_populates="categories")

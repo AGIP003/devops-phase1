@@ -2,7 +2,7 @@ from flask import Flask
 from app.routes import register_routes
 from app.errors import register_error_handlers
 from flask_cors import CORS
-from app.extensions import bcrypt, mail, limiter
+from app.extensions import bcrypt, mail, limiter, migrate, db
 from app.auth_routes import auth_bp
 from app.telegram_routes import telegram_bp
 from flask_talisman import Talisman
@@ -44,6 +44,18 @@ def create_app():
     register_routes(app)
     register_error_handlers(app)
     bcrypt.init_app(app)
+
+
+
+    # sql alchemy extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+
+    with app.app_context():
+        from app.models import (
+            User, Category, Transaction, Budget, BudgetItem,
+            TelegramLink, TelegramUserPreferences
+        )
 
     Talisman(
         app,
