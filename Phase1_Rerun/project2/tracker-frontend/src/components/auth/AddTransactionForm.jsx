@@ -72,7 +72,6 @@ function AddTransactionForm({ onSuccess }) {
     }
 
     const currentCategories = formData.type ? categoryOptions[formData.type] : [];
-    const categorySelectEnabled = formData.type !== '';
 
     const paymentMethodOptions = [
       "cash", "m-pesa", "airtel money", "t-kash", "equitel",

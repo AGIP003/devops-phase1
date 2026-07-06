@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { Check, Copy, ExternalLink, Link2Off, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";

@@ -119,8 +119,8 @@ describe('EditTransaction', () => {
     api.get.mockRejectedValue({ response: { data: { message: 'Not found' } } })
     renderEdit()
 
-    // API fetch errors should be shown to the user.
-    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+    // Fetch errors should be shown to the user.
+    expect(await screen.findByText(/failed to load transaction/i)).toBeInTheDocument()
   })
 
 })

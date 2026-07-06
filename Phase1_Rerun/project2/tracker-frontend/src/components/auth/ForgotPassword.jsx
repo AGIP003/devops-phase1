@@ -46,7 +46,7 @@ function ForgotPassword() {
 
                 <div className="auth-heading">
                     <h2>Forgot password</h2>
-                    <p>Enter your email and we'll send you a reset link.</p>
+                    <p>Enter your email and we will send you a reset link.</p>
                 </div>
 
                 <div className="form-field">

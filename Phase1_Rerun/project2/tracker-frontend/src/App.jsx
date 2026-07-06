@@ -6,6 +6,8 @@ import Layout from './components/ui/Layout';
 import NotFound from './components/auth/NotFound';
 import { lazy, Suspense} from 'react';
 import Transaction from './pages/Transactions';
+import Landing from './pages/Landing';
+import DemoPreview from './pages/DemoPreview';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Goals = lazy(() => import('./pages/Goals'));
 const Debts = lazy(() => import('./pages/Debts'));
@@ -27,7 +29,9 @@ function App() {
         <Suspense fallback={<div className="loading-screen">Loading...</div>}>
           <Routes>
              {/* public routes */}
-            <Route path='/' element={<LoginForm />} />
+            <Route path='/' element={<Landing />} />
+            <Route path="/demo" element={<DemoPreview />} />
+            <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />

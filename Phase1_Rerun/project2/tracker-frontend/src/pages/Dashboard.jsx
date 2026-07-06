@@ -82,10 +82,9 @@ function Dashboard() {
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [showAddMenu, setShowAddMenu] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [error, setError] = useState('');
     const [filterType, setFilterType] = useState("all");
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const [sidePreview, setSidePreview] = useState("bills");
@@ -97,18 +96,9 @@ function Dashboard() {
         return transactions.filter(transaction => {
             //Type filter
             if (filterType !== 'all' && transaction.type !== filterType) return false;
-            //Search filter
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const matchesDesc = transaction.description?.toLowerCase().includes(query);
-                const matchesCat = transaction.category?.toLowerCase().includes(query);
-                const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
-                if (!matchesCat && !matchesDesc && !matchesPM) return false;
-            }
-
             return true;
         })
-    }, [transactions, filterType, searchQuery]);
+    }, [transactions, filterType]);
 
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
@@ -143,7 +133,7 @@ function Dashboard() {
     }, []);
     useEffect(() => {
         fetchTransactions();
-    }, [])
+    }, [fetchTransactions])
 
     useEffect(() => {
         if (showForm && addTransactionPanelRef.current) {
@@ -283,6 +273,7 @@ function Dashboard() {
                 </div>
             </div>
             <div className="dashboard-overview">
+                {error && <div className="error-banner">{error}</div>}
                 <SummaryCards
                     filteredTransactions={filteredTransactions}
                     hideAmounts={hideAmounts}

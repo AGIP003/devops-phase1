@@ -4,7 +4,7 @@ import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
 //useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
@@ -100,7 +100,7 @@ function LoginForm() {
 
                 <div className="auth-heading">
                     <h2>Welcome back</h2>
-                    <p>Sign in to view your dashboard.</p>
+                    <p>Sign in to view your live dashboard, or preview the product with sample data first.</p>
                 </div>
 
                 <div className="form-field">
@@ -152,8 +152,12 @@ function LoginForm() {
                 </button>
 
                 <p className="auth-switch">
-                    Don't have an account? <Link to="/register">Sign up</Link>
+                    Don&apos;t have an account? <Link to="/register">Sign up</Link>
                 </p>
+
+                <Link className="auth-preview-link" to="/demo">
+                    Preview the app <ArrowRight size={16} />
+                </Link>
             </form>
         </div>
     )

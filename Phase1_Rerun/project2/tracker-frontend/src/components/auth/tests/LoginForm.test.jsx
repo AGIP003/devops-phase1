@@ -120,7 +120,7 @@ describe('LoginForm', () => {
     await user.click(submitButton)
     // 2. Assert that "Invalid credentials" text appears in the DOM
     // Hint: use findByText (async) because the error appears after the API call
-    const errorMessage = await screen.findByText((content, element) =>
+    const errorMessage = await screen.findByText((content) =>
       content.toLowerCase().includes('invalid credentials')
     )
     expect(errorMessage).toBeInTheDocument()

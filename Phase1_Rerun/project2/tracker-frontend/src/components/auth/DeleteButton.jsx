@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 
-function DeleteButton({ transactionId, onDeleted }) {
+export default function DeleteButton({ transactionId, onDeleted }) {
     const [loading, setLoading] = useState(false);
 
     async function handleDelete() {
@@ -27,5 +27,3 @@ function DeleteButton({ transactionId, onDeleted }) {
         </button>
     );
 }
-
-
