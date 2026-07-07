@@ -413,6 +413,155 @@ def update_reset_password(user_id, password_hash):
         conn.close()
 
 
+def _budget_item_to_api(row):
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "estimatedAmount": float(row["estimated_amount"] or 0),
+        "actualAmount": float(row["actual_amount"] or 0),
+        "checked": bool(row["checked"]),
+        "position": row["position"],
+    }
+
+
+def _budget_to_api(row, items):
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "category": row["category"] or "General",
+        "targetAmount": float(row["target_amount"] or 0),
+        "lastSpend": sum(float(item["actual_amount"] or 0) for item in items),
+        "lastUsedAt": row["last_used_at"].isoformat() if row["last_used_at"] else None,
+        "items": [_budget_item_to_api(item) for item in items],
+    }
+
+
+def get_budgets_for_user(user_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT id, user_id, name, category, target_amount, last_used_at
+                FROM budgets
+                WHERE user_id = %s
+                ORDER BY COALESCE(last_used_at, updated_at, created_at) DESC, id DESC
+                """,
+                (user_id,),
+            )
+            budgets = cursor.fetchall()
+
+            if not budgets:
+                return []
+
+            budget_ids = [budget["id"] for budget in budgets]
+            cursor.execute(
+                """
+                SELECT id, budget_id, name, estimated_amount, actual_amount, checked, position
+                FROM budget_items
+                WHERE budget_id = ANY(%s)
+                ORDER BY budget_id, position, id
+                """,
+                (budget_ids,),
+            )
+            item_rows = cursor.fetchall()
+
+        items_by_budget = {}
+        for item in item_rows:
+            items_by_budget.setdefault(item["budget_id"], []).append(item)
+
+        return [
+            _budget_to_api(budget, items_by_budget.get(budget["id"], []))
+            for budget in budgets
+        ]
+    finally:
+        conn.close()
+
+
+def create_budget_for_user(user_id, name, category, target_amount, items):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO budgets (
+                    user_id, name, category, target_amount, last_used_at, created_at, updated_at
+                )
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                RETURNING id, user_id, name, category, target_amount, last_used_at
+                """,
+                (user_id, name, category, target_amount),
+            )
+            budget = cursor.fetchone()
+
+            item_rows = []
+            for index, item in enumerate(items):
+                cursor.execute(
+                    """
+                    INSERT INTO budget_items (
+                        budget_id, name, estimated_amount, checked, position, created_at, updated_at
+                    )
+                    VALUES (%s, %s, %s, FALSE, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    RETURNING id, budget_id, name, estimated_amount, actual_amount, checked, position
+                    """,
+                    (
+                        budget["id"],
+                        item["name"],
+                        item.get("estimated_amount", 0),
+                        index,
+                    ),
+                )
+                item_rows.append(cursor.fetchone())
+
+        conn.commit()
+        return _budget_to_api(budget, item_rows)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def update_budget_item_checked_for_user(user_id, item_id, checked):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                UPDATE budget_items bi
+                SET checked = %s, updated_at = CURRENT_TIMESTAMP
+                FROM budgets b
+                WHERE bi.budget_id = b.id
+                  AND bi.id = %s
+                  AND b.user_id = %s
+                RETURNING bi.id, bi.budget_id, bi.name, bi.estimated_amount,
+                          bi.actual_amount, bi.checked, bi.position
+                """,
+                (checked, item_id, user_id),
+            )
+            item = cursor.fetchone()
+            if item is None:
+                conn.rollback()
+                return None
+
+            cursor.execute(
+                """
+                UPDATE budgets
+                SET last_used_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (item["budget_id"],),
+            )
+
+        conn.commit()
+        return _budget_item_to_api(item)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def create_telegram_link_token(user_id, token, expires_at):
     """Create one active Telegram link token for a user."""
     conn = get_db_connection()

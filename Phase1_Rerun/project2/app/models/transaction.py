@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import Integer, Numeric, Date, Text, ForeignKey, DateTime
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base, TimeStampMixin, SoftDeleteMixin
 
 class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
@@ -20,3 +20,11 @@ class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
     payment_method_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("payment_methods.id"), nullable=True
     )
+
+    user = relationship("User", back_populates="transactions")
+    category = relationship("Category", back_populates="transactions")
+
+    def soft_delete(self):
+        from datetime import datetime
+        self.deleted_at = datetime.utcnow()
+

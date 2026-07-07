@@ -8,7 +8,8 @@ from app.db import (
     create_transaction_for_user, get_all_transactions, get_all_transactions_for_user,
     search_transactions, get_db_connection,
     db_get_transaction_by_id, update_transactions, delete_transactions,
-    get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id
+    get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id,
+    get_budgets_for_user, create_budget_for_user, update_budget_item_checked_for_user
 )
 from app.middleware import login_required, admin_required
 import os
@@ -98,6 +99,86 @@ def register_routes(app):
         else:
             transactions = get_all_transactions_for_user(user_id)
         return jsonify(transactions), 200
+
+    @app.route("/api/budgets", methods=["GET"])
+    @login_required
+    def get_budgets():
+        user_id = g.current_user["user_id"]
+        budgets = get_budgets_for_user(user_id)
+        return jsonify(budgets), 200
+
+    @app.route("/api/budgets", methods=["POST"])
+    @login_required
+    def create_budget():
+        data = request.get_json()
+        if data is None:
+            abort(400, description="Invalid JSON")
+
+        if not isinstance(data, dict):
+            abort(400, description="Payload must be an object")
+
+        name = str(data.get("name", "")).strip()
+        category = str(data.get("category", "General")).strip() or "General"
+        items = data.get("items", [])
+
+        if not name:
+            abort(400, description="Budget name is required")
+
+        try:
+            target_amount = validate_amount(data.get("targetAmount"))
+        except ValidationError as e:
+            abort(400, description=str(e))
+
+        if not isinstance(items, list) or not items:
+            abort(400, description="At least one budget item is required")
+
+        clean_items = []
+        for item in items:
+            if not isinstance(item, dict):
+                abort(400, description="Each budget item must be an object")
+
+            item_name = str(item.get("name", "")).strip()
+            if not item_name:
+                abort(400, description="Budget item name is required")
+
+            try:
+                estimated_amount = validate_amount(item.get("estimatedAmount", 0))
+            except ValidationError as e:
+                abort(400, description=str(e))
+
+            clean_items.append({
+                "name": item_name,
+                "estimated_amount": estimated_amount,
+            })
+
+        budget = create_budget_for_user(
+            user_id=g.current_user["user_id"],
+            name=name,
+            category=category,
+            target_amount=target_amount,
+            items=clean_items,
+        )
+        return jsonify({"data": budget, "status": "success"}), 201
+
+    @app.route("/api/budget-items/<int:item_id>", methods=["PATCH"])
+    @login_required
+    def update_budget_item(item_id):
+        data = request.get_json()
+        if data is None:
+            abort(400, description="Invalid JSON")
+
+        if "checked" not in data or not isinstance(data["checked"], bool):
+            abort(400, description="'checked' must be true or false")
+
+        item = update_budget_item_checked_for_user(
+            g.current_user["user_id"],
+            item_id,
+            data["checked"],
+        )
+        if item is None:
+            abort(404, description="Budget item not found")
+
+        return jsonify({"data": item, "status": "success"}), 200
         
     @app.route("/api/transactions/<int:transaction_id>", methods=["DELETE"])
     @login_required
