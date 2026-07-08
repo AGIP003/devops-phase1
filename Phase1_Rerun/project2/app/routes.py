@@ -105,7 +105,9 @@ def register_routes(app):
     def get_budgets():
         user_id = g.current_user["user_id"]
         budgets = get_budgets_for_user(user_id)
-        return jsonify(budgets), 200
+        response = jsonify(budgets)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
 
     @app.route("/api/budgets", methods=["POST"])
     @login_required

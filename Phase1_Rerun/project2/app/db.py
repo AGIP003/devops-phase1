@@ -427,6 +427,7 @@ def _budget_item_to_api(row):
 def _budget_to_api(row, items):
     return {
         "id": row["id"],
+        "userId": row["user_id"],
         "name": row["name"],
         "category": row["category"] or "General",
         "targetAmount": float(row["target_amount"] or 0),

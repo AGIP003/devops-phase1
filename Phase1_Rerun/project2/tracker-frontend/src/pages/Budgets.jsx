@@ -2,6 +2,7 @@ import { ClipboardCheck, Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
+import { getToken } from "../utils/auth";
 
 const EMPTY_ITEM = { name: "", estimatedAmount: "" };
 
@@ -15,6 +16,18 @@ function getBudgetTotal(items = []) {
     (total, item) => total + toCurrencyNumber(item.estimatedAmount),
     0
   );
+}
+
+function getCurrentUserId() {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.user_id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function Budgets() {
@@ -57,10 +70,15 @@ function Budgets() {
     try {
       const response = await api.get("/budgets");
       const data = Array.isArray(response.data) ? response.data : [];
-      setBudgetList(data);
+      const currentUserId = getCurrentUserId();
+      const userBudgets = data.filter((budget) => {
+        if (currentUserId === null) return false;
+        return Number(budget.userId) === Number(currentUserId);
+      });
+      setBudgetList(userBudgets);
       setActiveBudgetId((currentId) => {
-        if (data.some((budget) => budget.id === currentId)) return currentId;
-        return data[0]?.id || null;
+        if (userBudgets.some((budget) => budget.id === currentId)) return currentId;
+        return userBudgets[0]?.id || null;
       });
     } catch (err) {
       setError(err.message || "Unable to load budgets");
