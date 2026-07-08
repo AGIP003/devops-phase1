@@ -3763,10 +3763,20 @@ body.public-screen {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.35fr);
 }
 
+.budget-main-column {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
 .budget-create-form {
   display: grid;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+
+.budget-edit-form {
+  margin-bottom: 0;
 }
 
 .budget-form-grid {

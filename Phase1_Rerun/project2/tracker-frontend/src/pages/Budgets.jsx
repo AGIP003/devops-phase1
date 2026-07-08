@@ -290,6 +290,92 @@ function Budgets() {
     }
   }
 
+  function renderBudgetForm(extraClassName = "") {
+    return (
+      <form
+        className={`budget-list-card budget-create-form ${extraClassName}`.trim()}
+        onSubmit={saveBudget}
+      >
+        <div className="budget-form-grid">
+          <label>
+            <span>Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              placeholder="Monthly groceries"
+            />
+          </label>
+          <label>
+            <span>Category</span>
+            <input
+              type="text"
+              value={form.category}
+              onChange={(event) => setForm({ ...form, category: event.target.value })}
+              placeholder="Food"
+            />
+          </label>
+          <label>
+            <span>Target</span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={form.targetAmount}
+              onChange={(event) => setForm({ ...form, targetAmount: event.target.value })}
+              placeholder="8500"
+            />
+          </label>
+        </div>
+
+        <div className="budget-form-items">
+          {form.items.map((item, index) => (
+            <div className="budget-form-item" key={`budget-form-item-${index}`}>
+              <input
+                type="text"
+                value={item.name}
+                onChange={(event) => updateItem(index, "name", event.target.value)}
+                placeholder="Item name"
+              />
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={item.estimatedAmount}
+                onChange={(event) => updateItem(index, "estimatedAmount", event.target.value)}
+                placeholder="Estimate"
+              />
+              <button
+                type="button"
+                className="budget-remove-item-button"
+                onClick={() => removeItemRow(index)}
+                disabled={form.items.length <= 1}
+                aria-label={`Remove item ${index + 1}`}
+                title="Remove item"
+              >
+                <Trash2 size={15} aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {formError && <p className="transaction-form-message transaction-form-error">{formError}</p>}
+
+        <div className="budget-form-actions">
+          <button type="button" className="secondary-button" onClick={addItemRow}>
+            Add item
+          </button>
+          <button type="button" className="secondary-button" onClick={resetForm}>
+            Cancel
+          </button>
+          <button type="submit" className="feature-primary-button" disabled={isCreating}>
+            {isCreating ? "Saving..." : editingBudgetId ? "Update budget" : "Save budget"}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div className="feature-page">
       <div className="feature-page-header">
@@ -308,86 +394,7 @@ function Budgets() {
         </button>
       </div>
 
-      {showForm && (
-        <form className="budget-list-card budget-create-form" onSubmit={saveBudget}>
-          <div className="budget-form-grid">
-            <label>
-              <span>Name</span>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="Monthly groceries"
-              />
-            </label>
-            <label>
-              <span>Category</span>
-              <input
-                type="text"
-                value={form.category}
-                onChange={(event) => setForm({ ...form, category: event.target.value })}
-                placeholder="Food"
-              />
-            </label>
-            <label>
-              <span>Target</span>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={form.targetAmount}
-                onChange={(event) => setForm({ ...form, targetAmount: event.target.value })}
-                placeholder="8500"
-              />
-            </label>
-          </div>
-
-          <div className="budget-form-items">
-            {form.items.map((item, index) => (
-              <div className="budget-form-item" key={`budget-form-item-${index}`}>
-                <input
-                  type="text"
-                  value={item.name}
-                  onChange={(event) => updateItem(index, "name", event.target.value)}
-                  placeholder="Item name"
-                />
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={item.estimatedAmount}
-                  onChange={(event) => updateItem(index, "estimatedAmount", event.target.value)}
-                  placeholder="Estimate"
-                />
-                <button
-                  type="button"
-                  className="budget-remove-item-button"
-                  onClick={() => removeItemRow(index)}
-                  disabled={form.items.length <= 1}
-                  aria-label={`Remove item ${index + 1}`}
-                  title="Remove item"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {formError && <p className="transaction-form-message transaction-form-error">{formError}</p>}
-
-          <div className="budget-form-actions">
-            <button type="button" className="secondary-button" onClick={addItemRow}>
-              Add item
-            </button>
-            <button type="button" className="secondary-button" onClick={resetForm}>
-              Cancel
-            </button>
-            <button type="submit" className="feature-primary-button" disabled={isCreating}>
-              {isCreating ? "Saving..." : editingBudgetId ? "Update budget" : "Save budget"}
-            </button>
-          </div>
-        </form>
-      )}
+      {showForm && !editingBudgetId && renderBudgetForm()}
 
       {error && (
         <div className="transaction-form-message transaction-form-error">
@@ -432,57 +439,61 @@ function Budgets() {
           </section>
 
           <div className="budget-layout">
-            <section className="budget-list-card">
-              <div className="subscription-card-header">
-                <div>
-                  <h2>
-                    <ClipboardCheck size={18} aria-hidden="true" />
-                    {activeBudget.name}
-                  </h2>
-                  <p>Tick items as you shop. Completed items stay visible but crossed out.</p>
+            <div className="budget-main-column">
+              <section className="budget-list-card">
+                <div className="subscription-card-header">
+                  <div>
+                    <h2>
+                      <ClipboardCheck size={18} aria-hidden="true" />
+                      {activeBudget.name}
+                    </h2>
+                    <p>Tick items as you shop. Completed items stay visible but crossed out.</p>
+                  </div>
+                  <div className="budget-card-actions">
+                    <button
+                      type="button"
+                      className="table-action-button table-action-edit"
+                      onClick={() => startEditBudget(activeBudget)}
+                      aria-label={`Edit ${activeBudget.name}`}
+                      title="Edit budget"
+                    >
+                      <Pencil size={16} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="table-action-button table-action-delete"
+                      onClick={() => deleteBudget(activeBudget.id)}
+                      disabled={deletingBudgetId === activeBudget.id}
+                      aria-label={`Delete ${activeBudget.name}`}
+                      title="Delete budget"
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
-                <div className="budget-card-actions">
-                  <button
-                    type="button"
-                    className="table-action-button table-action-edit"
-                    onClick={() => startEditBudget(activeBudget)}
-                    aria-label={`Edit ${activeBudget.name}`}
-                    title="Edit budget"
-                  >
-                    <Pencil size={16} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="table-action-button table-action-delete"
-                    onClick={() => deleteBudget(activeBudget.id)}
-                    disabled={deletingBudgetId === activeBudget.id}
-                    aria-label={`Delete ${activeBudget.name}`}
-                    title="Delete budget"
-                  >
-                    <Trash2 size={16} aria-hidden="true" />
-                  </button>
+
+                <div className="budget-progress-track" aria-hidden="true">
+                  <span style={{ width: `${progress}%` }} />
                 </div>
-              </div>
 
-              <div className="budget-progress-track" aria-hidden="true">
-                <span style={{ width: `${progress}%` }} />
-              </div>
+                <div className="budget-checklist">
+                  {activeBudget.items.map((item) => (
+                    <label className={`budget-item ${item.checked ? "checked" : ""}`} key={item.id}>
+                      <input
+                        type="checkbox"
+                        checked={item.checked}
+                        disabled={savingItemId === item.id}
+                        onChange={() => toggleItem(item.id)}
+                      />
+                      <span>{item.name}</span>
+                      <strong>{formatCurrency(toCurrencyNumber(item.estimatedAmount))}</strong>
+                    </label>
+                  ))}
+                </div>
+              </section>
 
-              <div className="budget-checklist">
-                {activeBudget.items.map((item) => (
-                  <label className={`budget-item ${item.checked ? "checked" : ""}`} key={item.id}>
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      disabled={savingItemId === item.id}
-                      onChange={() => toggleItem(item.id)}
-                    />
-                    <span>{item.name}</span>
-                    <strong>{formatCurrency(toCurrencyNumber(item.estimatedAmount))}</strong>
-                  </label>
-                ))}
-              </div>
-            </section>
+              {showForm && editingBudgetId === activeBudget.id && renderBudgetForm("budget-edit-form")}
+            </div>
 
             <aside className="budget-side-card">
               <h2>Saved Lists</h2>
