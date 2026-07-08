@@ -9,7 +9,8 @@ from app.db import (
     search_transactions, get_db_connection,
     db_get_transaction_by_id, update_transactions, delete_transactions,
     get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id,
-    get_budgets_for_user, create_budget_for_user, update_budget_item_checked_for_user
+    get_budgets_for_user, create_budget_for_user, update_budget_for_user,
+    delete_budget_for_user, update_budget_item_checked_for_user
 )
 from app.middleware import login_required, admin_required
 import os
@@ -109,10 +110,7 @@ def register_routes(app):
         response.headers["Cache-Control"] = "private, no-store"
         return response, 200
 
-    @app.route("/api/budgets", methods=["POST"])
-    @login_required
-    def create_budget():
-        data = request.get_json()
+    def validate_budget_payload(data):
         if data is None:
             abort(400, description="Invalid JSON")
 
@@ -151,7 +149,16 @@ def register_routes(app):
             clean_items.append({
                 "name": item_name,
                 "estimated_amount": estimated_amount,
+                "checked": bool(item.get("checked", False)),
             })
+
+        return name, category, target_amount, clean_items
+
+    @app.route("/api/budgets", methods=["POST"])
+    @login_required
+    def create_budget():
+        data = request.get_json()
+        name, category, target_amount, clean_items = validate_budget_payload(data)
 
         budget = create_budget_for_user(
             user_id=g.current_user["user_id"],
@@ -161,6 +168,34 @@ def register_routes(app):
             items=clean_items,
         )
         return jsonify({"data": budget, "status": "success"}), 201
+
+    @app.route("/api/budgets/<int:budget_id>", methods=["PUT"])
+    @login_required
+    def update_budget(budget_id):
+        data = request.get_json()
+        name, category, target_amount, clean_items = validate_budget_payload(data)
+
+        budget = update_budget_for_user(
+            user_id=g.current_user["user_id"],
+            budget_id=budget_id,
+            name=name,
+            category=category,
+            target_amount=target_amount,
+            items=clean_items,
+        )
+        if budget is None:
+            abort(404, description="Budget not found")
+
+        return jsonify({"data": budget, "status": "success"}), 200
+
+    @app.route("/api/budgets/<int:budget_id>", methods=["DELETE"])
+    @login_required
+    def delete_budget(budget_id):
+        row = delete_budget_for_user(g.current_user["user_id"], budget_id)
+        if row is None:
+            abort(404, description="Budget not found")
+
+        return jsonify({"message": "Budget deleted", "status": "success"}), 200
 
     @app.route("/api/budget-items/<int:item_id>", methods=["PATCH"])
     @login_required

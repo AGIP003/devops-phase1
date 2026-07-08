@@ -523,6 +523,83 @@ def create_budget_for_user(user_id, name, category, target_amount, items):
         conn.close()
 
 
+def update_budget_for_user(user_id, budget_id, name, category, target_amount, items):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                UPDATE budgets
+                SET name = %s,
+                    category = %s,
+                    target_amount = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+                RETURNING id, user_id, name, category, target_amount, last_used_at
+                """,
+                (name, category, target_amount, budget_id, user_id),
+            )
+            budget = cursor.fetchone()
+            if budget is None:
+                conn.rollback()
+                return None
+
+            cursor.execute(
+                "DELETE FROM budget_items WHERE budget_id = %s",
+                (budget_id,),
+            )
+
+            item_rows = []
+            for index, item in enumerate(items):
+                cursor.execute(
+                    """
+                    INSERT INTO budget_items (
+                        budget_id, name, estimated_amount, checked, position, created_at, updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    RETURNING id, budget_id, name, estimated_amount, actual_amount, checked, position
+                    """,
+                    (
+                        budget_id,
+                        item["name"],
+                        item.get("estimated_amount", 0),
+                        item.get("checked", False),
+                        index,
+                    ),
+                )
+                item_rows.append(cursor.fetchone())
+
+        conn.commit()
+        return _budget_to_api(budget, item_rows)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def delete_budget_for_user(user_id, budget_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                DELETE FROM budgets
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+                """,
+                (budget_id, user_id),
+            )
+            row = cursor.fetchone()
+        conn.commit()
+        return row
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def update_budget_item_checked_for_user(user_id, item_id, checked):
     conn = get_db_connection()
     try:

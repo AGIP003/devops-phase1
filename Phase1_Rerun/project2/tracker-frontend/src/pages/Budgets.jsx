@@ -1,10 +1,19 @@
-import { ClipboardCheck, Plus, RefreshCw } from "lucide-react";
+import { ClipboardCheck, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { getToken } from "../utils/auth";
 
 const EMPTY_ITEM = { name: "", estimatedAmount: "" };
+
+function getEmptyForm() {
+  return {
+    name: "",
+    category: "",
+    targetAmount: "",
+    items: [{ ...EMPTY_ITEM }, { ...EMPTY_ITEM }, { ...EMPTY_ITEM }],
+  };
+}
 
 function toCurrencyNumber(value) {
   const amount = Number(value);
@@ -38,14 +47,11 @@ function Budgets() {
   const [savingItemId, setSavingItemId] = useState(null);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingBudgetId, setEditingBudgetId] = useState(null);
   const [formError, setFormError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    category: "",
-    targetAmount: "",
-    items: [{ ...EMPTY_ITEM }, { ...EMPTY_ITEM }, { ...EMPTY_ITEM }],
-  });
+  const [deletingBudgetId, setDeletingBudgetId] = useState(null);
+  const [form, setForm] = useState(getEmptyForm);
 
   const activeBudget = useMemo(() => {
     if (!budgetList.length) return null;
@@ -160,14 +166,59 @@ function Budgets() {
     }));
   }
 
-  async function createBudget(event) {
+  function removeItemRow(index) {
+    setForm((current) => {
+      if (current.items.length <= 1) return current;
+      return {
+        ...current,
+        items: current.items.filter((_, itemIndex) => itemIndex !== index),
+      };
+    });
+  }
+
+  function resetForm() {
+    setForm(getEmptyForm());
+    setEditingBudgetId(null);
+    setFormError("");
+    setShowForm(false);
+  }
+
+  function startCreateBudget() {
+    setForm(getEmptyForm());
+    setEditingBudgetId(null);
+    setFormError("");
+    setShowForm(true);
+  }
+
+  function startEditBudget(budget) {
+    setForm({
+      name: budget.name || "",
+      category: budget.category || "",
+      targetAmount: String(budget.targetAmount || ""),
+      items: budget.items.length
+        ? budget.items.map((item) => ({
+            id: item.id,
+            name: item.name || "",
+            estimatedAmount: String(item.estimatedAmount || ""),
+            checked: Boolean(item.checked),
+          }))
+        : [{ ...EMPTY_ITEM }],
+    });
+    setEditingBudgetId(budget.id);
+    setFormError("");
+    setShowForm(true);
+  }
+
+  async function saveBudget(event) {
     event.preventDefault();
     setFormError("");
 
     const cleanItems = form.items
       .map((item) => ({
+        id: item.id,
         name: item.name.trim(),
         estimatedAmount: Number(item.estimatedAmount),
+        checked: Boolean(item.checked),
       }))
       .filter((item) => item.name && Number.isFinite(item.estimatedAmount));
 
@@ -183,28 +234,59 @@ function Budgets() {
 
     setIsCreating(true);
     try {
-      const response = await api.post("/budgets", {
+      const payload = {
         name: form.name.trim(),
         category: form.category.trim() || "General",
         targetAmount: Number(form.targetAmount),
         items: cleanItems,
-      });
+      };
+      const response = editingBudgetId
+        ? await api.put(`/budgets/${editingBudgetId}`, payload)
+        : await api.post("/budgets", payload);
       const savedBudget = response.data?.data;
       if (savedBudget) {
-        setBudgetList((current) => [savedBudget, ...current]);
+        setBudgetList((current) => {
+          if (editingBudgetId) {
+            return current.map((budget) =>
+              budget.id === savedBudget.id ? savedBudget : budget
+            );
+          }
+          return [savedBudget, ...current];
+        });
         setActiveBudgetId(savedBudget.id);
       }
-      setForm({
-        name: "",
-        category: "",
-        targetAmount: "",
-        items: [{ ...EMPTY_ITEM }, { ...EMPTY_ITEM }, { ...EMPTY_ITEM }],
-      });
-      setShowForm(false);
+      resetForm();
     } catch (err) {
-      setFormError(err.message || "Unable to create budget");
+      setFormError(err.message || "Unable to save budget");
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function deleteBudget(budgetId) {
+    const budget = budgetList.find((item) => item.id === budgetId);
+    if (!budget) return;
+
+    const confirmed = window.confirm(`Delete "${budget.name}" budget?`);
+    if (!confirmed) return;
+
+    setDeletingBudgetId(budgetId);
+    setError("");
+    try {
+      await api.delete(`/budgets/${budgetId}`);
+      const nextBudgets = budgetList.filter((item) => item.id !== budgetId);
+      setBudgetList(nextBudgets);
+      setActiveBudgetId((currentId) => {
+        if (currentId !== budgetId) return currentId;
+        return nextBudgets[0]?.id || null;
+      });
+      if (editingBudgetId === budgetId) {
+        resetForm();
+      }
+    } catch (err) {
+      setError(err.message || "Unable to delete budget");
+    } finally {
+      setDeletingBudgetId(null);
     }
   }
 
@@ -219,7 +301,7 @@ function Budgets() {
         <button
           type="button"
           className="feature-primary-button"
-          onClick={() => setShowForm((current) => !current)}
+          onClick={startCreateBudget}
         >
           <Plus size={17} aria-hidden="true" />
           New budget
@@ -227,7 +309,7 @@ function Budgets() {
       </div>
 
       {showForm && (
-        <form className="budget-list-card budget-create-form" onSubmit={createBudget}>
+        <form className="budget-list-card budget-create-form" onSubmit={saveBudget}>
           <div className="budget-form-grid">
             <label>
               <span>Name</span>
@@ -277,6 +359,16 @@ function Budgets() {
                   onChange={(event) => updateItem(index, "estimatedAmount", event.target.value)}
                   placeholder="Estimate"
                 />
+                <button
+                  type="button"
+                  className="budget-remove-item-button"
+                  onClick={() => removeItemRow(index)}
+                  disabled={form.items.length <= 1}
+                  aria-label={`Remove item ${index + 1}`}
+                  title="Remove item"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
               </div>
             ))}
           </div>
@@ -287,8 +379,11 @@ function Budgets() {
             <button type="button" className="secondary-button" onClick={addItemRow}>
               Add item
             </button>
+            <button type="button" className="secondary-button" onClick={resetForm}>
+              Cancel
+            </button>
             <button type="submit" className="feature-primary-button" disabled={isCreating}>
-              {isCreating ? "Saving..." : "Save budget"}
+              {isCreating ? "Saving..." : editingBudgetId ? "Update budget" : "Save budget"}
             </button>
           </div>
         </form>
@@ -345,6 +440,27 @@ function Budgets() {
                     {activeBudget.name}
                   </h2>
                   <p>Tick items as you shop. Completed items stay visible but crossed out.</p>
+                </div>
+                <div className="budget-card-actions">
+                  <button
+                    type="button"
+                    className="table-action-button table-action-edit"
+                    onClick={() => startEditBudget(activeBudget)}
+                    aria-label={`Edit ${activeBudget.name}`}
+                    title="Edit budget"
+                  >
+                    <Pencil size={16} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="table-action-button table-action-delete"
+                    onClick={() => deleteBudget(activeBudget.id)}
+                    disabled={deletingBudgetId === activeBudget.id}
+                    aria-label={`Delete ${activeBudget.name}`}
+                    title="Delete budget"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
