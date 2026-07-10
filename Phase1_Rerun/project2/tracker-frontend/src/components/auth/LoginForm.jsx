@@ -91,16 +91,15 @@ function LoginForm() {
         <div className="auth-page">
             <form className="auth-form" onSubmit={handleSubmit}>
                 <div className="auth-brand">
-                    <div className="brand-mark">F</div>
+                    <div className="brand-mark">M</div>
                     <div>
-                        <strong>Finance</strong>
-                        <span>Tracker</span>
+                        <strong>MoneyTiq</strong>
                     </div>
                 </div>
 
                 <div className="auth-heading">
                     <h2>Welcome back</h2>
-                    <p>Sign in to view your live dashboard, or preview the product with sample data first.</p>
+                    <p>Log in to use your own money entries, or try MoneyTiq first with sample data.</p>
                 </div>
 
                 <div className="form-field">
@@ -156,7 +155,7 @@ function LoginForm() {
                 </p>
 
                 <Link className="auth-preview-link" to="/demo">
-                    Preview the app <ArrowRight size={16} />
+                    Try the preview <ArrowRight size={16} />
                 </Link>
             </form>
         </div>

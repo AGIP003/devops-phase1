@@ -455,7 +455,6 @@ export function getFeeSummary(events = feeEvents) {
       .reduce((sum, event) => sum + event.fee, 0);
     return { ...provider, total };
   }).sort((a, b) => b.total - a.total);
-
   return {
     totalWeek,
     totalMonth,

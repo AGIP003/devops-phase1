@@ -49,10 +49,9 @@ function Register() {
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="auth-brand">
-          <div className="brand-mark">F</div>
+          <div className="brand-mark">M</div>
           <div>
-            <strong>Finance</strong>
-            <span>Tracker</span>
+            <strong>MoneyTiq</strong>
           </div>
         </div>
 
@@ -68,6 +67,7 @@ function Register() {
           <input
             id="register-name"
             type="text"
+            placeholder="Enter your full name"
             {...register('name', { required: 'Name is required' })}
           />
           {errors.name && <span className="error">{errors.name.message}</span>}
@@ -78,6 +78,7 @@ function Register() {
           <input
             id="register-email"
             type="email"
+            placeholder="Enter your email"
             {...register('email', {
               required: 'Email is required',
               pattern: {
@@ -95,6 +96,7 @@ function Register() {
             <input
               id="register-password"
               type={showPassword ? 'text' : 'password'}
+              placeholder="Create a password"
               {...register('password', {
                 required: 'Password is required',
                 minLength: {
@@ -127,6 +129,7 @@ function Register() {
             <input
               id="register-confirm-password"
               type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirm your password"
               {...register('confirmPassword', {
                 required: 'Please confirm your password',
                 validate: value => value === password || 'Passwords do not match',

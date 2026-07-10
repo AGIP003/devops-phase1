@@ -79,7 +79,7 @@ function DemoPreview() {
         <Link className="public-brand" to="/">
           <span className="brand-mark">F</span>
           <span>
-            <strong>Finance</strong>
+            <strong>MoneyTiq</strong>
             <small>Preview</small>
           </span>
         </Link>
@@ -90,12 +90,12 @@ function DemoPreview() {
         </div>
       </nav>
 
-      <section className="demo-shell" aria-label="Interactive Finance Tracker demo">
+      <section className="demo-shell" aria-label="Interactive MoneyTiq preview">
         <aside className="demo-sidebar">
-          <span className="public-kicker">Read-only preview</span>
-          <h1>Explore the dashboard before creating anything.</h1>
+          <span className="public-kicker">Try it with sample money</span>
+          <h1>Click through MoneyTiq before you sign in.</h1>
           <p>
-            This demo uses sample state in the browser. The same screens can later call your guest-user backend.
+            Add a few sample entries, switch views, and see how your money would feel inside the app.
           </p>
 
           <div className="demo-tabs">
@@ -236,9 +236,9 @@ function DemoPreview() {
           )}
 
           <footer className="demo-footer-cta">
-            <span>This is where guest mode can connect later.</span>
+            <span>Ready to use your own money entries?</span>
             <Link to="/login">
-              Use the real app <ArrowRight size={17} />
+              Log in to start <ArrowRight size={17} />
             </Link>
           </footer>
         </section>

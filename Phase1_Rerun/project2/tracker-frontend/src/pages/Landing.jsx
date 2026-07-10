@@ -3,25 +3,233 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BadgePercent,
-  CheckCircle2,
+  CalendarClock,
+  CheckSquare,
   ClipboardCheck,
+  Coins,
+  FileText,
   HandCoins,
+  Landmark,
   LayoutDashboard,
-  MessageCircle,
+  LockKeyhole,
+  PiggyBank,
+  ReceiptText,
+  Send,
   ShieldCheck,
 } from 'lucide-react';
 
-const highlights = [
-  { label: 'Tracked this month', value: 'KES 142,450' },
-  { label: 'Saved from goals', value: 'KES 36,000' },
-  { label: 'Recurring bills', value: '8 active' },
+const heroMetrics = [
+  { label: 'Income', value: 'KES 84,500', note: 'M-Pesa salary + side income' },
+  { label: 'Spending', value: 'KES 52,300', note: '62% of monthly income' },
+  { label: 'Available balance', value: 'KES 32,200', note: 'Across M-Pesa + bank' },
+  { label: 'Budget remaining', value: 'KES 9,700', note: 'Groceries and bills left', progress: 62 },
 ];
 
-const transactions = [
-  { name: 'Rent deposit', category: 'Housing', amount: '-45,000' },
-  { name: 'M-Pesa salary', category: 'Income', amount: '+120,000' },
-  { name: 'Internet bill', category: 'Bills', amount: '-4,500' },
+const recentTransactions = [
+  { name: 'M-Pesa salary', category: 'Income', amount: '+ KES 84,500', type: 'income' },
+  { name: 'Rent', category: 'Housing', amount: '- KES 25,000', type: 'expense' },
+  { name: 'Groceries', category: 'Naivas', amount: '- KES 1,200', type: 'expense' },
+  { name: 'Matatu', category: 'Transport', amount: '- KES 120', type: 'expense' },
+  { name: 'Internet', category: 'Safaricom Home', amount: '- KES 4,100', type: 'expense' },
 ];
+
+const featureModules = [
+  {
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    copy: 'See income, spending, recent activity, and a simple chart as soon as you open the app.',
+    preview: 'dashboard',
+  },
+  {
+    title: 'Transactions',
+    icon: ReceiptText,
+    copy: 'Add, edit, or delete money entries with category, payment method, and income or expense type.',
+    preview: 'transactions',
+  },
+  {
+    title: 'Budgets',
+    icon: ClipboardCheck,
+    copy: 'Make shopping lists, tick off items, and see how much of the budget is still left.',
+    preview: 'budgets',
+  },
+  {
+    title: 'Goals',
+    icon: PiggyBank,
+    copy: 'Set a target amount and watch the progress bar move every time you save.',
+    preview: 'goals',
+  },
+  {
+    title: 'Debts',
+    icon: Landmark,
+    copy: 'Keep track of who you owe, what is left, and how much you have already paid back.',
+    preview: 'debts',
+  },
+  {
+    title: 'Bills',
+    icon: CalendarClock,
+    copy: 'Keep rent, internet, chama, and other repeat bills visible before they are due.',
+    preview: 'bills',
+  },
+  {
+    title: 'Forex',
+    icon: Coins,
+    copy: 'Check exchange rates and quick conversions when you are dealing with another currency.',
+    preview: 'forex',
+  },
+  {
+    title: 'Quotations',
+    icon: FileText,
+    copy: 'Compare prices from different suppliers before you decide who to pay.',
+    preview: 'quotations',
+  },
+  {
+    title: 'Chamas',
+    icon: HandCoins,
+    copy: 'Follow contribution cycles and see how much has been collected so far.',
+    preview: 'chamas',
+  },
+  {
+    title: 'Fees',
+    icon: BadgePercent,
+    copy: 'See mobile money and bank charges so small fees do not disappear in the background.',
+    preview: 'fees',
+  },
+  {
+    title: 'Telegram',
+    icon: Send,
+    copy: 'Link Telegram once, then add spending from chat when opening the app feels too slow.',
+    preview: 'telegram',
+  },
+  {
+    title: 'Account privacy',
+    icon: LockKeyhole,
+    copy: 'Your money entries stay in your account. Other users cannot open or change them.',
+    preview: 'privacy',
+  },
+];
+
+const steps = [
+  {
+    title: 'Log money',
+    copy: 'Enter transactions in the app, or send a Telegram message like /add 1200 groceries.',
+  },
+  {
+    title: 'Review the dashboard',
+    copy: 'Income, spending, available balance, and budget remaining update the moment an entry lands.',
+  },
+  {
+    title: 'Plan ahead',
+    copy: 'Use budgets, goals, bills, debts, and fees to see what is due, what is left, and what is next.',
+  },
+];
+
+function ModulePreview({ type }) {
+  if (type === 'dashboard') {
+    return (
+      <div className="money-mini-dashboard">
+        <span>In <strong>84,500</strong></span>
+        <span>Out <strong>52,300</strong></span>
+        <span>Left <strong>32,200</strong></span>
+        <b>Groceries - Naivas <em>- KES 1,200</em></b>
+      </div>
+    );
+  }
+
+  if (type === 'transactions') {
+    return (
+      <div className="money-mini-transaction">
+        <strong>Matatu fare <em>- KES 120</em></strong>
+        <span><b>Transport</b><b>M-Pesa</b></span>
+        <small>+ Add transaction</small>
+      </div>
+    );
+  }
+
+  if (type === 'budgets') {
+    return (
+      <div className="money-mini-list">
+        <span><CheckSquare size={13} /> Unga - 2kg <b>210</b></span>
+        <span><CheckSquare size={13} /> Milk - 4 packets <b>260</b></span>
+        <span className="open"><i /> Cooking oil - 1L <b>420</b></span>
+        <small>Target KES 3,500 <b>KES 2,610 left</b></small>
+      </div>
+    );
+  }
+
+  if (type === 'goals' || type === 'debts' || type === 'chamas') {
+    const labels = {
+      goals: ['Emergency fund', '38%', 'KES 45,600 of KES 120,000'],
+      debts: ['Owed to Njeri', 'KES 6,000 left', 'KES 9,000 of 15,000 repaid'],
+      chamas: ['Umoja Chama - Cycle 4 of 12', 'KES 2,000/mo', '9 of 12 members paid'],
+    };
+    const [title, tag, note] = labels[type];
+    return (
+      <div className="money-mini-progress">
+        <strong>{title}<span>{tag}</span></strong>
+        <div><span /></div>
+        <small>{note}</small>
+      </div>
+    );
+  }
+
+  if (type === 'bills') {
+    return (
+      <div className="money-mini-rows">
+        <span>Rent - due 1 Aug <b>Upcoming</b></span>
+        <span>Internet - due 5 Jul <b className="paid">Paid</b></span>
+        <span>Chama contribution - due 15 Jul <b>Upcoming</b></span>
+      </div>
+    );
+  }
+
+  if (type === 'forex') {
+    return (
+      <div className="money-mini-rates">
+        <span>USD to KES <b>129.40</b></span>
+        <span>GBP to KES <b>163.85</b></span>
+        <small>$100 = KES 12,940 after conversion</small>
+      </div>
+    );
+  }
+
+  if (type === 'quotations') {
+    return (
+      <div className="money-mini-quote">
+        <span>Sofa set - 3 quotes <b>Best</b></span>
+        <strong>Ngara Furniture <em>KES 48,000</em></strong>
+        <small>Kariokor Works <b>KES 55,500</b></small>
+      </div>
+    );
+  }
+
+  if (type === 'fees') {
+    return (
+      <div className="money-mini-fees">
+        <span>M-Pesa send - KES 5,000 <b>Fee KES 57</b></span>
+        <span>Bank transfer - KES 20,000 <b>Fee KES 44</b></span>
+        <small>KES 612 spent on fees this month</small>
+      </div>
+    );
+  }
+
+  if (type === 'telegram') {
+    return (
+      <div className="money-mini-telegram">
+        <span>@you_linked</span>
+        <strong>/add 350 matatu</strong>
+        <small>Logged to Transport - today 08:12</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="money-mini-privacy">
+      <span>you@moneytiq <b>248 entries</b></span>
+      <span>Other users <b>No access</b></span>
+      <small>Your budget, bills, and transactions stay separate.</small>
+    </div>
+  );
+}
 
 function Landing() {
   useEffect(() => {
@@ -30,143 +238,139 @@ function Landing() {
   }, []);
 
   return (
-    <main className="public-page landing-page">
-      <nav className="public-nav" aria-label="Main navigation">
-        <Link className="public-brand" to="/">
-          <span className="brand-mark">F</span>
-          <span>
-            <strong>Finance</strong>
-            <small>Tracker</small>
-          </span>
+    <main className="public-page landing-page money-landing-page">
+      <nav className="public-nav money-public-nav" aria-label="Main navigation">
+        <Link className="public-brand money-brand" to="/">
+          <span className="brand-mark">M</span>
+          <strong>MoneyTiq</strong>
         </Link>
 
         <div className="public-nav-actions">
-          <Link className="public-link" to="/demo">Preview</Link>
           <Link className="public-button ghost" to="/login">Log in</Link>
+          <Link className="public-button primary" to="/demo">Try the preview</Link>
         </div>
       </nav>
 
-      <section className="landing-hero">
-        <div className="landing-copy">
-          <span className="public-kicker">Personal finance, built for real tracking</span>
-          <h1>Know where your money went before the month is over.</h1>
+      <section className="money-hero">
+        <div className="money-hero-copy">
+          <span className="money-pill"><ShieldCheck size={13} /> Your money, one clear view</span>
+          <h1>Track spending, budgets, bills, debts, goals, and fees in one place.</h1>
           <p>
-            Finance Tracker brings spending, goals, bills, debts, fees, and Telegram logging into one focused dashboard.
-            Visitors can preview the app first, then sign in when they are ready to use real data.
+            MoneyTiq helps you see what came in, what went out, what is due, and what is still safe to spend.
+            Add entries in the app or from Telegram, and keep everything private to your account.
           </p>
 
-          <div className="landing-actions">
+          <div className="landing-actions money-hero-actions">
             <Link className="public-button primary" to="/demo">
-              Preview the app <ArrowRight size={18} />
+              Try the preview <ArrowRight size={17} />
             </Link>
             <Link className="public-button secondary" to="/login">Log in</Link>
           </div>
-
-          <div className="landing-proof">
-            <span><CheckCircle2 size={17} /> Flask API</span>
-            <span><CheckCircle2 size={17} /> PostgreSQL models</span>
-            <span><CheckCircle2 size={17} /> Telegram workflow</span>
-          </div>
         </div>
 
-        <div className="landing-preview-panel" aria-label="Finance Tracker dashboard preview">
-          <div className="preview-topbar">
-            <div>
-              <span>Monthly overview</span>
-              <strong>July snapshot</strong>
-            </div>
-            <span className="preview-status">Live pattern</span>
-          </div>
+        <section className="money-dashboard-mock" aria-label="MoneyTiq dashboard preview">
+          <header className="money-mock-header">
+            <span><LayoutDashboard size={14} /> Dashboard - July 2026</span>
+            <small>you@moneytiq - KES</small>
+          </header>
 
-          <div className="preview-metrics">
-            {highlights.map((item) => (
-              <article key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
+          <div className="money-metric-grid">
+            {heroMetrics.map((metric) => (
+              <article className={metric.progress ? 'is-highlighted' : ''} key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+                <small>{metric.note}</small>
+                {metric.progress && (
+                  <div className="money-metric-progress" aria-hidden="true">
+                    <span style={{ width: `${metric.progress}%` }} />
+                  </div>
+                )}
               </article>
             ))}
           </div>
 
-          <div className="preview-chart">
-            {[52, 76, 34, 64, 88, 58, 71].map((height, index) => (
-              <span key={height} style={{ '--bar-height': `${height}%` }} aria-label={`Week ${index + 1}`} />
-            ))}
-          </div>
-
-          <div className="preview-grid">
-            <div className="preview-list">
-              <div className="preview-card-heading">
-                <strong>Recent activity</strong>
-                <span>3 updates</span>
-              </div>
-              {transactions.map((transaction) => (
-                <div className="preview-transaction" key={transaction.name}>
-                  <span>
-                    <strong>{transaction.name}</strong>
-                    <small>{transaction.category}</small>
-                  </span>
-                  <b className={transaction.amount.startsWith('+') ? 'is-income' : 'is-expense'}>
+          <div className="money-mock-grid">
+            <div className="money-transactions-panel">
+              <h2>Recent transactions</h2>
+              {recentTransactions.map((transaction) => (
+                <div className="money-transaction-row" key={transaction.name}>
+                  <span>{transaction.name} - {transaction.category}</span>
+                  <strong className={transaction.type === 'income' ? 'is-income' : 'is-expense'}>
                     {transaction.amount}
-                  </b>
+                  </strong>
                 </div>
               ))}
             </div>
 
-            <div className="preview-bot-card">
-              <MessageCircle size={20} />
-              <strong>Telegram capture</strong>
-              <p>/spend 1200 groceries</p>
-              <span>Logged, categorized, and ready for review.</span>
+            <div className="money-side-stack">
+              <article className="money-spend-panel">
+                <h2>Spending by week</h2>
+                <div className="money-bars" aria-hidden="true">
+                  {[36, 62, 48, 74, 30].map((height, index) => (
+                    <span className={index === 2 ? 'active' : ''} style={{ height: `${height}%` }} key={height} />
+                  ))}
+                </div>
+                <small>Week 3 - KES 14,850 logged</small>
+              </article>
+
+              <article className="money-telegram-panel">
+                <h2><Send size={14} /> Telegram</h2>
+                <strong>/add 1200 groceries</strong>
+                <small>Logged: KES 1,200 - Groceries</small>
+              </article>
             </div>
           </div>
+        </section>
+      </section>
+
+      <section className="money-modules-section">
+        <div className="money-section-heading">
+          <h2>Every module of the app, up front</h2>
+          <p>See what is inside before you sign in. Each card shows the kind of screen you will use in the app.</p>
+        </div>
+
+        <div className="money-feature-grid">
+          {featureModules.map(({ title, icon: Icon, copy, preview }) => (
+            <article className="money-feature-card" key={title}>
+              <h3><Icon size={16} /> {title}</h3>
+              <p>{copy}</p>
+              <ModulePreview type={preview} />
+            </article>
+          ))}
         </div>
       </section>
 
-      <section className="landing-band" aria-label="How Finance Tracker helps">
-        <article>
-          <LayoutDashboard size={22} />
-          <strong>See the whole month</strong>
-          <p>Balances, income, spending, bills, and goals are grouped into a dashboard built for quick scanning.</p>
-        </article>
-        <article>
-          <HandCoins size={22} />
-          <strong>Track local money habits</strong>
-          <p>Debts, chama mockups, fees, and recurring expenses make the app feel closer to everyday use.</p>
-        </article>
-        <article>
-          <BadgePercent size={22} />
-          <strong>Spot hidden costs</strong>
-          <p>Fee and subscription views help users catch small repeated expenses before they become background noise.</p>
-        </article>
-      </section>
-
-      <section className="landing-detail">
-        <div>
-          <span className="public-kicker">What happens after login</span>
-          <h2>A working product flow, not a static portfolio screen.</h2>
-          <p>
-            The signed-in app already connects to a Flask backend, stores data in PostgreSQL, and includes a Telegram bot flow.
-            The public preview shows the shape of that experience without forcing a new visitor to create credentials first.
-          </p>
-        </div>
-
-        <div className="landing-checklist">
-          <span><ClipboardCheck size={18} /> Add and review transactions</span>
-          <span><ShieldCheck size={18} /> Authenticate protected dashboard routes</span>
-          <span><MessageCircle size={18} /> Connect Telegram-assisted logging</span>
-          <span><LayoutDashboard size={18} /> Compare goals, bills, debts, budgets, and fees</span>
+      <section className="money-how-section">
+        <h2>How it works</h2>
+        <div className="money-step-grid">
+          {steps.map((step, index) => (
+            <article className="money-step-card" key={step.title}>
+              <span>{index + 1}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.copy}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
-      <section className="landing-final">
-        <div>
-          <h2>Try the product shape before signing in.</h2>
-          <p>The preview is interactive sample data today. Later, it can point to the guest-user backend you build.</p>
+      <section className="money-final-cta">
+        <h2>Try MoneyTiq before you sign in.</h2>
+        <p>Click around with sample KES data and see how the dashboard, budgets, bills, and goals feel in use.</p>
+        <div className="landing-actions">
+          <Link className="public-button primary" to="/demo">Try the preview</Link>
+          <Link className="public-button secondary" to="/login">Log in</Link>
         </div>
-        <Link className="public-button primary" to="/demo">
-          Open preview <ArrowRight size={18} />
+      </section>
+
+      <footer className="money-footer">
+        <Link className="public-brand money-brand" to="/">
+          <span className="brand-mark">M</span>
+          <strong>MoneyTiq</strong>
         </Link>
-      </section>
+        <small>Telegram logging - private accounts - your money stays yours</small>
+      </footer>
     </main>
   );
 }
