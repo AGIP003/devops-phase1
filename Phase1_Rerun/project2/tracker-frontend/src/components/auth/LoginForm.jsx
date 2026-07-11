@@ -4,7 +4,7 @@ import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Link } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, HandCoins } from 'lucide-react';
 //useState is a react hook that lets you add a state variable to your component
 // inshort useState gives a component memory
 //useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
@@ -91,7 +91,9 @@ function LoginForm() {
         <div className="auth-page">
             <form className="auth-form" onSubmit={handleSubmit}>
                 <div className="auth-brand">
-                    <div className="brand-mark">M</div>
+                    <div className="brand-mark" aria-hidden="true">
+                        <HandCoins size={22} strokeWidth={2.2} />
+                    </div>
                     <div>
                         <strong>MoneyTiq</strong>
                     </div>

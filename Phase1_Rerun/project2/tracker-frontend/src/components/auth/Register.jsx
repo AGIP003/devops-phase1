@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, HandCoins } from 'lucide-react';
 import api from '../../services/api';
 import { saveToken } from '../../utils/auth';
 
@@ -49,7 +49,9 @@ function Register() {
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="auth-brand">
-          <div className="brand-mark">M</div>
+          <div className="brand-mark" aria-hidden="true">
+            <HandCoins size={22} strokeWidth={2.2} />
+          </div>
           <div>
             <strong>MoneyTiq</strong>
           </div>
@@ -153,7 +155,7 @@ function Register() {
         </button>
 
         <p className="auth-switch">
-          Already have an account? <Link to="/">Sign in</Link>
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </form>
     </div>

@@ -241,7 +241,9 @@ function Landing() {
     <main className="public-page landing-page money-landing-page">
       <nav className="public-nav money-public-nav" aria-label="Main navigation">
         <Link className="public-brand money-brand" to="/">
-          <span className="brand-mark">M</span>
+          <span className="brand-mark" aria-hidden="true">
+            <HandCoins size={17} strokeWidth={2.2} />
+          </span>
           <strong>MoneyTiq</strong>
         </Link>
 
@@ -366,7 +368,9 @@ function Landing() {
 
       <footer className="money-footer">
         <Link className="public-brand money-brand" to="/">
-          <span className="brand-mark">M</span>
+          <span className="brand-mark" aria-hidden="true">
+            <HandCoins size={17} strokeWidth={2.2} />
+          </span>
           <strong>MoneyTiq</strong>
         </Link>
         <small>Telegram logging - private accounts - your money stays yours</small>

@@ -57,7 +57,9 @@ function Layout() {
             />
             <aside className="sidebar">
                 <div className="sidebar-brand">
-                    <div className="brand-mark">F</div>
+                    <div className="brand-mark" aria-hidden="true">
+                        <HandCoins size={22} strokeWidth={2.2} />
+                    </div>
                     <div className="sidebar-brand-text">
                         <strong>Finance</strong>
                         <span>Tracker</span>

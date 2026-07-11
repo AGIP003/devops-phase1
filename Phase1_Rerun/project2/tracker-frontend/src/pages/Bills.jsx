@@ -1,6 +1,7 @@
 import { CalendarClock, Plus } from "lucide-react";
 import { getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
+import SubscriptionIcon from "../components/ui/SubscriptionIcon";
 
 const dateFormatter = new Intl.DateTimeFormat("en-KE", {
   day: "2-digit",
@@ -12,21 +13,6 @@ function daysUntil(dateValue) {
   const today = new Date("2026-06-24T00:00:00");
   const dueDate = new Date(`${dateValue}T00:00:00`);
   return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-}
-
-function SubscriptionIcon({ subscription }) {
-  return (
-    <span
-      className="subscription-icon"
-      style={{
-        backgroundColor: subscription.brandColor,
-        color: subscription.accentColor,
-      }}
-      aria-hidden="true"
-    >
-      {subscription.iconLabel}
-    </span>
-  );
 }
 
 function Bills() {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { HandCoins } from "lucide-react";
 import api from "../../services/api";
 
 function ResetPassword() {
@@ -88,7 +89,9 @@ function ResetPassword() {
         <div className="auth-page">
             <form className="auth-form" onSubmit={handleSubmit}>
                 <div className="auth-brand">
-                    <div className="brand-mark">F</div>
+                    <div className="brand-mark" aria-hidden="true">
+                        <HandCoins size={22} strokeWidth={2.2} />
+                    </div>
                     <div>
                         <strong>Finance</strong>
                         <span>Tracker</span>

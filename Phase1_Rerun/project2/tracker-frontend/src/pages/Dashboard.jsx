@@ -12,6 +12,7 @@ import SummaryCards from "../components/ui/SummaryCard";
 import { chamaGroups, debts, feeEvents, getChamaProgress, getDebtProgress, getFeeSummary, getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
+import SubscriptionIcon from "../components/ui/SubscriptionIcon";
 
 const TELEGRAM_BOT_LINK = "https://t.me/pesatiq_bot";
 
@@ -56,21 +57,6 @@ function DebtPulseLine({ progress }) {
             </svg>
             <span className="debt-pulse-glow" />
         </div>
-    )
-}
-
-function SubscriptionIcon({ subscription }) {
-    return (
-        <span
-            className="subscription-icon subscription-icon-small"
-            style={{
-                backgroundColor: subscription.brandColor,
-                color: subscription.accentColor,
-            }}
-            aria-hidden="true"
-        >
-            {subscription.iconLabel}
-        </span>
     )
 }
 
@@ -397,7 +383,7 @@ function Dashboard() {
                                     <div className="subscription-preview-list">
                                         {subscriptionPreview.map((subscription) => (
                                             <div className="subscription-preview-row" key={subscription.id}>
-                                                <SubscriptionIcon subscription={subscription} />
+                                            <SubscriptionIcon subscription={subscription} small />
                                                 <div>
                                                     <strong>{subscription.name}</strong>
                                                     <small>{dateFormatter.format(new Date(subscription.dueDate))}</small>

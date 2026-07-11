@@ -77,7 +77,9 @@ function DemoPreview() {
     <main className="public-page demo-preview-page">
       <nav className="public-nav" aria-label="Demo navigation">
         <Link className="public-brand" to="/">
-          <span className="brand-mark">F</span>
+          <span className="brand-mark" aria-hidden="true">
+            <HandCoins size={17} strokeWidth={2.2} />
+          </span>
           <span>
             <strong>MoneyTiq</strong>
             <small>Preview</small>

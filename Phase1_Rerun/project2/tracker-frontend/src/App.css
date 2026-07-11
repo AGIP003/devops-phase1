@@ -4160,10 +4160,66 @@ body.public-screen {
   width: 42px;
 }
 
+.subscription-icon svg {
+  display: block;
+  height: 24px;
+  width: 24px;
+}
+
 .subscription-icon-small {
   font-size: 0.82rem;
   height: 34px;
   width: 34px;
+}
+
+.subscription-icon-small svg {
+  height: 19px;
+  width: 19px;
+}
+
+.subscription-icon-brand {
+  background: transparent;
+  border-radius: 0;
+  width: 48px;
+}
+
+.subscription-icon-brand.subscription-icon-small {
+  width: 38px;
+}
+
+.subscription-icon-netflix svg {
+  height: 30px;
+  width: 30px;
+}
+
+.subscription-icon-small.subscription-icon-netflix svg {
+  height: 24px;
+  width: 24px;
+}
+
+.subscription-icon-spotify svg {
+  background: #1db954;
+  border-radius: 50%;
+  color: #111111;
+  height: 32px;
+  padding: 5px;
+  width: 32px;
+}
+
+.subscription-icon-small.subscription-icon-spotify svg {
+  height: 25px;
+  padding: 4px;
+  width: 25px;
+}
+
+.subscription-icon-figma svg {
+  height: 31px;
+  width: 31px;
+}
+
+.subscription-icon-small.subscription-icon-figma svg {
+  height: 25px;
+  width: 25px;
 }
 
 .bills-layout {
