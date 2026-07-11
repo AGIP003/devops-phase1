@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { Calendar, FileText, Pencil, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, ChevronDown, FileText, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
 import { useOutletContext } from "react-router-dom";
@@ -23,6 +23,17 @@ function TransactionSkelton() {
             <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
         </tr>
     )
+}
+
+function FilterSelect({ children, ...props }) {
+    return (
+        <span className="filter-select-wrap">
+            <select {...props}>
+                {children}
+            </select>
+            <ChevronDown size={17} aria-hidden="true" />
+        </span>
+    );
 }
 
 function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
@@ -200,6 +211,11 @@ function Transaction() {
     const [transactions, setTransactions] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState("all");
+    const [filterCategory, setFilterCategory] = useState("all");
+    const [dateRange, setDateRange] = useState("all");
+    const [customStartDate, setCustomStartDate] = useState("");
+    const [customEndDate, setCustomEndDate] = useState("");
+    const [sortOrder, setSortOrder] = useState("newest");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [editingTransactionId, setEditingTransactionId] = useState(null);
@@ -209,28 +225,115 @@ function Transaction() {
         month: 'short',
 
     });
-    const [filterDate, setFilterDate] = useState('');
+    function getDateValue(dateValue) {
+        if (!dateValue) return null;
+        const parsedDate = new Date(dateValue);
+        if (Number.isNaN(parsedDate.getTime())) return null;
+        parsedDate.setHours(0, 0, 0, 0);
+        return parsedDate;
+    }
 
-    //Derived filtered list
-    const filteredTransactions = (transactions || []).filter(transaction => {
-        //Type filter
-        if (filterType !== 'all' && transaction.type !== filterType) return false;
-        //date filter
-        if (filterDate) {
-            const transactionDate = new Date(transaction.date).toISOString().slice(0, 10);
-            if (transactionDate !== filterDate) return false;
-        }
-        //Search filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesDesc = transaction.description?.toLowerCase().includes(query);
-            const matchesCat = transaction.category?.toLowerCase().includes(query);
-            const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
-            if (!matchesCat && !matchesDesc && !matchesPM) return false;
+    function getDateRangeBounds(rangeKey) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (rangeKey === "today") {
+            return { start: today, end: today };
         }
 
-        return true;
-    });
+        if (rangeKey === "this-week") {
+            const start = new Date(today);
+            start.setDate(today.getDate() - today.getDay());
+            return { start, end: today };
+        }
+
+        if (rangeKey === "this-month") {
+            return {
+                start: new Date(today.getFullYear(), today.getMonth(), 1),
+                end: today,
+            };
+        }
+
+        if (rangeKey === "last-month") {
+            const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const end = new Date(today.getFullYear(), today.getMonth(), 0);
+            return { start, end };
+        }
+
+        if (rangeKey === "custom" && (customStartDate || customEndDate)) {
+            return {
+                start: customStartDate ? getDateValue(customStartDate) : null,
+                end: customEndDate ? getDateValue(customEndDate) : null,
+            };
+        }
+
+        return { start: null, end: null };
+    }
+
+    const categoryOptions = useMemo(() => {
+        const categories = new Set();
+        transactions.forEach((transaction) => {
+            if (transaction.category) {
+                categories.add(transaction.category);
+            }
+        });
+        return Array.from(categories).sort((a, b) => a.localeCompare(b));
+    }, [transactions]);
+
+    const hasActiveFilters = Boolean(
+        searchQuery ||
+        filterType !== "all" ||
+        filterCategory !== "all" ||
+        dateRange !== "all" ||
+        customStartDate ||
+        customEndDate ||
+        sortOrder !== "newest"
+    );
+
+    function resetFilters() {
+        setSearchQuery("");
+        setFilterType("all");
+        setFilterCategory("all");
+        setDateRange("all");
+        setCustomStartDate("");
+        setCustomEndDate("");
+        setSortOrder("newest");
+    }
+
+    const filteredTransactions = useMemo(() => {
+        const { start, end } = getDateRangeBounds(dateRange);
+        const query = searchQuery.trim().toLowerCase();
+
+        return (transactions || [])
+            .filter(transaction => {
+                if (filterType !== 'all' && transaction.type !== filterType) return false;
+                if (filterCategory !== "all" && transaction.category !== filterCategory) return false;
+
+                const transactionDate = getDateValue(transaction.date);
+                if (start && (!transactionDate || transactionDate < start)) return false;
+                if (end && (!transactionDate || transactionDate > end)) return false;
+
+                if (query) {
+                    const matchesDesc = transaction.description?.toLowerCase().includes(query);
+                    const matchesCat = transaction.category?.toLowerCase().includes(query);
+                    const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
+                    if (!matchesCat && !matchesDesc && !matchesPM) return false;
+                }
+
+                return true;
+            })
+            .sort((a, b) => {
+                const aDate = getDateValue(a.date)?.getTime() || 0;
+                const bDate = getDateValue(b.date)?.getTime() || 0;
+                const aAmount = Number(a.amount || 0);
+                const bAmount = Number(b.amount || 0);
+
+                if (sortOrder === "oldest") return aDate - bDate;
+                if (sortOrder === "highest") return bAmount - aAmount;
+                if (sortOrder === "lowest") return aAmount - bAmount;
+                return bDate - aDate;
+            });
+    }, [transactions, filterType, filterCategory, dateRange, customStartDate, customEndDate, searchQuery, sortOrder]);
 
 
 
@@ -302,23 +405,13 @@ function Transaction() {
             <div className="transactions-toolbar">
                 <input
                     type='text'
-                    placeholder="Search..."
+                    placeholder="Search description, category, payment"
                     aria-label="Search transactions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <div className="transactions-filter-group">
-                    <div className={`date-input-wrap date-input-wrap-filter ${!filterDate ? "date-input-empty" : ""}`}>
-                        <Calendar size={16} aria-hidden="true" />
-                        {!filterDate && <span className="date-placeholder">Filter date</span>}
-                        <input
-                            type="date"
-                            aria-label="Filter transactions by date"
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                        />
-                    </div>
-                    <select
+                    <FilterSelect
                         value={filterType}
                         onChange={(e) => setFilterType(e.target.value)}
                         aria-label="Filter transactions by type"
@@ -326,8 +419,72 @@ function Transaction() {
                         <option value="all">All</option>
                         <option value="income">Income</option>
                         <option value="expense">Expense</option>
-                    </select>
+                    </FilterSelect>
+                    <FilterSelect
+                        value={filterCategory}
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                        aria-label="Filter transactions by category"
+                    >
+                        <option value="all">All categories</option>
+                        {categoryOptions.map((category) => (
+                            <option key={category} value={category}>{category}</option>
+                        ))}
+                    </FilterSelect>
+                    <FilterSelect
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value)}
+                        aria-label="Filter transactions by date range"
+                    >
+                        <option value="all">Any date</option>
+                        <option value="today">Today</option>
+                        <option value="this-week">This week</option>
+                        <option value="this-month">This month</option>
+                        <option value="last-month">Last month</option>
+                        <option value="custom">Custom</option>
+                    </FilterSelect>
+                    <FilterSelect
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value)}
+                        aria-label="Sort transactions"
+                    >
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="highest">Highest amount</option>
+                        <option value="lowest">Lowest amount</option>
+                    </FilterSelect>
+                    <button
+                        type="button"
+                        className="filter-reset-button"
+                        onClick={resetFilters}
+                        disabled={!hasActiveFilters}
+                    >
+                        Reset
+                    </button>
                 </div>
+                {dateRange === "custom" && (
+                    <div className="transactions-custom-dates">
+                        <div className={`date-input-wrap date-input-wrap-filter ${!customStartDate ? "date-input-empty" : ""}`}>
+                            <Calendar size={16} aria-hidden="true" />
+                            {!customStartDate && <span className="date-placeholder">From</span>}
+                            <input
+                                type="date"
+                                aria-label="Filter transactions from date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className={`date-input-wrap date-input-wrap-filter ${!customEndDate ? "date-input-empty" : ""}`}>
+                            <Calendar size={16} aria-hidden="true" />
+                            {!customEndDate && <span className="date-placeholder">To</span>}
+                            <input
+                                type="date"
+                                aria-label="Filter transactions to date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="transactions-table-card">
@@ -341,8 +498,8 @@ function Transaction() {
                     filteredTransactions.length === 0 && !loading ? (
                         <EmptyState
                             title="No transactions found"
-                            message={searchQuery ? "Try a different search term" : "Add your first transaction to get started"}
-                            actionLabel={searchQuery ? null : "Add Transaction"}
+                            message={hasActiveFilters ? "Try clearing or changing your filters" : "Add your first transaction to get started"}
+                            actionLabel={hasActiveFilters ? null : "Add Transaction"}
                             actionPath="/transactions/add"
                         />
                     ) : (
