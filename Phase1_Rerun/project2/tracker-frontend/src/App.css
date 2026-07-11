@@ -5762,28 +5762,37 @@ body.public-screen {
   }
 
   .recent-row {
-    align-items: start;
-    gap: 0.4rem 0.75rem;
+    align-items: center;
+    gap: 0.22rem 0.75rem;
     grid-template-columns: 28px minmax(0, 1fr) auto;
-    padding: 0.75rem 0;
+    padding: 0.72rem 0;
   }
 
   .recent-description {
     grid-column: 2 / 3;
+    grid-row: 1;
     white-space: normal;
   }
 
-  .recent-category,
-  .recent-date {
+  .recent-category {
     font-size: 0.8rem;
     grid-column: 2 / 3;
+    grid-row: 2;
+  }
+
+  .recent-date {
+    font-size: 0.8rem;
+    grid-column: 3 / 4;
+    grid-row: 2;
+    justify-self: end;
+    white-space: nowrap;
   }
 
   .recent-amount {
-    grid-column: 2 / 3;
-    grid-row: auto;
-    justify-self: start;
-    text-align: left;
+    grid-column: 3 / 4;
+    grid-row: 1;
+    justify-self: end;
+    text-align: right;
     white-space: nowrap;
   }
 
@@ -6001,14 +6010,14 @@ body.public-screen {
   }
 
   .recent-row {
-    grid-template-columns: 24px minmax(0, 1fr);
+    grid-template-columns: 24px minmax(0, 1fr) auto;
   }
 
   .recent-amount {
-    grid-column: 2 / 3;
-    grid-row: auto;
-    justify-self: start;
-    text-align: left;
+    grid-column: 3 / 4;
+    grid-row: 1;
+    justify-self: end;
+    text-align: right;
   }
 
   .sidebar-link span,
@@ -6096,6 +6105,35 @@ body.public-screen {
   .transactions-filter-group,
   .transactions-custom-dates {
     grid-template-columns: 1fr;
+  }
+
+  .recent-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .recent-description,
+  .recent-category,
+  .recent-date,
+  .recent-amount {
+    grid-column: 2 / 3;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .recent-description {
+    grid-row: 1;
+  }
+
+  .recent-category {
+    grid-row: 2;
+  }
+
+  .recent-date {
+    grid-row: 3;
+  }
+
+  .recent-amount {
+    grid-row: 4;
   }
 }
 
