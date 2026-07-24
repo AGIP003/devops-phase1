@@ -4446,6 +4446,7 @@ body.public-screen {
   display: grid;
   gap: 1rem;
   margin-bottom: 1rem;
+  scroll-margin-top: 1rem;
 }
 
 .budget-edit-form {

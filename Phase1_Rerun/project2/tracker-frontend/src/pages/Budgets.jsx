@@ -1,5 +1,5 @@
 import { ClipboardCheck, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { getToken } from "../utils/auth";
@@ -52,6 +52,7 @@ function Budgets() {
   const [isCreating, setIsCreating] = useState(false);
   const [deletingBudgetId, setDeletingBudgetId] = useState(null);
   const [form, setForm] = useState(getEmptyForm);
+  const budgetFormRef = useRef(null);
 
   const activeBudget = useMemo(() => {
     if (!budgetList.length) return null;
@@ -98,6 +99,15 @@ function Budgets() {
   useEffect(() => {
     fetchBudgets();
   }, [fetchBudgets]);
+
+  useEffect(() => {
+    if (!showForm) return;
+
+    budgetFormRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [editingBudgetId, showForm]);
 
   async function toggleItem(itemId) {
     if (!activeBudget) return;
@@ -295,6 +305,7 @@ function Budgets() {
       <form
         className={`budget-list-card budget-create-form ${extraClassName}`.trim()}
         onSubmit={saveBudget}
+        ref={budgetFormRef}
       >
         <div className="budget-form-grid">
           <label>
