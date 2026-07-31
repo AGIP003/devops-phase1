@@ -51,28 +51,14 @@ def get_category_id(category_name, user_id, category_type=None):
         conn.close()
 
 def get_db_connection():
-    database_url = config.DATABASE_URL.strip() if config.DATABASE_URL else None
-    use_database_url = bool(
-        database_url
-        and (config.ENV in {"production", "prod"} or config.DB_USE_URL)
-    )
-
-    if use_database_url:
-        return psycopg2.connect(database_url)
-
-    if not config.DB_NAME or not config.DB_USER:
+    database_url = config.SQLALCHEMY_DATABASE_URI
+    if not database_url:
         raise RuntimeError(
-            "Local database configuration is incomplete. "
-            "Set DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, or enable DB_USE_URL=True."
+            "Database uri not provided. Configure it for the current environment"
         )
 
-    return psycopg2.connect(
-        host=config.DB_HOST,
-        port=str(config.DB_PORT),
-        database=config.DB_NAME,
-        user=config.DB_USER,
-        password=config.DB_PASSWORD,
-    )
+    return psycopg2.connect(database_url.strip())
+
 TRANSACTION_SELECT = """
     SELECT
         t.id,

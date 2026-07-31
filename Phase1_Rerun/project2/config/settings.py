@@ -1,5 +1,4 @@
 import os
-from urllib.parse import quote_plus
 
 from .validators import get_env_bool, get_env_int, get_env_list
 
@@ -13,42 +12,21 @@ def normalize_database_url(url):
 
 
 def get_database_url():
-    direct_url = (
+    database_url = (
         os.getenv("DATABASE_URL")
-        or os.getenv("DATABASE_PRIVATE_URL")
-        or os.getenv("DATABASE_PUBLIC_URL")
-        or os.getenv("POSTGRES_URL")
     )
-    if direct_url:
-        return normalize_database_url(direct_url)
 
-    db_name = os.getenv("DB_NAME")
-    db_user = os.getenv("DB_USER")
-    if db_name and db_user:
-        db_host = os.getenv("DB_HOST", "localhost")
-        db_port = get_env_int("DB_PORT", 5432)
-        db_password = quote_plus(os.getenv("DB_PASSWORD", ""))
-        auth = quote_plus(db_user)
-        if db_password:
-            auth = f"{auth}:{db_password}"
-        return f"postgresql://{auth}@{db_host}:{db_port}/{quote_plus(db_name)}"
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is missing. Configure it for the current environment."
+        )
 
-    if os.getenv("FLASK_ENV", "development").lower() not in {"production", "prod"}:
-        return "sqlite:///:memory:"
-
-    return None
+    return normalize_database_url(database_url.strip())
 
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY")
     DATABASE_URL = os.getenv("DATABASE_URL")
-    DB_USE_URL = get_env_bool("DB_USE_URL", False)
     ENV = os.getenv("FLASK_ENV", "development").lower()
-
-    DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = get_env_int("DB_PORT", 5432)
-    DB_NAME = os.getenv("DB_NAME")
-    DB_USER = os.getenv("DB_USER")
-    DB_PASSWORD = os.getenv("DB_PASSWORD")
 
     JSON_SORT_KEYS = False
 

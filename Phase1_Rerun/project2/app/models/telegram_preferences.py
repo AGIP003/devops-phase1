@@ -9,7 +9,9 @@ class TelegramUserPreferences(Base):
     __tablename__ = "telegram_user_preferences"
 
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), primary_key=True
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
     )
     default_payment_method: Mapped[str] = mapped_column(
         String(50), nullable=False, default="m-pesa"

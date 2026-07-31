@@ -1,12 +1,17 @@
 from decimal import Decimal
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base, TimeStampMixin
 
 
 class Budget(TimeStampMixin, Base):
     __tablename__ = "budgets"
+    __table_args__ = (
+        Index("idx_budgets_user_id", "user_id"),
+        Index("idx_budgets_category", "category"),
+        Index("idx_budgets_last_used_at", "last_used_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
@@ -28,6 +33,10 @@ class Budget(TimeStampMixin, Base):
 
 class BudgetItem(TimeStampMixin, Base):
     __tablename__ = "budget_items"
+    __table_args__ = (
+        Index("idx_budget_items_budget_id", "budget_id"),
+        Index("idx_budget_items_budget_position", "budget_id", "position"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     budget_id: Mapped[int] = mapped_column(

@@ -54,7 +54,8 @@ def create_app():
     with app.app_context():
         from app.models import (
             User, Category, Transaction, Budget, BudgetItem,
-            TelegramLink, TelegramUserPreferences
+            PaymentMethod, PaymentMethodGroup, TelegramLink,
+            TelegramUserPreferences
         )
 
     Talisman(

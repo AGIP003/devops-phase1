@@ -1,5 +1,4 @@
 from datetime import datetime
-from app.extensions import db
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 from sqlalchemy import DateTime
 
