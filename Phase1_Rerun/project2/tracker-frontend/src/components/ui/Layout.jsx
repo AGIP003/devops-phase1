@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BadgePercent, CalendarClock, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
+import { BadgePercent, CalendarClock, ChartNoAxesCombined, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { removeToken } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
@@ -119,6 +119,15 @@ function Layout() {
                     >
                         <Coins size={18} aria-hidden="true" />
                         <span className="sidebar-link-label">Forex</span>
+                    </NavLink>
+                    <NavLink
+                        to="/stocks"
+                        className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
+                        aria-label="NSE Market Watch"
+                        title="NSE Market Watch"
+                    >
+                        <ChartNoAxesCombined size={18} aria-hidden="true" />
+                        <span className="sidebar-link-label">NSE Watch</span>
                     </NavLink>
                     <NavLink
                         to="/quotations"
