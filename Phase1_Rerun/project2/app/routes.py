@@ -1,25 +1,41 @@
+import os
+
 from flask import request, jsonify, abort, g
 from werkzeug.exceptions import HTTPException
+
+from app.db import delete_user_by_id, get_user_by_id
+from app.middleware import login_required, admin_required
+from app.serializers import (
+    budget_item_to_dict,
+    budget_to_dict,
+    transaction_to_dict,
+)
+from app.services.budget_service import (
+    create_budget_for_user,
+    delete_budget_for_user,
+    get_budgets_for_user,
+    update_budget_for_user,
+    update_budget_item_checked_for_user,
+)
+from app.services.transaction_service import (
+    create_transaction_for_user,
+    get_transaction_for_user,
+    list_all_transactions,
+    list_transactions_for_user,
+    soft_delete_transaction_for_user,
+    update_transaction_for_user,
+)
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
 )
-from app.db import (
-    create_transaction_for_user, get_all_transactions, get_all_transactions_for_user,
-    search_transactions, get_db_connection,
-    db_get_transaction_by_id, update_transactions, delete_transactions,
-    get_payment_method_id, get_category_id, get_user_by_email, get_user_by_id, delete_user_by_id,
-    get_budgets_for_user, create_budget_for_user, update_budget_for_user,
-    delete_budget_for_user, update_budget_item_checked_for_user
-)
-from app.middleware import login_required, admin_required
-import os
+
 
 def register_routes(app):
     @app.route("/", methods=["GET"])
     def index():
         return jsonify({"message": "Finance Tracker API", "endpoints": ["/transactions"]}), 200
-        
+
     @app.route('/health', methods=['GET'])
     def health_check():
         return {
@@ -45,32 +61,24 @@ def register_routes(app):
         
         try:
             # Validate type FIRST (required by category validation)
-            txn_type = validate_transaction_type(data.get("type"))
+            transaction_type = validate_transaction_type(data.get("type"))
             
             # Then validate category (depends on type)
-            category_name = validate_category(txn_type, data.get("category"))
+            category_name = validate_category(transaction_type, data.get("category"))
             
             # Validate other fields
             amount = validate_amount(data.get("amount"))
-            date = validate_date(data.get("date"))
+            transaction_date = validate_date(data.get("date"))
             description = validate_description(data.get("description", ""))
-            payment_method = validate_payment_method(data.get("payment_method"))
+            payment_method_name = validate_payment_method(data.get("payment_method"))
             
             try:
                 user_id = g.current_user["user_id"]
-                saved_record = create_transaction_for_user(
-                    user_id=user_id,
-                    category_name=category_name,
-                    transaction_type=txn_type,
-                    payment_method_name=payment_method,
-                    amount=amount,
-                    date=date,
-                    description=description,
-                )
+                saved_transaction = create_transaction_for_user(user_id, category_name, transaction_type, payment_method_name, amount, transaction_date, description)
             except ValueError as e:
                 abort(400, description=str(e))
 
-            return jsonify({"data": saved_record, "status": "success"}), 201
+            return jsonify({"data": transaction_to_dict(saved_transaction), "status": "success"}), 201
             
         except ValidationError as e:
             abort(400, description=str(e))
@@ -82,31 +90,36 @@ def register_routes(app):
     @app.route("/api/transactions/<int:transaction_id>", methods=["GET"])
     @login_required
     def get_transaction_by_id(transaction_id):
-        transaction = db_get_transaction_by_id(transaction_id)
+        user_id = g.current_user["user_id"]
+
+        transaction = get_transaction_for_user(user_id, transaction_id)
+
         if not transaction:
             abort(404, description=f"Error!! Transaction with ID {transaction_id} not found")
-        
-        if transaction["user_id"] != g.current_user["user_id"]:
-            abort(403, description="Not allowed. Wrong ID")
-        return jsonify(transaction), 200
+        return jsonify(transaction_to_dict(transaction)), 200
         
     @app.route("/api/transactions", methods=["GET"])
     @login_required
     def get_transaction():    
         query = request.args.get("query")
         user_id = g.current_user["user_id"]
-        if query:
-            transactions = search_transactions(query, user_id)
-        else:
-            transactions = get_all_transactions_for_user(user_id)
-        return jsonify(transactions), 200
+
+        transactions = list_transactions_for_user(user_id, query)
+
+        return jsonify([
+            transaction_to_dict(transaction)
+            for transaction in transactions
+        ]), 200
 
     @app.route("/api/budgets", methods=["GET"])
     @login_required
     def get_budgets():
         user_id = g.current_user["user_id"]
         budgets = get_budgets_for_user(user_id)
-        response = jsonify(budgets)
+        response = jsonify([
+            budget_to_dict(budget)
+            for budget in budgets
+        ])
         response.headers["Cache-Control"] = "private, no-store"
         return response, 200
 
@@ -167,7 +180,10 @@ def register_routes(app):
             target_amount=target_amount,
             items=clean_items,
         )
-        return jsonify({"data": budget, "status": "success"}), 201
+        return jsonify({
+            "data": budget_to_dict(budget),
+            "status": "success",
+        }), 201
 
     @app.route("/api/budgets/<int:budget_id>", methods=["PUT"])
     @login_required
@@ -186,13 +202,19 @@ def register_routes(app):
         if budget is None:
             abort(404, description="Budget not found")
 
-        return jsonify({"data": budget, "status": "success"}), 200
+        return jsonify({
+            "data": budget_to_dict(budget),
+            "status": "success",
+        }), 200
 
     @app.route("/api/budgets/<int:budget_id>", methods=["DELETE"])
     @login_required
     def delete_budget(budget_id):
-        row = delete_budget_for_user(g.current_user["user_id"], budget_id)
-        if row is None:
+        deleted = delete_budget_for_user(
+            g.current_user["user_id"],
+            budget_id,
+        )
+        if not deleted:
             abort(404, description="Budget not found")
 
         return jsonify({"message": "Budget deleted", "status": "success"}), 200
@@ -215,22 +237,23 @@ def register_routes(app):
         if item is None:
             abort(404, description="Budget item not found")
 
-        return jsonify({"data": item, "status": "success"}), 200
+        return jsonify({
+            "data": budget_item_to_dict(item),
+            "status": "success",
+        }), 200
         
     @app.route("/api/transactions/<int:transaction_id>", methods=["DELETE"])
     @login_required
     def delete_transaction(transaction_id):
-        transaction = db_get_transaction_by_id(transaction_id)
+        deleted = soft_delete_transaction_for_user(
+            user_id=g.current_user["user_id"],
+            transaction_id=transaction_id,
+        )
 
-        if not transaction:
-            abort(404, description=f"Error!! Transaction with ID {transaction_id} not found")
+        if not deleted:
+            abort(404, description="Transaction not found")
         
-        if transaction["user_id"] != g.current_user["user_id"]:
-            abort(403, description="Not allowed. Wrong ID")
-
-        delete_transactions(transaction_id)
         return jsonify({"message": "deleted successfully"}), 200
-       
             
     @app.route("/api/transactions/<int:transaction_id>", methods=["PUT"])
     @login_required
@@ -246,50 +269,52 @@ def register_routes(app):
         
         try:
             # Dictionary to hold validated updates
-            validated_updates = {}
+            amount = None
+            transaction_date = None
+            description = None
+            transaction_type = None
+            category_name = None
+            payment_method_name = None
             
             # Validate each field if present
             if "amount" in data:
-                validated_updates["amount"] = validate_amount(data["amount"])
+                amount = validate_amount(data["amount"])
             
-            txn_type = None
             if "type" in data:
-                txn_type = validate_transaction_type(data["type"])
+                transaction_type = validate_transaction_type(data["type"])
             
             if "category" in data:
                 # If updating category, we need the type
                 # Use the updated type if provided, otherwise require it
-                if not txn_type:
+                if not transaction_type:
                     abort(400, description="Must provide 'type' when updating 'category'")
-                validated_category = validate_category(txn_type, data["category"])
-                category_id = get_category_id(validated_category, user_id, txn_type)
-                validated_updates["category_id"] = category_id
+                category_name = validate_category(transaction_type, data["category"])
             
             if "date" in data:
-                validated_updates["date"] = validate_date(data["date"])
+                transaction_date = validate_date(data["date"])
             
             if "description" in data:
-                validated_updates["description"] = validate_description(data["description"])
+                description= validate_description(data["description"])
             
             if "payment_method" in data:
-                validated_payment = validate_payment_method(data["payment_method"])
-                payment_method_id = get_payment_method_id(validated_payment)
-                validated_updates["payment_method_id"] = payment_method_id
-            
-            if not validated_updates:
-                abort(400, description="No valid fields to update")
+                payment_method_name = validate_payment_method(data["payment_method"])
 
-            transaction = db_get_transaction_by_id(transaction_id)
-            if not transaction:
+
+            transaction = update_transaction_for_user(
+                user_id=user_id,
+                transaction_id=transaction_id,
+                amount=amount,
+                transaction_date=transaction_date,
+                description=description,
+                category_name=category_name,
+                transaction_type=transaction_type,
+                payment_method_name=payment_method_name,
+            )
+
+            if transaction is None:
                 abort(404, description="transaction not found")
-            if transaction["user_id"] != g.current_user["user_id"]:
-                abort(403, description="Not allowed. Wrong ID")
-
-            row, error = update_transactions(transaction_id, validated_updates)
-            if error:
-                abort(400, description=error)
             
-            return jsonify({"data": row, "message": "updated successfully", "status": "success"}), 200
+            return jsonify({"data": transaction_to_dict(transaction), "message": "updated successfully", "status": "success"}), 200
             
         except ValidationError as e:
             abort(400, description=str(e))
@@ -303,10 +328,13 @@ def register_routes(app):
     @app.route("/admin/transactions", methods=["GET"])
     @login_required
     @admin_required         
-    def admin_get_all_transactions(user_id=None):
-        transactions = get_all_transactions()
+    def admin_get_all_transactions():
+        transactions = list_all_transactions()
 
-        return jsonify(transactions), 200
+        return jsonify([
+            transaction_to_dict(transaction)
+            for transaction in transactions
+        ]), 200
     
     @app.route('/admin/users/<int:user_id>', methods=['DELETE'])
     @login_required
