@@ -1,4 +1,10 @@
 import os
+"""Archived raw-psycopg2 data layer retained as learning history.
+
+The running application uses SQLAlchemy ORM services under ``app/services``.
+Do not import this module into application code.
+"""
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.errors import UniqueViolation
