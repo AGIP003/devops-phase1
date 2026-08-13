@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -20,5 +20,8 @@ class TelegramUserPreferences(Base):
         JSONB, nullable=False, default=dict
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )

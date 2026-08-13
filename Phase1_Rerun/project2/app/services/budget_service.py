@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TypedDict
 
@@ -56,7 +56,7 @@ def create_budget_for_user(
             name=name,
             category=category,
             target_amount=target_amount,
-            last_used_at=datetime.utcnow(),
+            last_used_at=datetime.now(UTC),
             items=[
                 BudgetItem(
                     name=item["name"],
@@ -146,7 +146,7 @@ def update_budget_item_checked_for_user(
             return None
 
         item.checked = checked
-        item.budget.last_used_at = datetime.utcnow()
+        item.budget.last_used_at = datetime.now(UTC)
         db.session.commit()
         return item
     except Exception:

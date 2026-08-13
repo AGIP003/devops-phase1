@@ -1,6 +1,8 @@
 import os
 
 from .validators import get_env_bool, get_env_int, get_env_list
+from sqlalchemy.engine import make_url
+
 
 def normalize_database_url(url):
     """Railway gives postgres://, SQLAlchemy needs postgresql://"""
@@ -12,9 +14,7 @@ def normalize_database_url(url):
 
 
 def get_database_url():
-    database_url = (
-        os.getenv("DATABASE_URL")
-    )
+    database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
         raise RuntimeError(
@@ -22,6 +22,36 @@ def get_database_url():
         )
 
     return normalize_database_url(database_url.strip())
+
+
+def get_test_database_url():
+    test_database_url = os.getenv("TEST_DATABASE_URL")
+
+    if not test_database_url:
+        raise RuntimeError(
+            "TEST_DATABASE_URL is missing. "
+            "Tests require a separate PostgreSQL database."
+        )
+    test_database_url = normalize_database_url(test_database_url.strip())
+
+    development_database_url = normalize_database_url(
+        os.getenv("DATABASE_URL", "").strip()
+    )
+
+    if test_database_url == development_database_url:
+        raise RuntimeError(
+            "TEST_DATABASE_URL must not equal DATABASE_URL."
+        )
+
+    database_name = make_url(test_database_url).database
+
+    if not database_name or not database_name.endswith("_test"):
+        raise RuntimeError(
+            "Refusing to run database tests: "
+            "the test database name must end with '_test'."
+        )
+    return test_database_url
+
 
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY")
@@ -37,7 +67,7 @@ class BaseConfig:
     MAIL_PASSWORD = os.getenv("MAIL_APP_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME
 
-    #SQLALCHEMY
+    # SQLAlchemy
     SQLALCHEMY_DATABASE_URI = get_database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO") == "true"
@@ -61,7 +91,17 @@ class BaseConfig:
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
+    TESTING = False
+
+
+class TestingConfig(BaseConfig):
+    TESTING = True
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = None
+    SQLALCHEMY_ECHO = False
+    RATELIMIT_ENABLED = False
 
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
+    TESTING = False

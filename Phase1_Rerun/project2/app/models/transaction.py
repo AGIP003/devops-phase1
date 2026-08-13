@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, Text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
@@ -36,5 +36,4 @@ class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
     payment_method = relationship("PaymentMethod", back_populates="transactions")
 
     def soft_delete(self):
-        from datetime import datetime
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = datetime.now(UTC)

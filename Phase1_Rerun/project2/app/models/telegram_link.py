@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base
@@ -22,8 +22,12 @@ class TelegramLink(Base):
         nullable=True,
     )
     token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=True
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=True,
     )

@@ -1,9 +1,14 @@
 from flask import Blueprint, current_app, request, jsonify, abort
 from app.extensions import bcrypt, mail, limiter
 from app.auth import hash_password, verify_password, validate_password_strength
-from app.db import get_db_connection,get_user_by_email, insert_user_hashed_pw, update_reset_password
+from app.services.user_service import (
+    DuplicateUserError,
+    create_user,
+    get_user_by_email,
+    update_user_password,
+)
 import jwt
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from flask_mail import Message
 from config import get_config
@@ -49,22 +54,25 @@ def register_auth_route():
     #hashing the password
     password_hash = hash_password(password)
 
-    new_user = insert_user_hashed_pw(email, username, password_hash)
+    try:
+        new_user = create_user(email, username, password_hash)
+    except DuplicateUserError:
+        abort(409, description="The email or username is already in use.")
 
     payload = {
-        "user_id": new_user["id"],
-        "username": new_user["username"],
-        "email": new_user["email"],
-        "role": new_user.get("role", "user"),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+        "user_id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+        "role": new_user.role or "user",
+        "exp": datetime.now(UTC) + timedelta(hours=1)
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
     return jsonify({"message": "User registered", "token": token, "user": {
-        "user_id": new_user["id"],
-        "username": new_user["username"],
-        "email": new_user["email"],
-        "role": new_user.get("role", "user")
+        "user_id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+        "role": new_user.role or "user"
     }}), 201
 
 
@@ -86,25 +94,25 @@ def login():
     if not user:
         abort(401, description="Invalid email or password")
 
-    stored_hash = user["password_hash"]
+    stored_hash = user.password_hash
 
     if not verify_password(password, stored_hash):
         abort(401, description="Invalid email or password")
 
     payload = {
-        "user_id": user["id"],
-        "username": user["username"],
-        "email": user["email"],
-        "role": user.get("role", "user"),  # Default role is 'user'
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+        "user_id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role or "user",
+        "exp": datetime.now(UTC) + timedelta(hours=1)
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
     return jsonify({"message": "Login successful", "token": token,  'user': {
-            'user_id': user["id"],
-            'username': user["username"],
-            'email': user["email"],
-            'role': user.get("role", "user")}}), 200
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role or "user"}}), 200
 
 @auth_bp.route('/password_reset_request', methods=['POST'])
 @limiter.limit("5 per hour")
@@ -188,13 +196,10 @@ def password_reset_verify():
         abort(404, description="user not found")
 
     #get user_id
-    user_id = user["id"]
-
     #hash password
     password_hash = hash_password(new_password)
 
     #Store in db
-    update_reset_password(user_id, password_hash)
+    update_user_password(user, password_hash)
 
     return jsonify({"message": "Password reset succesfully"}), 200
-

@@ -20,7 +20,9 @@ class Budget(TimeStampMixin, Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=True)
     target_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    last_used_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user = relationship("User", back_populates="budgets")
     items = relationship(

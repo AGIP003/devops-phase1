@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Integer, String, DateTime, BigInteger
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base, TimeStampMixin
@@ -14,8 +16,12 @@ class User(TimeStampMixin, Base):
     email: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="user", nullable=True)
-    last_login: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=True, unique=True)
+    last_login: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    telegram_id: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, unique=True
+    )
 
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan", lazy="select")
     budgets = relationship("Budget", back_populates="user", cascade="all, delete-orphan", lazy="select")

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base
@@ -22,8 +22,10 @@ class Category(Base):
     )
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=True
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=True,
     )
 
     transactions = relationship(

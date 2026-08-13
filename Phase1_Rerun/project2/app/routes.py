@@ -3,7 +3,6 @@ import os
 from flask import request, jsonify, abort, g
 from werkzeug.exceptions import HTTPException
 
-from app.db import delete_user_by_id, get_user_by_id
 from app.middleware import login_required, admin_required
 from app.serializers import (
     budget_item_to_dict,
@@ -25,6 +24,7 @@ from app.services.transaction_service import (
     soft_delete_transaction_for_user,
     update_transaction_for_user,
 )
+from app.services.user_service import delete_user as delete_user_record, get_user_by_id
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
@@ -354,7 +354,7 @@ def register_routes(app):
             return abort(404, description="User not found")
         
         #Get user id
-        user_id = user["id"]
+        user_id = user.id
 
-        delete_user_by_id(user_id)
+        delete_user_record(user)
         return jsonify({'message': f"User {user_id} deleted"}), 200        
