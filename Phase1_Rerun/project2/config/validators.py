@@ -1,6 +1,7 @@
 import os
 
 REQUIRED_VARS = [
+    "DATABASE_URL",
     "SECRET_KEY",
     "MAIL_USERNAME",
     "MAIL_APP_PASSWORD",
@@ -9,22 +10,8 @@ REQUIRED_VARS = [
 def validate_environment(required_vars=None):
     required = required_vars or REQUIRED_VARS
     missing = [name for name in required if not os.getenv(name)]
+    
     if os.getenv("FLASK_ENV", "development").lower() in {"production", "prod"}:
-        has_database_url = any(
-            os.getenv(name)
-            for name in (
-                "DATABASE_URL",
-                "DATABASE_PRIVATE_URL",
-                "DATABASE_PUBLIC_URL",
-                "POSTGRES_URL",
-            )
-        )
-        has_database_parts = bool(os.getenv("DB_NAME") and os.getenv("DB_USER"))
-        if not has_database_url and not has_database_parts:
-            missing.append(
-                "DATABASE_URL or DATABASE_PRIVATE_URL or DB_NAME+DB_USER"
-            )
-
         if missing:
             raise RuntimeError(
                 "Missing required environment variables: "

@@ -7,7 +7,7 @@ from app.auth_routes import auth_bp
 from app.telegram_routes import telegram_bp
 from flask_talisman import Talisman
 from app.docs import api 
-from config import get_config, validate_environment
+from config import get_config, get_test_database_url, validate_environment
 from flask import g, request
 import logging
 import os
@@ -15,10 +15,16 @@ import sys
 import time
 
 
-def create_app():
-    validate_environment()
+def create_app(config_name=None):
+    selected_config = (config_name or os.getenv("FLASK_ENV", "development")).lower()
+
+    if selected_config != "testing":
+        validate_environment()
     app = Flask(__name__)
-    app.config.from_object(get_config())
+    app.config.from_object(get_config(selected_config))
+
+    if selected_config == "testing":
+        app.config["SQLALCHEMY_DATABASE_URI"] = get_test_database_url()
 
     allowed_origins = app.config.get(
         "CORS_ORIGINS",
@@ -54,7 +60,8 @@ def create_app():
     with app.app_context():
         from app.models import (
             User, Category, Transaction, Budget, BudgetItem,
-            TelegramLink, TelegramUserPreferences
+            PaymentMethod, PaymentMethodGroup, TelegramLink,
+            TelegramUserPreferences
         )
 
     Talisman(

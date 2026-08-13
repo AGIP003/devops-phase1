@@ -5,7 +5,7 @@ Storage module - Handle JSON persistence
 
 import json
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ class Storage:
 
             #Generate ID and Timestamp
             new_id = self._generate_id()
-            audit_time = datetime.now().isoformat()
+            audit_time = datetime.now(UTC).isoformat()
             record = {
                 "id": new_id,
                 "date": clean_date,
@@ -198,7 +198,6 @@ class Storage:
         existing_ids = [int(transaction_id) for transaction_id in self.transactions.keys()]
         return str(max(existing_ids) + 1)
         
-
 
 
 

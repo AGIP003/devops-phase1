@@ -1,14 +1,13 @@
 import secrets
 import os
-import json
 from hashlib import sha256
 from hmac import compare_digest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from flask import Blueprint, abort, g, jsonify, request
 
-from app.db import (
+from app.services.telegram_service import (
     consume_telegram_link_token,
     create_telegram_link_token,
     get_user_by_telegram_id,
@@ -46,11 +45,11 @@ def schema_not_ready_response():
 
 def issue_access_token(user):
     payload = {
-        "user_id": user["id"],
-        "username": user["username"],
-        "email": user["email"],
-        "role": user.get("role", "user"),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        "user_id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role or "user",
+        "exp": datetime.now(UTC) + timedelta(hours=1),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
@@ -81,7 +80,7 @@ def generate_link_token():
 
     user_id = g.current_user["user_id"]
     token = secrets.token_urlsafe(24)
-    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+    expires_at = datetime.now(UTC) + timedelta(
         minutes=LINK_TOKEN_TTL_MINUTES
     )
     link = create_telegram_link_token(user_id, token, expires_at)
@@ -89,8 +88,8 @@ def generate_link_token():
     return jsonify(
         {
             "message": "Telegram link code generated",
-            "token": link["token"],
-            "expires_at": link["expires_at"].isoformat() + "Z",
+            "token": link.token,
+            "expires_at": link.expires_at.isoformat().replace("+00:00", "Z"),
             "expires_in_seconds": LINK_TOKEN_TTL_MINUTES * 60,
         }
     ), 201
@@ -133,11 +132,11 @@ def verify_link_token():
             "message": "Telegram account linked successfully",
             "token": issue_access_token(user),
             "user": {
-                "user_id": user["id"],
-                "username": user["username"],
-                "email": user["email"],
-                "role": user["role"],
-                "telegram_id": user["telegram_id"],
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role or "user",
+                "telegram_id": user.telegram_id,
             },
         }
     ), 200
@@ -156,8 +155,8 @@ def telegram_link_status():
 
     return jsonify(
         {
-            "linked": status["telegram_id"] is not None,
-            "telegram_id": status["telegram_id"],
+            "linked": status.telegram_id is not None,
+            "telegram_id": status.telegram_id,
         }
     ), 200
 
@@ -209,11 +208,11 @@ def telegram_session():
             "linked": True,
             "token": issue_access_token(user),
             "user": {
-                "user_id": user["id"],
-                "username": user["username"],
-                "email": user["email"],
-                "role": user.get("role", "user"),
-                "telegram_id": user["telegram_id"],
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role or "user",
+                "telegram_id": user.telegram_id,
             },
         }
     ), 200
@@ -226,7 +225,12 @@ def telegram_preferences():
 
     if request.method == "GET":
         preferences = get_telegram_preferences(user_id)
-        return jsonify(preferences), 200
+        return jsonify(
+            {
+                "default_payment_method": preferences.default_payment_method,
+                "category_aliases": preferences.category_aliases,
+            }
+        ), 200
 
     data = request.get_json(silent=True) or {}
     payment_method = data.get("default_payment_method")
@@ -264,6 +268,11 @@ def telegram_preferences():
     preferences = update_telegram_preferences(
         user_id,
         default_payment_method=payment_method,
-        category_aliases=json.dumps(aliases) if aliases is not None else None,
+        category_aliases=aliases,
     )
-    return jsonify(preferences), 200
+    return jsonify(
+        {
+            "default_payment_method": preferences.default_payment_method,
+            "category_aliases": preferences.category_aliases,
+        }
+    ), 200

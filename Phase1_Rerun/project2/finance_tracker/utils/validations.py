@@ -1,6 +1,7 @@
 """Input Validation"""
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,18 +22,23 @@ def validate_amount(amount):
     """
 
     try:
-        amount = float(amount)
-    except (ValueError, TypeError):
+        decimal_amount = Decimal(str(amount))
+    except (InvalidOperation, ValueError, TypeError):
         raise ValidationError(f"Amount must be a number, you wrote: {amount}")
     
-    if amount <= 0:
-        raise ValidationError(f"Amount must be positive, you wrote{amount}")
+    if not decimal_amount.is_finite():
+        raise ValidationError("Amount must be a finite number")
     
-    if not (amount * 100).is_integer():
-        raise ValidationError(f"Amount cannot have more than 2 decimal places")
-    
-    logger.debug(f"Validated Amount: {amount}")
-    return amount
+    if decimal_amount <= 0:
+        raise ValidationError(f"Amount must be positive, you wrote: {decimal_amount}")
+
+    rounded_amount = decimal_amount.quantize(Decimal("0.01"))
+
+    if decimal_amount != rounded_amount:
+        raise ValidationError("Amount cannot have more than 2 decimal places")
+
+    logger.debug(f"Validated Amount: {decimal_amount}")
+    return decimal_amount
 
 def validate_category(txn_type, category):
     """
@@ -65,21 +71,20 @@ def validate_date(date_str):
     - Cannot be in future
     """
     #Formatting date and returning a readable string    ``
-    if not date_str:
-        return datetime.now().strftime('%Y-%m-%d')
-    
     try:
-        date = datetime.strptime(date_str, '%Y-%m-%d')
-    except ValueError:
+        parsed_date = datetime.strptime(
+            str(date_str),
+            "%Y-%m-%d",
+        ).date()
+    except (ValueError, TypeError):
         raise ValidationError(
             f"Invalid date format. Use YYYY-MM-DD, got: {date_str}"
         )
-    
-    if date > datetime.now():
+
+    if parsed_date > date.today():
         raise ValidationError(f"Date cannot be in the future: {date_str}")
-    
-    logger.debug(f"Validated date: {date_str}")
-    return date_str
+
+    return parsed_date
 
 def validate_description(description):
     """

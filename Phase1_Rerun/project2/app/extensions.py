@@ -13,5 +13,7 @@ limiter = Limiter(
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-db = SQLAlchemy()
+from app.models.base import Base
+
+db = SQLAlchemy(model_class=Base)
 migrate = Migrate()

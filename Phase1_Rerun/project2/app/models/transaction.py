@@ -1,18 +1,28 @@
-from datetime import datetime, date
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from sqlalchemy import Integer, Numeric, Date, Text, ForeignKey, DateTime
+from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, Text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base, TimeStampMixin, SoftDeleteMixin
 
 class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index("idx_transactions_category_id", "category_id"),
+        Index("idx_transactions_date", "date"),
+        Index("idx_transactions_user_date", "user_id", "date"),
+        Index("idx_transactions_user_id", "user_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
     )
     category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("categories.id"), nullable=True
+        Integer,
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -23,8 +33,7 @@ class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
 
     user = relationship("User", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")
+    payment_method = relationship("PaymentMethod", back_populates="transactions")
 
     def soft_delete(self):
-        from datetime import datetime
-        self.deleted_at = datetime.utcnow()
-
+        self.deleted_at = datetime.now(UTC)
