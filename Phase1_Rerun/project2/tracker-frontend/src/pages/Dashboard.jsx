@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { BadgePercent, ChevronDown, FileUp, HandCoins, PencilLine } from "lucide-react";
 import api from '../services/api'
-import { getToken, removeToken } from "../utils/auth";
+import { getCurrentUser } from "../utils/auth";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
 import AddTransactionForm from "../components/auth/AddTransactionForm";
@@ -13,19 +13,9 @@ import { chamaGroups, debts, feeEvents, getChamaProgress, getDebtProgress, getFe
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
 import SubscriptionIcon from "../components/ui/SubscriptionIcon";
+import ProfileMenu from "../components/ui/ProfileMenu";
 
 const TELEGRAM_BOT_LINK = "https://t.me/pesatiq_bot";
-
-function getUsernameFromToken() {
-    const token = getToken();
-    if (!token) return '';
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.username || payload.email || 'User';
-    } catch {
-        return 'User';
-    }
-}
 
 // Skeleton row for the div-based recent transactions list.
 function RecentTransactionSkeleton() {
@@ -63,7 +53,6 @@ function DebtPulseLine({ progress }) {
 function Dashboard() {
     const navigate = useNavigate();
     const { toggleSidebar } = useOutletContext();
-    const accountMenuRef = useRef(null);
     const addMenuRef = useRef(null);
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
@@ -72,7 +61,7 @@ function Dashboard() {
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [error, setError] = useState('');
     const [filterType, setFilterType] = useState("all");
-    const [showAccountMenu, setShowAccountMenu] = useState(false);
+    const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
     const [sidePreview, setSidePreview] = useState("bills");
     const { formatCurrency } = useAdjustedCurrency();
 
@@ -109,7 +98,6 @@ function Dashboard() {
             const response = await api.get('/transactions');
             const data = Array.isArray(response.data) ? response.data : [];
             setTransactions(data);
-            console.log('Transaction sample:', data[0]);
         } catch (error) {
             setError(error.message);
             setTransactions([]);
@@ -130,9 +118,7 @@ function Dashboard() {
         }
     }, [showForm]);
 
-    //useMemo catches the results and only computes when dependencies change
-    //USED WHEN COMPUTING IS EXPENSIVE OR WANT GUARANTTEE IT ONLY RUNS ONCE
-    const username = useMemo(() => getUsernameFromToken(), []);
+    const displayName = currentUser?.display_name || currentUser?.username || 'User';
 
     //summary cards
     const currencyFormatter = { format: formatCurrency };
@@ -152,12 +138,6 @@ function Dashboard() {
     //Click outside to close the menu
     useEffect(() => {
         function handleClickOutside(e) {
-            if (
-                accountMenuRef.current &&
-                !accountMenuRef.current.contains(e.target)
-            ) {
-                setShowAccountMenu(false);
-            }
             if (
                 addMenuRef.current &&
                 !addMenuRef.current.contains(e.target)
@@ -231,32 +211,11 @@ function Dashboard() {
                         </span>
                     </button>
                     <div className="dashboard-welcome-copy">
-                        <h1>Welcome, {username} </h1>
+                        <h1>Welcome, {displayName}</h1>
                         <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>
                     </div>
                 </div>
-                <div className="account-menu-wrap dashboard-profile-menu" ref={accountMenuRef}>
-                    <button
-                        type="button"
-                        className="profile-button"
-                        aria-label="Open user profile menu"
-                        aria-haspopup="menu"
-                        aria-expanded={showAccountMenu}
-                        onClick={() => setShowAccountMenu(prev => !prev)}
-                    >
-                        <span className="profile-initial">{username.charAt(0).toUpperCase()}</span>
-                    </button>
-
-                    {showAccountMenu && (
-                        <div className="account-menu" role="menu">
-                            <p>Signed in as</p>
-                            <strong>{username}</strong>
-                            <button type="button" role="menuitem" onClick={() => { removeToken(); navigate('/'); }}>
-                                Logout
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <ProfileMenu user={currentUser} onUserChange={setCurrentUser} />
             </div>
             <div className="dashboard-overview">
                 {error && <div className="error-banner">{error}</div>}

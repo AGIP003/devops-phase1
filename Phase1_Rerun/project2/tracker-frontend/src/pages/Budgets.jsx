@@ -2,7 +2,6 @@ import { ClipboardCheck, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
-import { getToken } from "../utils/auth";
 
 const EMPTY_ITEM = { name: "", estimatedAmount: "" };
 
@@ -25,18 +24,6 @@ function getBudgetTotal(items = []) {
     (total, item) => total + toCurrencyNumber(item.estimatedAmount),
     0
   );
-}
-
-function getCurrentUserId() {
-  const token = getToken();
-  if (!token) return null;
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.user_id ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function Budgets() {
@@ -76,12 +63,7 @@ function Budgets() {
     setError("");
     try {
       const response = await api.get("/budgets");
-      const data = Array.isArray(response.data) ? response.data : [];
-      const currentUserId = getCurrentUserId();
-      const userBudgets = data.filter((budget) => {
-        if (currentUserId === null) return false;
-        return Number(budget.userId) === Number(currentUserId);
-      });
+      const userBudgets = Array.isArray(response.data) ? response.data : [];
       setBudgetList(userBudgets);
       setActiveBudgetId((currentId) => {
         if (userBudgets.some((budget) => budget.id === currentId)) return currentId;

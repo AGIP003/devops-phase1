@@ -1,151 +1,137 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
-import { expect, vi } from 'vitest'
-import LoginForm from '../LoginForm'
-import api from '../../../services/api'
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import api from '../../../services/api';
+import LoginForm from '../LoginForm';
 
 vi.mock('../../../services/api', () => ({
   default: {
     post: vi.fn(),
-  }
-}))
+  },
+}));
 
-const mockNavigate = vi.fn()
+vi.mock('../GoogleSignInButton', () => ({
+  default: ({ onCredential, disabled }) => (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onCredential('google-id-credential')}
+    >
+      Continue with Google
+    </button>
+  ),
+}));
+
+const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return { ...actual, useNavigate: () => mockNavigate }
-})
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+const authenticatedUser = {
+  id: '28bc1c02-c52d-4ec8-a644-ef4d087ae913',
+  username: 'person',
+  display_name: 'Person Name',
+  email: 'person@example.com',
+  role: 'user',
+};
 
 function renderLogin() {
   return render(
     <MemoryRouter>
       <LoginForm />
-    </MemoryRouter>
-  )
+    </MemoryRouter>,
+  );
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
-})
+  vi.clearAllMocks();
+  window.localStorage.clear();
+});
 
 describe('LoginForm', () => {
+  it('renders both password and Google sign-in choices', () => {
+    renderLogin();
 
-  it('renders email and password fields and a submit button', () => {
-    renderLogin()
-    // YOUR CODE: assert that email input, password input, and submit button are present
-    // Hint: use getByLabelText for inputs, getByRole for button/ 2. Find the email input by its placeholder text
-    const emailInput = screen.getByPlaceholderText(/email/i)
-    // 3. Assert it exists in the document
-    expect(emailInput).toBeInTheDocument()
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+  });
 
-    // 4. Find the password input by placeholder
-    const passwordInput = screen.getByPlaceholderText(/password/i)
-    expect(passwordInput).toBeInTheDocument()
+  it('validates empty password login without calling the API', async () => {
+    const user = userEvent.setup();
+    renderLogin();
 
-    // 5. Find the submit button by its role and name (text)
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    expect(submitButton).toBeInTheDocument()
-  })
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
-  it('shows validation errors when submitted empty', async () => {
-    const user = userEvent.setup()
-    renderLogin()
-    // YOUR CODE:
-    // 1. Click the submit button without filling anything
-    // 2. Assert that "Email is required" (or similar) text appears
-    // Hint: React Hook Form shows errors after submit attempt
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    await user.click(submitButton)
+    expect(await screen.findByText(/email and password are required/i)).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+  });
 
-    //wait for the error message to appear
-    const errorMessage = await screen.findByText(/email and password are required/i)
-    expect(errorMessage).toBeInTheDocument()
-  })
+  it('stores the complete session after password login', async () => {
+    const user = userEvent.setup();
+    api.post.mockResolvedValue({
+      data: { token: 'moneytiq-jwt', user: authenticatedUser },
+    });
+    renderLogin();
 
-  it('calls api.post with correct credentials on valid submit', async () => {
-    const user = userEvent.setup()
-    // Tell the mock what to return on success
-    api.post.mockResolvedValue({ data: { token: 'fake-jwt-token' } })
+    await user.type(screen.getByLabelText(/email/i), 'person@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'StrongPass123!');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
-    renderLogin()
-    screen.debug()
-    // YOUR CODE:
-    // 1. Type a valid email into the email field
-    const emailInput = screen.getByPlaceholderText(/email/i)
-    await user.type(emailInput, 'blessedmuchemi@gmail.com')
-    // 2. Type a password into the password field
-    const passwordInput = screen.getByPlaceholderText(/password/i)
-    await user.type(passwordInput, 'Agip5118')
-    // 3. Click the submit button
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    await user.click(submitButton)
-    // 4. Assert that api.post was called with '/auth/login' and the correct payload
-    // Hint: expect(api.post).toHaveBeenCalledWith('/auth/login', { email: '...', password: '...' })
-    expect(api.post).toHaveBeenCalledTimes(1)
-    expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'blessedmuchemi@gmail.com', password: 'Agip5118' })
-  })
+    expect(api.post).toHaveBeenCalledWith('/auth/login', {
+      email: 'person@example.com',
+      password: 'StrongPass123!',
+    });
+    expect(window.localStorage.getItem('token')).toBe('moneytiq-jwt');
+    expect(JSON.parse(window.localStorage.getItem('moneytiq_user'))).toEqual(authenticatedUser);
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+  });
 
-  it('navigates to /dashboard after successful login', async () => {
-    const user = userEvent.setup()
-    api.post.mockResolvedValue({ data: { token: 'fake-jwt-token' } })
+  it('exchanges a Google credential for a MoneyTiq session', async () => {
+    const user = userEvent.setup();
+    api.post.mockResolvedValue({
+      data: { token: 'google-moneytiq-jwt', user: authenticatedUser },
+    });
+    renderLogin();
 
-    renderLogin()
-    // YOUR CODE:
-    // 1. Fill and submit the form
-    const emailInput = screen.getByPlaceholderText(/email/i)
-    const passwordInput = screen.getByPlaceholderText(/password/i)
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'wrongpassword')
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    await user.click(submitButton)
-    // 2. Assert that mockNavigate was called with '/dashboard'
-    
-  })
+    await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
-  it('shows server error message on 401 response', async () => {
-    const user = userEvent.setup()
-    api.post.mockRejectedValue({
-      response: { status: 401, data: { message: 'Invalid credentials' } }
-    })
+    expect(api.post).toHaveBeenCalledWith('/auth/google', {
+      credential: 'google-id-credential',
+    });
+    expect(window.localStorage.getItem('token')).toBe('google-moneytiq-jwt');
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+  });
 
-    renderLogin()
-    // YOUR CODE:
-    // 1. Fill and submit the form with any credentials
-    const emailInput = screen.getByPlaceholderText(/email/i)
-    const passwordInput = screen.getByPlaceholderText(/password/i)
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'wrongpassword')
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    await user.click(submitButton)
-    // 2. Assert that "Invalid credentials" text appears in the DOM
-    // Hint: use findByText (async) because the error appears after the API call
-    const errorMessage = await screen.findByText((content) =>
-      content.toLowerCase().includes('invalid credentials')
-    )
-    expect(errorMessage).toBeInTheDocument()
+  it('shows the backend message when authentication fails', async () => {
+    const user = userEvent.setup();
+    api.post.mockRejectedValue(new Error('Invalid email or password'));
+    renderLogin();
 
-  })
+    await user.type(screen.getByLabelText(/email/i), 'person@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
-  it('disables the submit button while submitting', async () => {
-    const user = userEvent.setup()
-    // Make the API hang (never resolves) so we can check the loading state
-    api.post.mockReturnValue(new Promise(() => { }))
+    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toHaveValue('');
+  });
 
-    renderLogin()
-    // YOUR CODE:
-    // 1. Fill and submit the form
-    const emailInput = screen.getByPlaceholderText(/email/i)
-    const passwordInput = screen.getByPlaceholderText(/password/i)
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'wrongpassword')
-    const submitButton = screen.getByRole('button', { name: /login/i })
-    user.click(submitButton)
-    // 2. Assert that the button is disabled (or shows loading text)
-    // Hint: getByRole('button') + toBeDisabled()
+  it('disables sign-in choices while password login is pending', async () => {
+    const user = userEvent.setup();
+    api.post.mockReturnValue(new Promise(() => {}));
+    renderLogin();
+
+    await user.type(screen.getByLabelText(/email/i), 'person@example.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'StrongPass123!');
+    await user.click(screen.getByRole('button', { name: /login/i }));
+
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /logging in/i })).toBeInTheDocument()})
-
-  })
-
-})
+      expect(screen.getByRole('button', { name: /logging in/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
+    });
+  });
+});

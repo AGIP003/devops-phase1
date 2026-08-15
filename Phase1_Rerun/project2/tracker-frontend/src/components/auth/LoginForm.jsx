@@ -1,16 +1,11 @@
-import { useState } from "react";
-import { getToken, saveToken } from "../../utils/auth";
+import { useEffect, useState } from "react";
+import { getToken, saveAuthSession } from "../../utils/auth";
 import api from '../../services/api'
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, HandCoins } from 'lucide-react';
-//useState is a react hook that lets you add a state variable to your component
-// inshort useState gives a component memory
-//useEffect gives a component the ability to do sth after it appears on screen. runs after  component renders
-//The convention is to name state variables like [something, setSomething] using array destructuring.
-// initial state value you want the state to be initially. React saves it once and ignores in the next  render
-// use state return an array with exactly two values; current state and set function
+import GoogleSignInButton from './GoogleSignInButton';
+
 function LoginForm() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -32,6 +27,13 @@ function LoginForm() {
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
+
+    function completeAuthentication(data) {
+        saveAuthSession({ token: data?.token, user: data?.user });
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+    }
 
     function handleChange(e) {
         const { name, value } = e.target;
@@ -66,16 +68,10 @@ function LoginForm() {
         try {
             //API call
             const response = await api.post('/auth/login', formData);
-            if (!response.data || !response.data.token) {
-                throw new Error('Invalid server response: missing token');
-            }
-            saveToken(response.data.token);
-            const from = location.state?.from?.pathname || '/dashboard';
-            navigate(from, { replace: true });
+            completeAuthentication(response.data);
             setSuccessMessage('Login Successful');
-            console.log(response)
         } catch (err) {
-            setErrorMessage(err.response?.data?.message || err.message);
+            setErrorMessage(err.response?.data?.message || err.message || 'Unable to sign in');
             setFormData((prevFormData) => ({
                 ...prevFormData,
                 password: ''
@@ -83,6 +79,21 @@ function LoginForm() {
 
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleGoogleCredential(credential) {
+        setGoogleLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            const response = await api.post('/auth/google', { credential });
+            completeAuthentication(response.data);
+        } catch (err) {
+            setErrorMessage(err.message || 'Unable to sign in with Google');
+        } finally {
+            setGoogleLoading(false);
         }
     }
 
@@ -104,6 +115,15 @@ function LoginForm() {
                     <p>Log in to use your own money entries, or try MoneyTiq first with sample data.</p>
                 </div>
 
+                <GoogleSignInButton
+                    onCredential={handleGoogleCredential}
+                    disabled={loading || googleLoading}
+                />
+
+                <div className="auth-divider" aria-hidden="true">
+                    <span>or use your email</span>
+                </div>
+
                 <div className="form-field">
                     <label htmlFor="login-email">Email</label>
                     <input
@@ -113,7 +133,7 @@ function LoginForm() {
                         placeholder="Enter your email"
                         value={formData.email}
                         onChange={handleChange}
-                        disabled={loading}
+                        disabled={loading || googleLoading}
                     />
                 </div>
 
@@ -127,14 +147,14 @@ function LoginForm() {
                             placeholder="Enter your password"
                             value={formData.password}
                             onChange={handleChange}
-                            disabled={loading}
+                            disabled={loading || googleLoading}
                         />
                         <button
                             aria-label={showPassword ? 'Hide password' : 'Show password'}
                             className="password-toggle"
                             type="button"
                             onClick={() => setShowPassword((current) => !current)}
-                            disabled={loading}
+                            disabled={loading || googleLoading}
                         >
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -148,7 +168,7 @@ function LoginForm() {
                 {errorMessage && <div className="auth-message auth-message-error">{errorMessage}</div>}
                 {successMessage && <div className="auth-message auth-message-success">{successMessage}</div>}
 
-                <button className="auth-submit" type="submit" disabled={loading}>
+                <button className="auth-submit" type="submit" disabled={loading || googleLoading}>
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
 
