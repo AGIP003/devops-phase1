@@ -47,6 +47,10 @@ body {
   color: var(--text-main);
 }
 
+body:has(.app-shell) {
+  overflow: hidden;
+}
+
 body:has(.auth-page),
 body.auth-screen {
   background: #f6f7f2;
@@ -57,7 +61,10 @@ body.auth-screen {
   display: grid;
   gap: 1.25rem;
   grid-template-columns: 240px minmax(0, 1fr);
-  min-height: 100vh;
+  height: calc(100vh - var(--space-page) - var(--space-page));
+  height: calc(100dvh - var(--space-page) - var(--space-page));
+  min-height: 0;
+  overflow: hidden;
   transition: grid-template-columns 0.2s ease;
 }
 
@@ -66,8 +73,13 @@ body.auth-screen {
 }
 
 .main-content {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 0;
+  scrollbar-gutter: stable;
 }
 
 .sidebar {
@@ -77,7 +89,9 @@ body.auth-screen {
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: 1rem;
   transition: padding 0.2s ease;
 }
@@ -141,7 +155,27 @@ body.auth-screen {
 
 .sidebar-nav {
   display: grid;
+  flex: 1 1 auto;
   gap: 0.65rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-right: 0.25rem;
+  scrollbar-color: #cbd3c5 transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #cbd3c5;
+  border-radius: 999px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sidebar-link {
@@ -788,6 +822,62 @@ body.auth-screen {
   justify-content: center;
   min-height: 42px;
   text-decoration: none;
+}
+
+.google-signin-shell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  overflow: hidden;
+  transition: opacity 0.2s;
+  width: 100%;
+}
+
+.google-signin-shell.is-disabled {
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.google-signin-button {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  width: 100%;
+}
+
+.google-signin-button > div,
+.google-signin-button iframe {
+  max-width: 100% !important;
+}
+
+.google-signin-status {
+  background: #f7f8ef;
+  border: 1px dashed #cfd8a9;
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.auth-divider {
+  align-items: center;
+  color: var(--text-muted);
+  display: grid;
+  font-size: 0.75rem;
+  font-weight: 800;
+  gap: 0.75rem;
+  grid-template-columns: 1fr auto 1fr;
+  letter-spacing: 0.02em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  background: var(--border-soft);
+  content: "";
+  height: 1px;
 }
 
 #root:has(.public-page) {
@@ -2128,10 +2218,10 @@ body.public-screen {
   display: inline-flex;
   font: inherit;
   font-weight: 800;
-  gap: 0.5rem;
   height: 42px;
   justify-content: center;
-  min-width: 0;
+  padding: 0;
+  width: 42px;
 
 }
 
@@ -2196,6 +2286,255 @@ body.public-screen {
   min-height: 36px;
   width: 100%;
 
+}
+
+.account-menu {
+  min-width: min(310px, calc(100vw - 2rem));
+  padding: 0.65rem;
+  z-index: 90;
+}
+
+.account-menu-identity {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 0.55rem 0.55rem 0.85rem;
+}
+
+.account-menu-avatar {
+  align-items: center;
+  background: var(--text-main);
+  border: 3px solid #eef0dc;
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 0.85rem;
+  font-weight: 900;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.account-menu-identity strong,
+.account-menu-actions strong {
+  display: block;
+  margin: 0;
+}
+
+.account-menu-identity span:not(.account-menu-avatar),
+.account-menu-actions small {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-actions {
+  border-bottom: 1px solid var(--border-soft);
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.4rem 0;
+}
+
+.account-menu .account-menu-actions button,
+.account-menu-security {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: var(--text-main);
+  display: grid;
+  font: inherit;
+  gap: 0.65rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 52px;
+  padding: 0.55rem;
+  text-align: left;
+  width: 100%;
+}
+
+.account-menu .account-menu-actions button {
+  cursor: pointer;
+}
+
+.account-menu .account-menu-actions button:hover {
+  background: #f4f6e9;
+}
+
+.account-menu-actions svg {
+  color: var(--accent);
+}
+
+.account-menu-security {
+  cursor: default;
+}
+
+.account-menu .account-menu-logout {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  color: var(--expense);
+  display: flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 0.6rem;
+  justify-content: flex-start;
+  margin-top: 0.4rem;
+  min-height: 42px;
+  padding: 0 0.6rem;
+  width: 100%;
+}
+
+.account-menu .account-menu-logout:hover {
+  background: #fff0ed;
+}
+
+.profile-dialog-backdrop {
+  align-items: center;
+  background: rgba(23, 33, 27, 0.46);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 500;
+}
+
+.profile-dialog {
+  background: var(--card-background);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  box-shadow: 0 28px 70px rgba(23, 33, 27, 0.25);
+  box-sizing: border-box;
+  max-width: 460px;
+  padding: 1.25rem;
+  width: 100%;
+}
+
+.profile-dialog-heading {
+  align-items: flex-start;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-bottom: 1.15rem;
+}
+
+.profile-dialog-icon {
+  align-items: center;
+  background: #eef0dc;
+  border-radius: 12px;
+  color: var(--accent);
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.profile-dialog h2 {
+  color: var(--text-main);
+  font-size: 1.25rem;
+  margin: 0 0 0.25rem;
+}
+
+.profile-dialog-heading p,
+.profile-dialog-note {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.profile-dialog-heading p {
+  font-size: 0.82rem;
+}
+
+.profile-dialog .profile-dialog-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.profile-dialog .profile-dialog-close:hover {
+  background: #eef0dc;
+  color: var(--text-main);
+}
+
+.profile-dialog form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.profile-dialog label {
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.profile-dialog input {
+  background: #f9faf7;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-sizing: border-box;
+  color: var(--text-main);
+  font: inherit;
+  min-height: 46px;
+  outline: none;
+  padding: 0 0.85rem;
+  width: 100%;
+}
+
+.profile-dialog input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(111, 127, 63, 0.16);
+}
+
+.profile-dialog-note {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.profile-dialog-error {
+  color: var(--expense);
+  font-size: 0.8rem;
+  font-weight: 750;
+  margin: 0;
+}
+
+.profile-dialog-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+}
+
+.profile-dialog .profile-dialog-actions button {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-main);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 0 1rem;
+}
+
+.profile-dialog .profile-dialog-actions button[type="submit"] {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: #ffffff;
 }
 
 .dashboard-header {
@@ -5048,6 +5387,10 @@ body.public-screen {
     text-align: left;
   }
 
+  body:has(.app-shell) {
+    overflow: auto;
+  }
+
   .public-nav {
     padding: 0.85rem;
   }
@@ -5257,11 +5600,15 @@ body.public-screen {
   .app-shell,
   .app-shell.sidebar-collapsed {
     display: block;
+    height: auto;
     min-height: 100dvh;
+    overflow: visible;
   }
 
   .main-content {
+    height: auto;
     min-height: 100dvh;
+    overflow: visible;
     width: 100%;
     padding: 0.65rem 0.65rem calc(6.8rem + env(safe-area-inset-bottom));
   }
@@ -5275,7 +5622,9 @@ body.public-screen {
     gap: 0.6rem;
     grid-template-columns: 1fr auto;
     left: 0;
+    height: auto;
     min-height: 0;
+    overflow: visible;
     padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
     position: fixed;
     right: 0;
@@ -5291,6 +5640,7 @@ body.public-screen {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     padding-bottom: 0.15rem;
     scrollbar-width: none;

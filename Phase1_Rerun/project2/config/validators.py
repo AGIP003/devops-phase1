@@ -3,8 +3,10 @@ import os
 REQUIRED_VARS = [
     "DATABASE_URL",
     "SECRET_KEY",
+    "JWT_SECRET_KEY",
     "MAIL_USERNAME",
     "MAIL_APP_PASSWORD",
+    "GOOGLE_CLIENT_ID",
 ] 
  
 def validate_environment(required_vars=None):

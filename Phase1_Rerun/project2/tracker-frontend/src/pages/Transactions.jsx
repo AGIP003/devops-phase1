@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, ChevronDown, FileText, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
@@ -23,6 +23,14 @@ function TransactionSkelton() {
             <td style={{ textAlign: 'center' }}><div style={{ height: '20px', background: '#e2e8f0', borderRadius: '4px', width: '70px' }} /></td>
         </tr>
     )
+}
+
+function getDateValue(dateValue) {
+    if (!dateValue) return null;
+    const parsedDate = new Date(dateValue);
+    if (Number.isNaN(parsedDate.getTime())) return null;
+    parsedDate.setHours(0, 0, 0, 0);
+    return parsedDate;
 }
 
 function FilterSelect({ children, ...props }) {
@@ -225,15 +233,7 @@ function Transaction() {
         month: 'short',
 
     });
-    function getDateValue(dateValue) {
-        if (!dateValue) return null;
-        const parsedDate = new Date(dateValue);
-        if (Number.isNaN(parsedDate.getTime())) return null;
-        parsedDate.setHours(0, 0, 0, 0);
-        return parsedDate;
-    }
-
-    function getDateRangeBounds(rangeKey) {
+    const getDateRangeBounds = useCallback((rangeKey) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -268,7 +268,7 @@ function Transaction() {
         }
 
         return { start: null, end: null };
-    }
+    }, [customStartDate, customEndDate]);
 
     const categoryOptions = useMemo(() => {
         const categories = new Set();
@@ -333,7 +333,7 @@ function Transaction() {
                 if (sortOrder === "lowest") return aAmount - bAmount;
                 return bDate - aDate;
             });
-    }, [transactions, filterType, filterCategory, dateRange, customStartDate, customEndDate, searchQuery, sortOrder]);
+    }, [transactions, filterType, filterCategory, dateRange, searchQuery, sortOrder, getDateRangeBounds]);
 
 
 
@@ -345,7 +345,6 @@ function Transaction() {
             const response = await api.get('/transactions');
             const data = Array.isArray(response.data) ? response.data : [];
             setTransactions(data);
-            console.log('Transaction sample:', data[0]);
         } catch (error) {
             setError(error.message);
             setTransactions([]);

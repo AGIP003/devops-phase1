@@ -1,8 +1,9 @@
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from app import create_app
 from app.extensions import db
+from app.models.user import User
 
 DATABASE_TABLES = (
     "budget_items",
@@ -13,6 +14,7 @@ DATABASE_TABLES = (
     "telegram_link_tokens",
     "payment_methods",
     "payment_method_groups",
+    "auth_identities",
     "users",
 )
 
@@ -91,6 +93,24 @@ def register_user(client):
         return response.get_json()
 
     return register
+
+
+@pytest.fixture()
+def internal_user_id(app):
+    """Resolve the private database ID from the public API user ID."""
+    def resolve(authentication_response: dict) -> int:
+        public_id = authentication_response["user"]["id"]
+
+        with app.app_context():
+            user = db.session.scalar(
+                select(User).where(User.public_id == public_id)
+            )
+
+            assert user is not None
+            return user.id
+
+    return resolve
+
 
 @pytest.fixture()
 def payment_method(app):

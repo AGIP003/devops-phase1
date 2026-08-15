@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, HandCoins } from 'lucide-react';
 import api from '../../services/api';
-import { saveToken } from '../../utils/auth';
+import { saveAuthSession } from '../../utils/auth';
+import GoogleSignInButton from './GoogleSignInButton';
 
 function Register() {
   const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm({
@@ -13,6 +14,7 @@ function Register() {
   const [serverError, setServerError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const password = watch('password');
 
@@ -29,11 +31,8 @@ function Register() {
         email: data.email,
         password: data.password,
       });
-      if (!response.data || !response.data.token) {
-        throw new Error('Invalid server response: missing token');
-      }
-      saveToken(response.data.token);
-      navigate('/dashboard'); // or wherever your dashboard route is
+      saveAuthSession({ token: response.data?.token, user: response.data?.user });
+      navigate('/dashboard');
     } catch (err) {
       const message = err.message || 'Registration failed';
 
@@ -44,6 +43,21 @@ function Register() {
       }
     }
   };
+
+  async function handleGoogleCredential(credential) {
+    setGoogleLoading(true);
+    setServerError('');
+
+    try {
+      const response = await api.post('/auth/google', { credential });
+      saveAuthSession({ token: response.data?.token, user: response.data?.user });
+      navigate('/dashboard');
+    } catch (err) {
+      setServerError(err.message || 'Unable to continue with Google');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   return (
     <div className="auth-page">
@@ -63,6 +77,16 @@ function Register() {
         </div>
 
         {serverError && <div className="auth-message auth-message-error">{serverError}</div>}
+
+        <GoogleSignInButton
+          onCredential={handleGoogleCredential}
+          disabled={isSubmitting || googleLoading}
+          text="signup_with"
+        />
+
+        <div className="auth-divider" aria-hidden="true">
+          <span>or create one with email</span>
+        </div>
 
         <div className="form-field">
           <label htmlFor="register-name">Full name</label>
@@ -150,7 +174,7 @@ function Register() {
           {errors.confirmPassword && <span className="error">{errors.confirmPassword.message}</span>}
         </div>
 
-        <button className="auth-submit" type="submit" disabled={isSubmitting}>
+        <button className="auth-submit" type="submit" disabled={isSubmitting || googleLoading}>
           {isSubmitting ? 'Registering...' : 'Register'}
         </button>
 

@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { BadgePercent, CalendarClock, ChartNoAxesCombined, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { removeToken } from "../../utils/auth";
+import { removeAuthSession } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
 import TelegramLinkPanel, { TelegramIcon } from "./TelegramLinkPanel";
 import api from "../../services/api";
@@ -27,8 +27,8 @@ function Layout() {
     }, [refreshTelegramStatus]);
 
     function handleLogout() {
-        removeToken();
-        navigate('/');
+        removeAuthSession();
+        navigate('/login');
     }
 
     function toggleSidebar() {

@@ -108,9 +108,14 @@ def test_soft_delete_hides_but_preserves_transaction(app, client, register_user,
         assert stored_transaction is not None
         assert stored_transaction.deleted_at is not None
 
-def test_failed_transaction_rolls_back_and_session_recovers(app, register_user, payment_method):
+def test_failed_transaction_rolls_back_and_session_recovers(
+    app,
+    register_user,
+    internal_user_id,
+    payment_method,
+):
     owner = register_user("owner", "owner@example.com")
-    user_id = owner["user"]["user_id"]
+    user_id = internal_user_id(owner)
 
     with app.app_context():
         with pytest.raises(IntegrityError):
@@ -124,22 +129,20 @@ def test_failed_transaction_rolls_back_and_session_recovers(app, register_user, 
                 description="must fail",
             )
 
-            rolled_back_category = db.session.scalar(
-                select(Category).where(
-                    Category.user_id == user_id,
-                    Category.name == "food",
-                )
+        rolled_back_category = db.session.scalar(
+            select(Category).where(
+                Category.user_id == user_id,
+                Category.name == "food",
             )
-            assert rolled_back_category is None
-
-            saved_transaction = create_transaction_for_user(
-                user_id=user_id,
-                category_name="food",
-                transaction_type="expense",
-                payment_method_name="m-pesa",
-                amount=Decimal("300.00"),
-                transaction_date=date.today(),
-                description="session recovered",
-            )
-
-            assert saved_transaction.id is not None
+        )
+        assert rolled_back_category is None
+        saved_transaction = create_transaction_for_user(
+            user_id=user_id,
+            category_name="food",
+            transaction_type="expense",
+            payment_method_name="m-pesa",
+            amount=Decimal("300.00"),
+            transaction_date=date.today(),
+            description="session recovered",
+        )
+        assert saved_transaction.id is not None
