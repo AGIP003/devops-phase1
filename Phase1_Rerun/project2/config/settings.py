@@ -54,7 +54,22 @@ def get_test_database_url():
 
 
 class BaseConfig:
+    JWT_ALGORITHM = "HS256"
+    JWT_ISSUER = os.getenv("JWT_ISSUER", "moneytiq-api")
+    JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "moneytiq-web")
+    JWT_ACCESS_TOKEN_MINUTES = get_env_int(
+        "JWT_ACCESS_TOKEN_MINUTES",
+        60,
+    )
+    RECENT_AUTH_MAX_AGE_MINUTES = get_env_int(
+        "RECENT_AUTH_MAX_AGE_MINUTES",
+        10,
+    )
+
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
     SECRET_KEY = os.getenv("SECRET_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     DATABASE_URL = os.getenv("DATABASE_URL")
     ENV = os.getenv("FLASK_ENV", "development").lower()
 
@@ -97,9 +112,11 @@ class DevelopmentConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     TESTING = True
     DEBUG = False
+    JWT_SECRET_KEY = "testing-only-jwt-secret-never-use-in-production"
     SQLALCHEMY_DATABASE_URI = None
     SQLALCHEMY_ECHO = False
     RATELIMIT_ENABLED = False
+    GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"
 
 
 class ProductionConfig(BaseConfig):

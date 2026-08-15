@@ -1,14 +1,31 @@
-from flask import Blueprint, current_app, request, jsonify, abort
+from flask import Blueprint, current_app, request, jsonify, abort, g
+
 from app.extensions import bcrypt, mail, limiter
 from app.auth import hash_password, verify_password, validate_password_strength
 from app.services.user_service import (
     DuplicateUserError,
     create_user,
     get_user_by_email,
+    update_user_display_name,
     update_user_password,
 )
-import jwt
-from datetime import UTC, datetime, timedelta
+from app.middleware import (
+    login_required,
+    recent_authentication_required,
+)
+from app.serializers import authenticated_user_to_dict
+from app.services.external_identity_service import (
+    ExternalAccountLinkRequiredError,
+    ExternalIdentityConflictError,
+    authenticate_external_identity,
+    link_external_identity,
+)
+from app.services.google_identity_service import (
+    GoogleIdentityProviderUnavailableError,
+    InvalidGoogleCredentialError,
+    verify_google_credential,
+)
+from app.services.token_service import issue_access_token
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from flask_mail import Message
 from config import get_config
@@ -24,6 +41,100 @@ def get_serializer():
     return URLSafeTimedSerializer(SECRET_KEY)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+@auth_bp.route("/google", methods=["POST"])
+@limiter.limit("5 per minute")
+def google_login():
+    data=request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        abort(400, description="Invalid JSON")
+
+    credential = data.get("credential")
+
+    if not isinstance(credential, str) or not credential.strip():
+        abort(400, description="Google credential is required")
+
+    try:
+        verified_identity = verify_google_credential(credential)
+        user = authenticate_external_identity(verified_identity)
+    except InvalidGoogleCredentialError:
+        abort(401, description="Invalid Google credential")
+    except ExternalAccountLinkRequiredError:
+        return jsonify(
+            {
+                "error": "account_link_required",
+                "message": (
+                    "Sign in to the existing MoneyTiq account before linking Google."
+                ),
+            }
+        ), 409
+    except GoogleIdentityProviderUnavailableError:
+        current_app.logger.warning(
+            "Google identity verification is temporarily unavailable"
+        )
+        abort(
+            503,
+            description="Google authentication is temporarily unavailable",
+        )
+
+    token = issue_access_token(user)
+
+    return jsonify(
+        {
+            "message": "Google sign-in successful",
+            "token": token,
+            "user": authenticated_user_to_dict(user),
+        }
+    ), 200
+
+@auth_bp.route("/google/link", methods=["POST"])
+@limiter.limit("5 per hour")
+@login_required
+@recent_authentication_required
+def link_google_identity():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        abort(400, description="Invalid JSON")
+
+    credential = data.get("credential")
+
+    if not isinstance(credential, str) or not credential.strip():
+        abort(400, description="Google credential is required")
+
+    try:
+        verified_identity = verify_google_credential(credential)
+        link_external_identity(
+            g.authenticated_user,
+            verified_identity,
+        )
+    except InvalidGoogleCredentialError:
+        abort(401, description="Invalid Google credential")
+    except ExternalIdentityConflictError:
+        return jsonify(
+            {
+                "error": "external_identity_conflict",
+                "message": "This Google identity cannot be linked.",
+            }
+        ), 409
+    except GoogleIdentityProviderUnavailableError:
+        current_app.logger.warning(
+            "Google identity verification is temporarily unavailable"
+        )
+        abort(
+            503,
+            description="Google authentication is temporarily unavailable",
+        )
+
+    return jsonify(
+        {
+            "message": "Google account linked successfully",
+            "user": authenticated_user_to_dict(
+                g.authenticated_user
+            ),
+        }
+    ), 200
 
 @auth_bp.route('/register', methods=['POST'])
 @limiter.limit("3 per minute")
@@ -59,21 +170,14 @@ def register_auth_route():
     except DuplicateUserError:
         abort(409, description="The email or username is already in use.")
 
-    payload = {
-        "user_id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "role": new_user.role or "user",
-        "exp": datetime.now(UTC) + timedelta(hours=1)
-    }
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    token = issue_access_token(new_user)
 
-    return jsonify({"message": "User registered", "token": token, "user": {
-        "user_id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "role": new_user.role or "user"
-    }}), 201
+    return jsonify(
+        {
+            "message": "User registered",
+            "token": token,
+            "user": authenticated_user_to_dict(new_user),
+        }), 201
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -96,23 +200,49 @@ def login():
 
     stored_hash = user.password_hash
 
-    if not verify_password(password, stored_hash):
+    if stored_hash is None or not verify_password(password, stored_hash):
         abort(401, description="Invalid email or password")
 
-    payload = {
-        "user_id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role or "user",
-        "exp": datetime.now(UTC) + timedelta(hours=1)
-    }
-    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    token = issue_access_token(user)
 
-    return jsonify({"message": "Login successful", "token": token,  'user': {
-            'user_id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'role': user.role or "user"}}), 200
+    return jsonify({"message": "Login successful", "token": token,  'user': authenticated_user_to_dict(user) }), 200
+
+
+@auth_bp.route('/profile', methods=['PATCH'])
+@login_required
+def update_profile():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        abort(400, description="Invalid JSON")
+
+    display_name = data.get("display_name")
+
+    if not isinstance(display_name, str):
+        abort(400, description="Display name must be text")
+
+    display_name = display_name.strip()
+
+    if not display_name:
+        abort(400, description="Display name is required")
+
+    if len(display_name) > 100:
+        abort(
+            400,
+            description="Display name must be 100 characters or fewer",
+        )
+
+    user = update_user_display_name(
+        g.authenticated_user,
+        display_name,
+    )
+
+    return jsonify(
+        {
+            "message": "Profile updated",
+            "user": authenticated_user_to_dict(user),
+        }
+    ), 200
 
 @auth_bp.route('/password_reset_request', methods=['POST'])
 @limiter.limit("5 per hour")

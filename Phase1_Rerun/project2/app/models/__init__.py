@@ -6,6 +6,7 @@ from app.models.budget import Budget, BudgetItem
 from app.models.payment_method import PaymentMethod, PaymentMethodGroup
 from app.models.telegram_link import TelegramLink
 from app.models.telegram_preferences import TelegramUserPreferences
+from app.models.auth_identity import AuthIdentity
 
 __all__ = [
     "Base",
@@ -19,4 +20,6 @@ __all__ = [
     "PaymentMethodGroup",
     "TelegramLink",
     "TelegramUserPreferences",
+    "AuthIdentity",
+    "SoftDeleteMixin",
 ]

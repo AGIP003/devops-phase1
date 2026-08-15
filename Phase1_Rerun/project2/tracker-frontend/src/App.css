@@ -47,6 +47,10 @@ body {
   color: var(--text-main);
 }
 
+body:has(.app-shell) {
+  overflow: hidden;
+}
+
 body:has(.auth-page),
 body.auth-screen {
   background: #f6f7f2;
@@ -57,7 +61,10 @@ body.auth-screen {
   display: grid;
   gap: 1.25rem;
   grid-template-columns: 240px minmax(0, 1fr);
-  min-height: 100vh;
+  height: calc(100vh - var(--space-page) - var(--space-page));
+  height: calc(100dvh - var(--space-page) - var(--space-page));
+  min-height: 0;
+  overflow: hidden;
   transition: grid-template-columns 0.2s ease;
 }
 
@@ -66,8 +73,13 @@ body.auth-screen {
 }
 
 .main-content {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 0;
+  scrollbar-gutter: stable;
 }
 
 .sidebar {
@@ -77,7 +89,9 @@ body.auth-screen {
   color: var(--text-main);
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: 1rem;
   transition: padding 0.2s ease;
 }
@@ -141,7 +155,27 @@ body.auth-screen {
 
 .sidebar-nav {
   display: grid;
+  flex: 1 1 auto;
   gap: 0.65rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-right: 0.25rem;
+  scrollbar-color: #cbd3c5 transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #cbd3c5;
+  border-radius: 999px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sidebar-link {
@@ -2184,10 +2218,10 @@ body.public-screen {
   display: inline-flex;
   font: inherit;
   font-weight: 800;
-  gap: 0.5rem;
   height: 42px;
   justify-content: center;
-  min-width: 0;
+  padding: 0;
+  width: 42px;
 
 }
 
@@ -2252,19 +2286,6 @@ body.public-screen {
   min-height: 36px;
   width: 100%;
 
-}
-
-.profile-button {
-  padding: 0 0.35rem;
-}
-
-.profile-chevron {
-  margin-right: 0.25rem;
-  transition: transform 0.2s;
-}
-
-.profile-button[aria-expanded="true"] .profile-chevron {
-  transform: rotate(180deg);
 }
 
 .account-menu {
@@ -5366,6 +5387,10 @@ body.public-screen {
     text-align: left;
   }
 
+  body:has(.app-shell) {
+    overflow: auto;
+  }
+
   .public-nav {
     padding: 0.85rem;
   }
@@ -5575,11 +5600,15 @@ body.public-screen {
   .app-shell,
   .app-shell.sidebar-collapsed {
     display: block;
+    height: auto;
     min-height: 100dvh;
+    overflow: visible;
   }
 
   .main-content {
+    height: auto;
     min-height: 100dvh;
+    overflow: visible;
     width: 100%;
     padding: 0.65rem 0.65rem calc(6.8rem + env(safe-area-inset-bottom));
   }
@@ -5593,7 +5622,9 @@ body.public-screen {
     gap: 0.6rem;
     grid-template-columns: 1fr auto;
     left: 0;
+    height: auto;
     min-height: 0;
+    overflow: visible;
     padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
     position: fixed;
     right: 0;
@@ -5609,6 +5640,7 @@ body.public-screen {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     padding-bottom: 0.15rem;
     scrollbar-width: none;
@@ -5774,10 +5806,6 @@ body.public-screen {
     flex: 0 0 auto;
     height: 28px;
     width: 28px;
-  }
-
-  .profile-chevron {
-    display: none;
   }
 
   .summary-card-topline {

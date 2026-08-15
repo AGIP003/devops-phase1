@@ -2,7 +2,16 @@ from decimal import Decimal
 
 from app.models.budget import Budget, BudgetItem
 from app.models.transaction import Transaction
+from app.models.user import User
 
+def authenticated_user_to_dict(user: User) -> dict[str, object]:
+    return {
+        "id": str(user.public_id),
+        "username": user.username,
+        "display_name": user.display_name or user.username,
+        "email": user.email,
+        "role": user.role or "user",
+    }
 
 def transaction_to_dict(transaction: Transaction) -> dict[str, object]:
     category = transaction.category

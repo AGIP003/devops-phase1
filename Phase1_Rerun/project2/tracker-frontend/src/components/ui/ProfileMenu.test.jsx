@@ -1,9 +1,16 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import api from '../../services/api';
 import ProfileMenu from './ProfileMenu';
+
+vi.mock('../../services/api', () => ({
+  default: {
+    patch: vi.fn(),
+  },
+}));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -38,24 +45,37 @@ beforeEach(() => {
 });
 
 describe('ProfileMenu', () => {
-  it('edits the display name locally and explains the scope', async () => {
+  it('persists the display name and refreshes the cached profile', async () => {
     const user = userEvent.setup();
     const onUserChange = renderMenu();
+    api.patch.mockResolvedValue({
+      data: {
+        user: {
+          ...userProfile,
+          display_name: 'Updated Person',
+        },
+      },
+    });
 
     await user.click(screen.getByRole('button', { name: /open profile menu/i }));
     expect(screen.getByText('person@example.com')).toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: /edit display name/i }));
 
-    expect(screen.getByText(/saved only in this browser/i)).toBeInTheDocument();
+    expect(screen.queryByText(/saved only in this browser/i)).not.toBeInTheDocument();
     const input = screen.getByLabelText(/display name/i);
     await user.clear(input);
     await user.type(input, 'Updated Person');
     await user.click(screen.getByRole('button', { name: /save name/i }));
 
-    expect(JSON.parse(window.localStorage.getItem('moneytiq_user')).display_name).toBe('Updated Person');
-    expect(onUserChange).toHaveBeenCalledWith(
-      expect.objectContaining({ display_name: 'Updated Person' }),
-    );
+    expect(api.patch).toHaveBeenCalledWith('/auth/profile', {
+      display_name: 'Updated Person',
+    });
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem('moneytiq_user')).display_name).toBe('Updated Person');
+      expect(onUserChange).toHaveBeenCalledWith(
+        expect.objectContaining({ display_name: 'Updated Person' }),
+      );
+    });
   });
 
   it('clears the complete session when signing out', async () => {

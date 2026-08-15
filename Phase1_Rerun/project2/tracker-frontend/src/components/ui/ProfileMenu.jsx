@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ChevronDown,
   LogOut,
   PencilLine,
   ShieldCheck,
@@ -9,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import api from '../../services/api';
 import { removeAuthSession, updateCurrentUser } from '../../utils/auth';
 
 function getInitials(name) {
@@ -28,6 +28,7 @@ function ProfileMenu({ user, onUserChange }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const visibleName = user?.display_name || user?.username || 'Your account';
   const email = user?.email || 'Sign in again to refresh your profile';
@@ -65,7 +66,7 @@ function ProfileMenu({ user, onUserChange }) {
     setMenuOpen(false);
   }
 
-  function saveDisplayName(event) {
+  async function saveDisplayName(event) {
     event.preventDefault();
     const cleanName = displayName.trim();
 
@@ -79,14 +80,31 @@ function ProfileMenu({ user, onUserChange }) {
       return;
     }
 
-    const updatedUser = updateCurrentUser({ display_name: cleanName });
-    if (!updatedUser) {
-      setError('Sign in again before editing your profile.');
-      return;
-    }
+    setSaving(true);
+    setError('');
 
-    onUserChange?.(updatedUser);
-    setEditorOpen(false);
+    try {
+      const response = await api.patch('/auth/profile', {
+        display_name: cleanName,
+      });
+      const serverUser = response.data?.user;
+
+      if (!serverUser || typeof serverUser !== 'object') {
+        throw new Error('The server returned an invalid profile.');
+      }
+
+      const updatedUser = updateCurrentUser(serverUser);
+      if (!updatedUser) {
+        throw new Error('Sign in again before editing your profile.');
+      }
+
+      onUserChange?.(updatedUser);
+      setEditorOpen(false);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to update your profile.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function signOut() {
@@ -107,7 +125,6 @@ function ProfileMenu({ user, onUserChange }) {
         <span className="profile-initial" aria-hidden="true">
           {getInitials(visibleName)}
         </span>
-        <ChevronDown className="profile-chevron" size={15} aria-hidden="true" />
       </button>
 
       {menuOpen && (
@@ -127,7 +144,7 @@ function ProfileMenu({ user, onUserChange }) {
               <PencilLine size={17} aria-hidden="true" />
               <span>
                 <strong>Edit display name</strong>
-                <small>Personalise this device</small>
+                <small>Personalise your account</small>
               </span>
             </button>
             <div className="account-menu-security" aria-label="Account security">
@@ -184,13 +201,10 @@ function ProfileMenu({ user, onUserChange }) {
                   setError('');
                 }}
               />
-              <p className="profile-dialog-note">
-                For now, this preference is saved only in this browser. Server-side profile syncing comes next.
-              </p>
               {error && <p className="profile-dialog-error" role="alert">{error}</p>}
               <div className="profile-dialog-actions">
-                <button type="button" onClick={() => setEditorOpen(false)}>Cancel</button>
-                <button type="submit">Save name</button>
+                <button type="button" disabled={saving} onClick={() => setEditorOpen(false)}>Cancel</button>
+                <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save name'}</button>
               </div>
             </form>
           </section>

@@ -54,6 +54,15 @@ def register_error_handlers(app):
         """Handle server errors"""
         app.logger.exception("Internal server error occurred")
         return jsonify({"error": "server error", "message": "An internal error ocurred"}), 500
+
+    @app.errorhandler(503)
+    def service_unavailable(error):
+        """Handle temporary upstream service failures."""
+        app.logger.warning(f"Service unavailable: {error}")
+        return jsonify({
+            "error": "Service unavailable",
+            "message": str(error.description),
+        }), 503
     
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
@@ -63,4 +72,3 @@ def register_error_handlers(app):
             raise
         app.logger.exception(f"Unexpected error occurred: {type(error).__name__} - {str(error)}")
         return jsonify({"error": "server error", "message": "Unexpected error occurred"}), 500
- 

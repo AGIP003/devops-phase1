@@ -95,3 +95,4 @@ webencodings==0.5.1
 Werkzeug==3.1.5
 wrapt==2.1.2
 yarg==0.1.9
+google-auth==2.56.3

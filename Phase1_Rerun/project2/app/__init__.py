@@ -16,6 +16,7 @@ import time
 
 
 def create_app(config_name=None):
+    #Testing Database configuration
     selected_config = (config_name or os.getenv("FLASK_ENV", "development")).lower()
 
     if selected_config != "testing":
@@ -26,6 +27,18 @@ def create_app(config_name=None):
     if selected_config == "testing":
         app.config["SQLALCHEMY_DATABASE_URI"] = get_test_database_url()
 
+    jwt_secret_key = app.config.get("JWT_SECRET_KEY")
+
+    if not jwt_secret_key:
+        raise RuntimeError(
+            "JWT_SECRET_KEY is missing. Configure it for this environment."
+        )
+
+    if len(jwt_secret_key.encode("utf-8")) < 32:
+        raise RuntimeError(
+            "JWT_SECRET_KEY must contain at least 32 bytes."
+        )
+    #CORS
     allowed_origins = app.config.get(
         "CORS_ORIGINS",
         ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174",
@@ -61,7 +74,7 @@ def create_app(config_name=None):
         from app.models import (
             User, Category, Transaction, Budget, BudgetItem,
             PaymentMethod, PaymentMethodGroup, TelegramLink,
-            TelegramUserPreferences
+            TelegramUserPreferences, AuthIdentity,
         )
 
     Talisman(

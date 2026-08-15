@@ -48,12 +48,18 @@ def test_telegram_link_token_is_single_use(client, register_user):
         "telegram_id": 123456789,
     }
 
-def test_expired_telegram_link_token_is_rejected(app, client, register_user):
+def test_expired_telegram_link_token_is_rejected(
+    app,
+    client,
+    register_user,
+    internal_user_id,
+):
     owner = register_user("owner", "owner@example.com")
+    user_id = internal_user_id(owner)
 
     with app.app_context():
         expired_link = TelegramLink(
-            user_id=owner["user"]["user_id"],
+            user_id=user_id,
             token="expired-test-token",
             expires_at=datetime.now(UTC) - timedelta(seconds=1),
             used=False,
