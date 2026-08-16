@@ -29,17 +29,43 @@ Successful response:
   "stale": false,
   "rates": {
     "KES": "1",
+    "AED": "0.02843",
+    "AUD": "0.01095",
+    "BIF": "23.13",
+    "CAD": "0.01077",
+    "CHF": "0.00629",
+    "CNY": "0.05219",
+    "DKK": "0.05013",
     "EUR": "0.0067",
     "GBP": "0.00573",
+    "HKD": "0.06072",
+    "INR": "0.74074",
+    "JPY": "1.2327",
+    "NOK": "0.07348",
+    "RWF": "11.36",
+    "SAR": "0.02905",
+    "SEK": "0.07391",
+    "SGD": "0.0099",
     "TZS": "20.46",
     "UGX": "28.7",
-    "USD": "0.00774"
+    "USD": "0.00774",
+    "ZAR": "0.12531"
   }
 }
 ```
 
 Rates are strings so the API does not silently introduce binary floating-point
 rounding. JavaScript converts them to `Number` only for display formatting.
+
+Every rate is expressed as quote-currency units per one KES. The browser can
+therefore calculate a cross-rate without another provider request:
+
+```text
+converted amount = amount × target KES rate ÷ source KES rate
+```
+
+The converter is for indicative display only, not accounting entries or
+executable trading quotes.
 
 `stale: true` means provider refresh failed and the response is a previous,
 validated database snapshot. A `503` means neither the provider nor a complete

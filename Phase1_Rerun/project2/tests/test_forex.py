@@ -16,17 +16,34 @@ from app.services.forex_client import (
 from app.services.forex_service import (
     ForexRatesResult,
     ForexUnavailableError,
+    SUPPORTED_QUOTES,
     get_current_forex_rates,
 )
 
 
-QUOTES = ("EUR", "GBP", "TZS", "UGX", "USD")
+QUOTES = SUPPORTED_QUOTES
 RATE_VALUES = {
+    "AED": Decimal("0.02843"),
+    "AUD": Decimal("0.01095"),
+    "BIF": Decimal("23.13"),
+    "CAD": Decimal("0.01077"),
+    "CHF": Decimal("0.00629"),
+    "CNY": Decimal("0.05219"),
+    "DKK": Decimal("0.05013"),
     "EUR": Decimal("0.0067"),
     "GBP": Decimal("0.00573"),
+    "HKD": Decimal("0.06072"),
+    "INR": Decimal("0.74074"),
+    "JPY": Decimal("1.2327"),
+    "NOK": Decimal("0.07348"),
+    "RWF": Decimal("11.36"),
+    "SAR": Decimal("0.02905"),
+    "SEK": Decimal("0.07391"),
+    "SGD": Decimal("0.0099"),
     "TZS": Decimal("20.46"),
     "UGX": Decimal("28.7"),
     "USD": Decimal("0.00774"),
+    "ZAR": Decimal("0.12531"),
 }
 
 
@@ -80,9 +97,9 @@ def test_provider_client_validates_and_parses_decimal_rates():
         http_get=fake_get,
     )
 
-    assert rates[-1].quote == "USD"
-    assert rates[-1].rate == Decimal("0.00774")
-    assert isinstance(rates[-1].rate, Decimal)
+    usd_rate = next(rate for rate in rates if rate.quote == "USD")
+    assert usd_rate.rate == Decimal("0.00774")
+    assert isinstance(usd_rate.rate, Decimal)
     assert request_details["params"]["providers"] == "CBK"
     assert request_details["timeout"] == (3, 10)
 
@@ -125,7 +142,7 @@ def test_validated_rates_are_persisted_and_fresh_cache_avoids_network(app):
     assert first.stale is False
     assert second.stale is False
     assert second.rates["USD"] == Decimal("0.007740000000")
-    assert stored_count == 5
+    assert stored_count == len(QUOTES)
     assert calls["count"] == 1
 
 

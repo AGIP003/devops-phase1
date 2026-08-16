@@ -16,7 +16,29 @@ from app.services.forex_client import (
 )
 
 
-SUPPORTED_QUOTES = ("EUR", "GBP", "TZS", "UGX", "USD")
+SUPPORTED_QUOTES = (
+    "AED",
+    "AUD",
+    "BIF",
+    "CAD",
+    "CHF",
+    "CNY",
+    "DKK",
+    "EUR",
+    "GBP",
+    "HKD",
+    "INR",
+    "JPY",
+    "NOK",
+    "RWF",
+    "SAR",
+    "SEK",
+    "SGD",
+    "TZS",
+    "UGX",
+    "USD",
+    "ZAR",
+)
 
 
 class ForexUnavailableError(RuntimeError):

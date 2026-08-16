@@ -4385,6 +4385,161 @@ body.public-screen {
   min-height: 420px;
 }
 
+.forex-converter-card {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(194, 216, 131, 0.24), transparent 30%),
+    linear-gradient(135deg, #17231b 0%, #263b2d 58%, #354a33 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-card);
+  box-shadow: 0 22px 54px rgba(23, 35, 27, 0.2);
+  color: #ffffff;
+  display: grid;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  position: relative;
+}
+
+.forex-converter-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.8rem;
+}
+
+.forex-converter-icon {
+  align-items: center;
+  background: rgba(223, 238, 173, 0.13);
+  border: 1px solid rgba(223, 238, 173, 0.28);
+  border-radius: 13px;
+  color: #ddecab;
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.forex-converter-heading span,
+.forex-market-heading > div > span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.forex-converter-heading > div > span {
+  color: #c4d49c;
+}
+
+.forex-converter-heading h2,
+.forex-market-heading h2 {
+  margin: 0.18rem 0 0;
+}
+
+.forex-converter-heading h2 {
+  color: #ffffff;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+.forex-converter-controls {
+  align-items: end;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1fr) auto minmax(190px, 1fr);
+}
+
+.forex-converter-field {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+}
+
+.forex-converter-field > span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.forex-converter-field input,
+.forex-converter-field select {
+  background: transparent;
+  border: 0;
+  color: #ffffff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.forex-converter-field select option {
+  color: var(--text-main);
+}
+
+.forex-converter-field:focus-within {
+  border-color: rgba(221, 236, 171, 0.78);
+  box-shadow: 0 0 0 3px rgba(221, 236, 171, 0.1);
+}
+
+.forex-swap-button {
+  align-items: center;
+  background: #ddecab;
+  border: 0;
+  border-radius: 999px;
+  color: #1f3024;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+  transition: transform 160ms ease, background 160ms ease;
+  width: 42px;
+}
+
+.forex-swap-button:hover {
+  background: #eff6cd;
+  transform: rotate(180deg);
+}
+
+.forex-converter-result {
+  align-items: end;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  color: var(--text-main);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+}
+
+.forex-converter-result > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.forex-converter-result span,
+.forex-converter-result small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.forex-converter-result strong {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.forex-converter-result small {
+  text-align: right;
+}
+
 .forex-hero-card {
   align-items: center;
   background: var(--card-background);
@@ -4440,6 +4595,74 @@ body.public-screen {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.forex-market-section {
+  background: var(--card-background);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.forex-market-heading {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.forex-market-heading > div > span {
+  color: var(--accent);
+}
+
+.forex-market-heading h2 {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+}
+
+.forex-search {
+  align-items: center;
+  background: #f5f6ef;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0 0.8rem;
+}
+
+.forex-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(111, 127, 63, 0.1);
+}
+
+.forex-search input {
+  background: transparent;
+  border: 0;
+  color: var(--text-main);
+  font: inherit;
+  min-width: 150px;
+  outline: 0;
+}
+
+.forex-search .sr-only {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.forex-empty-search {
+  color: var(--text-muted);
+  margin: 0;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+}
+
 .forex-error,
 .forex-stale-notice,
 .forex-reference-note {
@@ -4481,6 +4704,12 @@ body.public-screen {
   padding: 1rem;
   position: relative;
   text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.forex-card:hover {
+  border-color: #cdd5b5;
+  transform: translateY(-2px);
 }
 
 .forex-card.active {
@@ -6135,6 +6364,39 @@ body.public-screen {
   .forex-hero-card {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .forex-converter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .forex-swap-button {
+    justify-self: center;
+    margin: -0.1rem 0;
+    transform: rotate(90deg);
+  }
+
+  .forex-swap-button:hover {
+    transform: rotate(270deg);
+  }
+
+  .forex-converter-result,
+  .forex-market-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .forex-converter-result small {
+    text-align: left;
+  }
+
+  .forex-search {
+    width: 100%;
+  }
+
+  .forex-search input {
+    min-width: 0;
+    width: 100%;
   }
 
   .forex-conversion-preview {

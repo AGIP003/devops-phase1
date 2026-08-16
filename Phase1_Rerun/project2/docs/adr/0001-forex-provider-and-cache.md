@@ -5,7 +5,8 @@ Date: 2026-08-16
 
 ## Context
 
-MoneyTiq needs daily KES reference rates for USD, EUR, GBP, UGX, and TZS.
+MoneyTiq needs daily KES reference rates for the 21 quote currencies currently
+covered by Frankfurter's CBK provider.
 Direct CBK automation currently encounters a Sucuri JavaScript challenge, while
 the historical CSV available through the browser is stale and inconsistent.
 The application must continue displaying its last validated rates during an
