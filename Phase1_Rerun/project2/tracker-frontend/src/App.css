@@ -163,7 +163,7 @@ body.auth-screen {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   padding-right: 0.25rem;
-  scrollbar-color: #cbd3c5 transparent;
+  scrollbar-color: transparent transparent;
   scrollbar-width: thin;
 }
 
@@ -172,8 +172,16 @@ body.auth-screen {
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: #cbd3c5;
+  background: transparent;
   border-radius: 999px;
+}
+
+.sidebar-nav.is-scrolling {
+  scrollbar-color: #cbd3c5 transparent;
+}
+
+.sidebar-nav.is-scrolling::-webkit-scrollbar-thumb {
+  background: #cbd3c5;
 }
 
 .sidebar-nav::-webkit-scrollbar-track {
@@ -2563,6 +2571,21 @@ body.public-screen {
   background: var(--text-main);
   border-color: var(--text-main);
   color: #ffffff;
+}
+
+.account-link-dialog {
+  max-width: 440px;
+}
+
+.account-link-security-note {
+  background: #f7f8ef;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0.7rem 0.8rem;
 }
 
 .dashboard-header {

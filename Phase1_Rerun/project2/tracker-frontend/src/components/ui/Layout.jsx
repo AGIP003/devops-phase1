@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { BadgePercent, CalendarClock, ChartNoAxesCombined, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { removeAuthSession } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
 import TelegramLinkPanel, { TelegramIcon } from "./TelegramLinkPanel";
@@ -12,6 +12,8 @@ function Layout() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [showTelegramPanel, setShowTelegramPanel] = useState(false);
     const [telegramLinked, setTelegramLinked] = useState(false);
+    const [sidebarScrolling, setSidebarScrolling] = useState(false);
+    const sidebarScrollTimeout = useRef(null);
 
     const refreshTelegramStatus = useCallback(async () => {
         try {
@@ -25,6 +27,18 @@ function Layout() {
     useEffect(() => {
         refreshTelegramStatus();
     }, [refreshTelegramStatus]);
+
+    useEffect(() => {
+        return () => window.clearTimeout(sidebarScrollTimeout.current);
+    }, []);
+
+    function handleSidebarScroll() {
+        setSidebarScrolling(true);
+        window.clearTimeout(sidebarScrollTimeout.current);
+        sidebarScrollTimeout.current = window.setTimeout(() => {
+            setSidebarScrolling(false);
+        }, 700);
+    }
 
     function handleLogout() {
         removeAuthSession();
@@ -65,7 +79,10 @@ function Layout() {
                         <span>Tracker</span>
                     </div>
                 </div>
-                <nav className="sidebar-nav">
+                <nav
+                    className={`sidebar-nav ${sidebarScrolling ? "is-scrolling" : ""}`}
+                    onScroll={handleSidebarScroll}
+                >
                     <NavLink
                         to="/dashboard"
                         className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}
