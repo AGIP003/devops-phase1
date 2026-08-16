@@ -7,6 +7,9 @@ from app.middleware import login_required, admin_required
 from app.serializers import (
     budget_item_to_dict,
     budget_to_dict,
+    debt_to_dict,
+    recurring_commitment_to_dict,
+    savings_goal_to_dict,
     transaction_to_dict,
 )
 from app.services.budget_service import (
@@ -26,6 +29,41 @@ from app.services.transaction_service import (
 )
 from app.services.user_service import delete_user as delete_user_record, get_user_by_id
 from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
+from app.debt_validation import parse_debt_create_payload, parse_debt_entry_payload
+from app.services.debt_service import (
+    DebtValidationError,
+    add_debt_entry_for_user,
+    archive_debt_for_user,
+    create_debt_for_user,
+    get_debt_for_user,
+    list_debts_for_user,
+)
+from app.savings_goal_validation import (
+    parse_savings_goal_create_payload,
+    parse_savings_goal_entry_payload,
+)
+from app.services.savings_goal_service import (
+    SavingsGoalValidationError,
+    add_savings_goal_entry_for_user,
+    archive_savings_goal_for_user,
+    create_savings_goal_for_user,
+    get_savings_goal_for_user,
+    list_savings_goals_for_user,
+)
+from app.recurring_commitment_validation import (
+    parse_commitment_cycle_payload,
+    parse_commitment_status_payload,
+    parse_recurring_commitment_create_payload,
+)
+from app.services.recurring_commitment_service import (
+    RecurringCommitmentValidationError,
+    archive_recurring_commitment_for_user,
+    create_recurring_commitment_for_user,
+    get_recurring_commitment_for_user,
+    list_recurring_commitments_for_user,
+    resolve_commitment_cycle_for_user,
+    set_recurring_commitment_status_for_user,
+)
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
@@ -69,6 +107,253 @@ def register_routes(app):
         })
         response.headers["Cache-Control"] = "private, max-age=300"
         return response, 200
+
+    @app.route("/api/debts", methods=["GET"])
+    @login_required
+    def get_debts():
+        debts = list_debts_for_user(g.current_user["user_id"])
+        response = jsonify([debt_to_dict(debt) for debt in debts])
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/debts/<int:debt_id>", methods=["GET"])
+    @login_required
+    def get_debt(debt_id):
+        debt = get_debt_for_user(g.current_user["user_id"], debt_id)
+        if debt is None:
+            abort(404, description="Debt not found")
+        response = jsonify(debt_to_dict(debt))
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/debts", methods=["POST"])
+    @login_required
+    def create_debt():
+        try:
+            command = parse_debt_create_payload(request.get_json(silent=True))
+            debt = create_debt_for_user(
+                g.current_user["user_id"],
+                command,
+            )
+        except DebtValidationError as error:
+            abort(400, description=str(error))
+
+        return jsonify({
+            "data": debt_to_dict(debt),
+            "status": "success",
+        }), 201
+
+    @app.route("/api/debts/<int:debt_id>/entries", methods=["POST"])
+    @login_required
+    def create_debt_entry(debt_id):
+        try:
+            command = parse_debt_entry_payload(request.get_json(silent=True))
+            debt = add_debt_entry_for_user(
+                g.current_user["user_id"],
+                debt_id,
+                command,
+            )
+        except DebtValidationError as error:
+            abort(400, description=str(error))
+        except ValueError as error:
+            abort(400, description=str(error))
+
+        if debt is None:
+            abort(404, description="Debt not found")
+
+        return jsonify({
+            "data": debt_to_dict(debt),
+            "status": "success",
+        }), 201
+
+    @app.route("/api/debts/<int:debt_id>", methods=["DELETE"])
+    @login_required
+    def archive_debt(debt_id):
+        archived = archive_debt_for_user(
+            g.current_user["user_id"],
+            debt_id,
+        )
+        if not archived:
+            abort(404, description="Debt not found")
+        return jsonify({"message": "Debt archived", "status": "success"}), 200
+
+    @app.route("/api/goals", methods=["GET"])
+    @login_required
+    def get_savings_goals():
+        goals = list_savings_goals_for_user(g.current_user["user_id"])
+        response = jsonify([savings_goal_to_dict(goal) for goal in goals])
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/goals/<int:goal_id>", methods=["GET"])
+    @login_required
+    def get_savings_goal(goal_id):
+        goal = get_savings_goal_for_user(g.current_user["user_id"], goal_id)
+        if goal is None:
+            abort(404, description="Savings goal not found")
+        response = jsonify(savings_goal_to_dict(goal))
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/goals", methods=["POST"])
+    @login_required
+    def create_savings_goal():
+        try:
+            command = parse_savings_goal_create_payload(
+                request.get_json(silent=True)
+            )
+            goal = create_savings_goal_for_user(
+                g.current_user["user_id"],
+                command,
+            )
+        except SavingsGoalValidationError as error:
+            abort(400, description=str(error))
+        return jsonify({
+            "data": savings_goal_to_dict(goal),
+            "status": "success",
+        }), 201
+
+    @app.route("/api/goals/<int:goal_id>/entries", methods=["POST"])
+    @login_required
+    def create_savings_goal_entry(goal_id):
+        try:
+            command = parse_savings_goal_entry_payload(
+                request.get_json(silent=True)
+            )
+            goal = add_savings_goal_entry_for_user(
+                g.current_user["user_id"],
+                goal_id,
+                command,
+            )
+        except SavingsGoalValidationError as error:
+            abort(400, description=str(error))
+        if goal is None:
+            abort(404, description="Savings goal not found")
+        return jsonify({
+            "data": savings_goal_to_dict(goal),
+            "status": "success",
+        }), 201
+
+    @app.route("/api/goals/<int:goal_id>", methods=["DELETE"])
+    @login_required
+    def archive_savings_goal(goal_id):
+        archived = archive_savings_goal_for_user(
+            g.current_user["user_id"],
+            goal_id,
+        )
+        if not archived:
+            abort(404, description="Savings goal not found")
+        return jsonify({
+            "message": "Savings goal archived",
+            "status": "success",
+        }), 200
+
+    @app.route("/api/commitments", methods=["GET"])
+    @login_required
+    def get_recurring_commitments():
+        commitments = list_recurring_commitments_for_user(
+            g.current_user["user_id"]
+        )
+        response = jsonify([
+            recurring_commitment_to_dict(commitment)
+            for commitment in commitments
+        ])
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/commitments/<int:commitment_id>", methods=["GET"])
+    @login_required
+    def get_recurring_commitment(commitment_id):
+        commitment = get_recurring_commitment_for_user(
+            g.current_user["user_id"],
+            commitment_id,
+        )
+        if commitment is None:
+            abort(404, description="Bill or subscription not found")
+        response = jsonify(recurring_commitment_to_dict(commitment))
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/commitments", methods=["POST"])
+    @login_required
+    def create_recurring_commitment():
+        try:
+            command = parse_recurring_commitment_create_payload(
+                request.get_json(silent=True)
+            )
+            commitment = create_recurring_commitment_for_user(
+                g.current_user["user_id"],
+                command,
+            )
+        except RecurringCommitmentValidationError as error:
+            abort(400, description=str(error))
+        return jsonify({
+            "data": recurring_commitment_to_dict(commitment),
+            "status": "success",
+        }), 201
+
+    @app.route(
+        "/api/commitments/<int:commitment_id>/cycles",
+        methods=["POST"],
+    )
+    @login_required
+    def resolve_commitment_cycle(commitment_id):
+        try:
+            command = parse_commitment_cycle_payload(
+                request.get_json(silent=True)
+            )
+            commitment = resolve_commitment_cycle_for_user(
+                g.current_user["user_id"],
+                commitment_id,
+                command,
+            )
+        except RecurringCommitmentValidationError as error:
+            abort(400, description=str(error))
+        if commitment is None:
+            abort(404, description="Bill or subscription not found")
+        return jsonify({
+            "data": recurring_commitment_to_dict(commitment),
+            "status": "success",
+        }), 201
+
+    @app.route(
+        "/api/commitments/<int:commitment_id>/status",
+        methods=["PATCH"],
+    )
+    @login_required
+    def change_recurring_commitment_status(commitment_id):
+        try:
+            status = parse_commitment_status_payload(
+                request.get_json(silent=True)
+            )
+            commitment = set_recurring_commitment_status_for_user(
+                g.current_user["user_id"],
+                commitment_id,
+                status,
+            )
+        except RecurringCommitmentValidationError as error:
+            abort(400, description=str(error))
+        if commitment is None:
+            abort(404, description="Bill or subscription not found")
+        return jsonify({
+            "data": recurring_commitment_to_dict(commitment),
+            "status": "success",
+        }), 200
+
+    @app.route("/api/commitments/<int:commitment_id>", methods=["DELETE"])
+    @login_required
+    def archive_recurring_commitment(commitment_id):
+        archived = archive_recurring_commitment_for_user(
+            g.current_user["user_id"],
+            commitment_id,
+        )
+        if not archived:
+            abort(404, description="Bill or subscription not found")
+        return jsonify({
+            "message": "Bill or subscription archived",
+            "status": "success",
+        }), 200
+
     @app.route("/api/transactions", methods=["POST"])
     @login_required
     def create_transaction_route():

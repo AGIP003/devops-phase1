@@ -76,6 +76,9 @@ def create_app(config_name=None):
             PaymentMethod, PaymentMethodGroup, TelegramLink,
             TelegramUserPreferences, AuthIdentity,
             ForexRate,
+            Debt, DebtEntry, DebtFeeTerm, DebtSchedule,
+            SavingsGoal, SavingsGoalEntry,
+            RecurringCommitment, CommitmentOccurrence,
         )
 
     Talisman(

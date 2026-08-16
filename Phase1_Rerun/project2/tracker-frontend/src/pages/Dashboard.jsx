@@ -9,7 +9,7 @@ import { useMemo, useCallback } from "react";
 import ChartsSection, { MonthlyTrendChart } from "../components/ui/ChartsSection";
 
 import SummaryCards from "../components/ui/SummaryCard";
-import { chamaGroups, debts, feeEvents, getChamaProgress, getDebtProgress, getFeeSummary, getSortedSubscriptions, subscriptions } from "../data/mockFinanceFeatures";
+import { chamaGroups, feeEvents, getChamaProgress, getFeeSummary } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
 import SubscriptionIcon from "../components/ui/SubscriptionIcon";
@@ -56,6 +56,9 @@ function Dashboard() {
     const addMenuRef = useRef(null);
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
+    const [debts, setDebts] = useState([]);
+    const [goals, setGoals] = useState([]);
+    const [commitments, setCommitments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [showAddMenu, setShowAddMenu] = useState(false);
@@ -78,7 +81,10 @@ function Dashboard() {
     //recent tables
     const recentTransactions = transactions.slice(0, 6);
     const debtPreview = debts.slice(0, 3);
-    const subscriptionPreview = getSortedSubscriptions(subscriptions).slice(0, 5);
+    const subscriptionPreview = commitments
+        .filter((item) => item.status === "active")
+        .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
+        .slice(0, 5);
     const chamaPreview = chamaGroups[0];
     const feeSummary = getFeeSummary(feeEvents);
 
@@ -108,6 +114,33 @@ function Dashboard() {
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions])
+
+    const fetchFinancialPlans = useCallback(async () => {
+        const [debtResult, goalResult, commitmentResult] = await Promise.allSettled([
+            api.get('/debts'),
+            api.get('/goals'),
+            api.get('/commitments'),
+        ]);
+        setDebts(
+            debtResult.status === "fulfilled" && Array.isArray(debtResult.value.data)
+                ? debtResult.value.data
+                : [],
+        );
+        setGoals(
+            goalResult.status === "fulfilled" && Array.isArray(goalResult.value.data)
+                ? goalResult.value.data
+                : [],
+        );
+        setCommitments(
+            commitmentResult.status === "fulfilled" && Array.isArray(commitmentResult.value.data)
+                ? commitmentResult.value.data
+                : [],
+        );
+    }, []);
+
+    useEffect(() => {
+        fetchFinancialPlans();
+    }, [fetchFinancialPlans]);
 
     useEffect(() => {
         if (showForm && addTransactionPanelRef.current) {
@@ -221,6 +254,8 @@ function Dashboard() {
                 {error && <div className="error-banner">{error}</div>}
                 <SummaryCards
                     filteredTransactions={filteredTransactions}
+                    debts={debts}
+                    goals={goals}
                     hideAmounts={hideAmounts}
                     currencyFormatter={currencyFormatter}
                     toggleHideAmounts={toggleHideAmounts}
@@ -340,14 +375,17 @@ function Dashboard() {
                             {sidePreview === "bills" ? (
                                 <>
                                     <div className="subscription-preview-list">
+                                        {subscriptionPreview.length === 0 && (
+                                            <p className="dashboard-preview-empty">No recurring bills or subscriptions yet.</p>
+                                        )}
                                         {subscriptionPreview.map((subscription) => (
                                             <div className="subscription-preview-row" key={subscription.id}>
                                             <SubscriptionIcon subscription={subscription} small />
                                                 <div>
                                                     <strong>{subscription.name}</strong>
-                                                    <small>{dateFormatter.format(new Date(subscription.dueDate))}</small>
+                                                    <small>{dateFormatter.format(new Date(`${subscription.nextDueDate}T00:00:00`))}</small>
                                                 </div>
-                                                <span>{currencyFormatter.format(subscription.amount)}</span>
+                                                <span>{currencyFormatter.format(Number(subscription.amount))}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -358,15 +396,18 @@ function Dashboard() {
                             ) : sidePreview === "debts" ? (
                                 <>
                                     <div className="debt-preview-list">
+                                        {debtPreview.length === 0 && (
+                                            <p className="dashboard-preview-empty">No debts recorded yet.</p>
+                                        )}
                                         {debtPreview.map((debt) => {
-                                            const progress = getDebtProgress(debt);
+                                            const progress = debt.progress ?? 0;
                                             return (
                                                 <div className="debt-preview-row" key={debt.id}>
                                                     <div>
-                                                        <strong>{debt.name}</strong>
-                                                        <small>{debt.type} · {debt.direction === "i_owe" ? "I owe" : "Owed to me"}</small>
+                                                        <strong>{debt.title}</strong>
+                                                        <small>{debt.category.replaceAll("_", " ")} · {debt.direction === "i_owe" ? "I owe" : "Owed to me"}</small>
                                                     </div>
-                                                    <span>{currencyFormatter.format(debt.balance)}</span>
+                                                    <span>{currencyFormatter.format(Number(debt.currentBalance))}</span>
                                                     <DebtPulseLine progress={progress} />
                                                 </div>
                                             )

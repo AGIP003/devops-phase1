@@ -1,6 +1,5 @@
 import React from "react";
 import { Eye, EyeOff, MoreVertical, Target, TrendingDown, Wallet, Scale, CircleDollarSign } from "lucide-react";
-import { debts, getDebtSummary, getGoalProgress, savingsGoals } from "../../data/mockFinanceFeatures";
 
 function SummaryDebtPulseLine({ progress }) {
     const gradientId = `summaryDebtPulse${React.useId().replace(/:/g, "")}`;
@@ -30,7 +29,7 @@ function SummaryGoalRing({ progress }) {
     )
 }
 
-const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, toggleHideAmounts, hideAmounts, currencyFormatter }) {
+const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, debts = [], goals = [], toggleHideAmounts, hideAmounts, currencyFormatter }) {
     //summary cards
     const txList = filteredTransactions || [];
     const incomeTotal = txList
@@ -40,13 +39,18 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const balanceTotal = incomeTotal - expenseTotal;
-    const debtSummary = getDebtSummary(debts);
+    const debtSummary = debts.reduce((summary, debt) => {
+        const balance = Number(debt.currentBalance || 0);
+        if (debt.direction === "i_owe") summary.youOwe += balance;
+        if (debt.direction === "owed_to_me") summary.owedToYou += balance;
+        return summary;
+    }, { youOwe: 0, owedToYou: 0 });
     const debtProgress = Math.min(100, Math.round((debtSummary.owedToYou / Math.max(debtSummary.youOwe, 1)) * 100));
     const [expenseMode, setExpenseMode] = React.useState("expenses");
     const [activeGoalIndex, setActiveGoalIndex] = React.useState(0);
     const showingDebt = expenseMode === "debt";
-    const activeGoal = savingsGoals[activeGoalIndex] || savingsGoals[0];
-    const goalProgress = getGoalProgress(activeGoal);
+    const activeGoal = goals[activeGoalIndex] || goals[0] || null;
+    const goalProgress = activeGoal?.progress || 0;
 
     React.useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -57,14 +61,18 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
     }, []);
 
     React.useEffect(() => {
-        if (savingsGoals.length <= 1) return undefined;
+        if (goals.length <= 1) return undefined;
 
         const intervalId = window.setInterval(() => {
-            setActiveGoalIndex(prev => (prev + 1) % savingsGoals.length);
+            setActiveGoalIndex(prev => (prev + 1) % goals.length);
         }, 120000);
 
         return () => window.clearInterval(intervalId);
-    }, []);
+    }, [goals.length]);
+
+    React.useEffect(() => {
+        if (activeGoalIndex >= goals.length) setActiveGoalIndex(0);
+    }, [activeGoalIndex, goals.length]);
 
     return (
         <div className="summary-grid">
@@ -132,10 +140,10 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, to
                 </div>
                 <div className="summary-goal-body">
                     <SummaryGoalRing progress={goalProgress} />
-                    <div className="summary-goal-copy" key={activeGoal.id}>
-                        <strong>{activeGoal.name}</strong>
-                        <small><span>Required: {hideAmounts ? "••••••" : currencyFormatter.format(activeGoal.targetAmount)}</span></small>
-                        <small><span>Collected: {hideAmounts ? "••••••" : currencyFormatter.format(activeGoal.savedAmount)}</span></small>
+                    <div className="summary-goal-copy" key={activeGoal?.id || "empty-goal"}>
+                        <strong>{activeGoal?.name || "No savings goal yet"}</strong>
+                        <small><span>Required: {hideAmounts ? "••••••" : currencyFormatter.format(Number(activeGoal?.targetAmount || 0))}</span></small>
+                        <small><span>Collected: {hideAmounts ? "••••••" : currencyFormatter.format(Number(activeGoal?.currentSavings || 0))}</span></small>
                     </div>
                 </div>
             </div>

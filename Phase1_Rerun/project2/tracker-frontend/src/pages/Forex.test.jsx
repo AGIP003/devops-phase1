@@ -67,7 +67,7 @@ describe("Forex", () => {
     renderForex();
 
     expect(await screen.findByText("Current CBK rates")).toBeInTheDocument();
-    expect(screen.getByText(/via Frankfurter, dated 2026-08-14/i)).toBeInTheDocument();
+    expect(screen.getByText(/CBK reference rates, dated 2026-08-14/i)).toBeInTheDocument();
 
     const usdCard = screen.getByText("US Dollar").closest("button");
     expect(within(usdCard).getByText("0.00774")).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("Forex", () => {
     renderForex();
 
     const refreshButton = await screen.findByRole("button", {
-      name: "Check for updates",
+      name: "Refresh",
     });
     await user.click(refreshButton);
 

@@ -1,4 +1,4 @@
-import { Wifi, Zap } from "lucide-react";
+import { ReceiptText, Repeat2, Wifi, Zap } from "lucide-react";
 
 function NetflixMark() {
   return (
@@ -50,17 +50,32 @@ function SubscriptionIcon({ subscription, small = false }) {
   const key = getSubscriptionKey(subscription);
   const BrandIcon = brandIcons[key];
   const isBrandIcon = Boolean(BrandIcon);
+  const fallbackColors = subscription.kind === "bill"
+    ? { backgroundColor: "#eef0dc", color: "#59652f" }
+    : { backgroundColor: "#e8f2eb", color: "#287a4d" };
+  const customColors = subscription.brandColor
+    ? {
+        backgroundColor: subscription.brandColor,
+        color: subscription.accentColor,
+      }
+    : fallbackColors;
+
+  let fallbackIcon = <Zap size={small ? 18 : 21} />;
+  if (subscription.kind === "bill") {
+    fallbackIcon = <ReceiptText size={small ? 18 : 21} />;
+  } else if (subscription.kind === "subscription") {
+    fallbackIcon = <Repeat2 size={small ? 18 : 21} />;
+  } else if (key === "wifi") {
+    fallbackIcon = <Wifi size={small ? 18 : 21} />;
+  }
 
   return (
     <span
       className={`subscription-icon ${isBrandIcon ? "subscription-icon-brand" : ""} ${small ? "subscription-icon-small" : ""} subscription-icon-${key}`}
-      style={isBrandIcon ? undefined : {
-        backgroundColor: subscription.brandColor,
-        color: subscription.accentColor,
-      }}
+      style={isBrandIcon ? undefined : customColors}
       aria-hidden="true"
     >
-      {BrandIcon ? <BrandIcon /> : key === "wifi" ? <Wifi size={small ? 18 : 21} /> : <Zap size={small ? 18 : 21} />}
+      {BrandIcon ? <BrandIcon /> : fallbackIcon}
     </span>
   );
 }

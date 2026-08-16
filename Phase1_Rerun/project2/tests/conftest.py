@@ -6,6 +6,14 @@ from app.extensions import db
 from app.models.user import User
 
 DATABASE_TABLES = (
+    "commitment_occurrences",
+    "recurring_commitments",
+    "savings_goal_entries",
+    "savings_goals",
+    "debt_entries",
+    "debt_fee_terms",
+    "debt_schedules",
+    "debts",
     "forex_rates",
     "budget_items",
     "budgets",

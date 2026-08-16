@@ -55,6 +55,41 @@ def _get_payment_method_by_name(payment_method_name: str) -> PaymentMethod | Non
 
     return db.session.scalar(statement)
 
+
+def build_transaction_for_user(
+    user_id: int,
+    category_name: str,
+    transaction_type: str,
+    payment_method_name: str,
+    amount: Decimal,
+    transaction_date: date,
+    description: str,
+) -> Transaction:
+    """Build a transaction without committing so a caller can compose one ACID unit."""
+    payment_method = _get_payment_method_by_name(payment_method_name)
+
+    if payment_method is None:
+        raise ValueError(
+            f"Payment method '{payment_method_name}' not found"
+        )
+
+    category = get_or_create_category(
+        name=category_name,
+        type=transaction_type,
+        user_id=user_id,
+    )
+
+    transaction = Transaction(
+        user_id=user_id,
+        category=category,
+        payment_method=payment_method,
+        amount=amount,
+        date=transaction_date,
+        description=description,
+    )
+    db.session.add(transaction)
+    return transaction
+
 def create_transaction_for_user(
     user_id: int,
     category_name: str,
@@ -65,29 +100,15 @@ def create_transaction_for_user(
     description: str,
 ) -> Transaction:
     try:
-        payment_method = _get_payment_method_by_name(payment_method_name)
-
-        if payment_method is None:
-            raise ValueError(
-                f"Payment method '{payment_method_name}' not found"
-            )
-
-        category = get_or_create_category(
-            name=category_name,
-            type=transaction_type,
+        transaction = build_transaction_for_user(
             user_id=user_id,
-        )
-
-        transaction = Transaction(
-            user_id=user_id,
-            category=category,
-            payment_method=payment_method,
+            category_name=category_name,
+            transaction_type=transaction_type,
+            payment_method_name=payment_method_name,
             amount=amount,
-            date=transaction_date,
+            transaction_date=transaction_date,
             description=description,
         )
-
-        db.session.add(transaction)
         db.session.commit()
 
         return transaction
