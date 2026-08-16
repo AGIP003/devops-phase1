@@ -75,7 +75,7 @@ function Forex() {
           <h1>Currency workspace</h1>
           <p>
             Convert currencies and choose how money appears across MoneyTiq.
-            {rateDate ? ` CBK reference rates via Frankfurter, dated ${rateDate}.` : ""}
+            {rateDate ? ` CBK reference rates, dated ${rateDate}.` : ""}
           </p>
         </div>
         <button
@@ -85,14 +85,14 @@ function Forex() {
           onClick={refreshRates}
         >
           <RefreshCw size={17} aria-hidden="true" />
-          {loading ? "Checking rates" : "Check for updates"}
+          {loading ? "Checking rates" : "Refresh"}
         </button>
       </div>
 
       {error && <p className="forex-error" role="alert">{error}</p>}
       {stale && (
         <p className="forex-stale-notice" role="status">
-          The provider is temporarily unavailable. MoneyTiq is showing the last validated rates.
+          The provider is temporarily unavailable. Showing the last validated rates.
         </p>
       )}
 
@@ -102,8 +102,8 @@ function Forex() {
             <Calculator size={20} aria-hidden="true" />
           </span>
           <div>
-            <span>Reference converter</span>
-            <h2 id="currency-converter-title">Convert with one trusted rate set</h2>
+            <span>Currency converter</span>
+            <h2 id="currency-converter-title">Convert confidently with trusted rates</h2>
           </div>
         </div>
 
@@ -240,7 +240,7 @@ function Forex() {
 
       {!loading && !error && (
         <p className="forex-reference-note">
-          Indicative daily reference rates for display—not executable trading quotes.
+            Daily reference rates for display—not executable trading quotes.
         </p>
       )}
     </div>

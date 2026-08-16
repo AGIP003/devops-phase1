@@ -4510,9 +4510,10 @@ body.public-screen {
 
 .forex-converter-result {
   align-items: end;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: #ddecab;
+  border: 1px solid var(--border-soft);
   border-radius: 12px;
+  box-shadow: none;
   color: var(--text-main);
   display: flex;
   gap: 1rem;
@@ -4533,6 +4534,7 @@ body.public-screen {
 }
 
 .forex-converter-result strong {
+  color: var(--text-main);
   font-size: clamp(1.35rem, 3vw, 2rem);
 }
 
