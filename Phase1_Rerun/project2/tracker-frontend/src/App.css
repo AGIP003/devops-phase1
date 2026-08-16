@@ -2577,17 +2577,6 @@ body.public-screen {
   max-width: 440px;
 }
 
-.account-link-security-note {
-  background: #f7f8ef;
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
-  margin: 0;
-  padding: 0.7rem 0.8rem;
-}
-
 .dashboard-header {
   align-items: flex-start;
   display: flex;
@@ -4449,6 +4438,33 @@ body.public-screen {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.forex-error,
+.forex-stale-notice,
+.forex-reference-note {
+  border-radius: 10px;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.forex-reference-note {
+  background: #f4f6ea;
+  border: 1px solid var(--border-soft);
+  color: var(--text-muted);
+}
+
+.forex-error {
+  background: #fff1ef;
+  border: 1px solid #f2c5bd;
+  color: #8d3326;
+}
+
+.forex-stale-notice,
+.coming-soon-pill.forex-status-stale {
+  background: #fff8df;
+  border-color: #ead99b;
+  color: #755f16;
 }
 
 .forex-card {

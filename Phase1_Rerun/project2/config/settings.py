@@ -68,6 +68,24 @@ class BaseConfig:
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
+    FOREX_API_BASE_URL = os.getenv(
+        "FOREX_API_BASE_URL",
+        "https://api.frankfurter.dev/v2",
+    )
+    FOREX_PROVIDER = os.getenv("FOREX_PROVIDER", "CBK")
+    FOREX_CACHE_TTL_SECONDS = get_env_int(
+        "FOREX_CACHE_TTL_SECONDS",
+        21600,
+    )
+    FOREX_CONNECT_TIMEOUT_SECONDS = get_env_int(
+        "FOREX_CONNECT_TIMEOUT_SECONDS",
+        3,
+    )
+    FOREX_READ_TIMEOUT_SECONDS = get_env_int(
+        "FOREX_READ_TIMEOUT_SECONDS",
+        10,
+    )
+
     SECRET_KEY = os.getenv("SECRET_KEY")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     DATABASE_URL = os.getenv("DATABASE_URL")

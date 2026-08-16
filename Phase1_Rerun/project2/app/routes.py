@@ -25,6 +25,7 @@ from app.services.transaction_service import (
     update_transaction_for_user,
 )
 from app.services.user_service import delete_user as delete_user_record, get_user_by_id
+from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
     validate_payment_method, ValidationError, validate_transaction_type
@@ -42,6 +43,32 @@ def register_routes(app):
             "status" : "ok",
             "environment": os.getenv("FLASK_ENV", "development")
         }, 200
+
+    @app.route("/api/forex/rates", methods=["GET"])
+    @login_required
+    def get_forex_rates():
+        try:
+            result = get_current_forex_rates()
+        except ForexUnavailableError:
+            abort(503, description="Forex rates are temporarily unavailable")
+
+        response = jsonify({
+            "base": result.base,
+            "provider": result.provider,
+            "source": "Frankfurter",
+            "rateDate": result.rate_date.isoformat(),
+            "fetchedAt": result.fetched_at.isoformat(),
+            "stale": result.stale,
+            "rates": {
+                "KES": "1",
+                **{
+                    quote: format(rate, "f")
+                    for quote, rate in sorted(result.rates.items())
+                },
+            },
+        })
+        response.headers["Cache-Control"] = "private, max-age=300"
+        return response, 200
     @app.route("/api/transactions", methods=["POST"])
     @login_required
     def create_transaction_route():

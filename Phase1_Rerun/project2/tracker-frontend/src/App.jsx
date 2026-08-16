@@ -23,6 +23,7 @@ import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import { AdjustedCurrencyProvider } from './context/AdjustedCurrencyContext';
 
 function App() {
  
@@ -38,7 +39,13 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
 
              {/* protected routes – all share the same Layout */}
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route element={
+              <ProtectedRoute>
+                <AdjustedCurrencyProvider>
+                  <Layout />
+                </AdjustedCurrencyProvider>
+              </ProtectedRoute>
+            }>
                 
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>}/>
                 <Route path="/transactions" element={<ErrorBoundary><Transaction /></ErrorBoundary>}/>

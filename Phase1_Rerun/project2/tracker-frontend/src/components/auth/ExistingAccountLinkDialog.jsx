@@ -110,11 +110,6 @@ function ExistingAccountLinkDialog({ credential, onClose, onLinked }) {
             }}
           />
 
-          <p className="account-link-security-note">
-            Your password confirms ownership. MoneyTiq never stores the Google
-            credential in browser storage.
-          </p>
-
           {error && <p className="profile-dialog-error" role="alert">{error}</p>}
 
           <div className="profile-dialog-actions">

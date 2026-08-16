@@ -75,6 +75,7 @@ def create_app(config_name=None):
             User, Category, Transaction, Budget, BudgetItem,
             PaymentMethod, PaymentMethodGroup, TelegramLink,
             TelegramUserPreferences, AuthIdentity,
+            ForexRate,
         )
 
     Talisman(

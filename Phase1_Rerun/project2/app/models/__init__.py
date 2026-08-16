@@ -7,6 +7,7 @@ from app.models.payment_method import PaymentMethod, PaymentMethodGroup
 from app.models.telegram_link import TelegramLink
 from app.models.telegram_preferences import TelegramUserPreferences
 from app.models.auth_identity import AuthIdentity
+from app.models.forex_rate import ForexRate
 
 __all__ = [
     "Base",
@@ -21,5 +22,6 @@ __all__ = [
     "TelegramLink",
     "TelegramUserPreferences",
     "AuthIdentity",
+    "ForexRate",
     "SoftDeleteMixin",
 ]

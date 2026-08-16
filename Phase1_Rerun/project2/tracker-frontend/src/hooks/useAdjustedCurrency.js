@@ -1,30 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  formatAdjustedCurrency,
-  getCurrencyByCode,
-  getSavedCurrencyCode,
-  saveCurrencyCode,
-} from "../data/currencies";
+import { useContext } from "react";
+
+import { AdjustedCurrencyContext } from "../context/adjustedCurrencyContext";
 
 export function useAdjustedCurrency() {
-  const [currencyCode, setCurrencyCode] = useState(getSavedCurrencyCode);
-
-  useEffect(() => {
-    function handleCurrencyChange(event) {
-      setCurrencyCode(event.detail || getSavedCurrencyCode());
-    }
-
-    window.addEventListener("adjusted-currency-change", handleCurrencyChange);
-    return () => window.removeEventListener("adjusted-currency-change", handleCurrencyChange);
-  }, []);
-
-  return useMemo(() => {
-    const currency = getCurrencyByCode(currencyCode);
-    return {
-      currency,
-      currencyCode,
-      setCurrencyCode: saveCurrencyCode,
-      formatCurrency: (amount) => formatAdjustedCurrency(amount, currencyCode),
-    };
-  }, [currencyCode]);
+  const context = useContext(AdjustedCurrencyContext);
+  if (!context) {
+    throw new Error("useAdjustedCurrency must be used inside AdjustedCurrencyProvider");
+  }
+  return context;
 }

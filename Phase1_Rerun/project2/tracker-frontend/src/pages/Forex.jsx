@@ -1,25 +1,60 @@
 import { ArrowRightLeft, Check, RefreshCw } from "lucide-react";
-import { currencies, convertFromKes } from "../data/currencies";
+import { convertFromKes } from "../data/currencies";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 
 const sampleAmount = 10000;
 
 function Forex() {
-  const { currency, currencyCode, setCurrencyCode, formatCurrency } = useAdjustedCurrency();
+  const {
+    currencies,
+    currency,
+    currencyCode,
+    error,
+    formatCurrency,
+    loading,
+    rateDate,
+    rates,
+    refreshRates,
+    setCurrencyCode,
+    stale,
+  } = useAdjustedCurrency();
 
   return (
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className="coming-soon-pill">Mock forex</span>
+          <span className={`coming-soon-pill ${stale ? "forex-status-stale" : ""}`}>
+            {loading ? "Loading rates" : stale ? "Last known rates" : "Current CBK rates"}
+          </span>
           <h1>Adjusted Currency</h1>
-          <p>Choose how money appears across the app.</p>
+          <p>
+            Choose how money appears across the app.
+            {rateDate ? ` CBK reference rates via Frankfurter, dated ${rateDate}.` : ""}
+          </p>
         </div>
-        <button type="button" className="feature-primary-button" disabled>
+        <button
+          type="button"
+          className="feature-primary-button"
+          disabled={loading}
+          onClick={refreshRates}
+        >
           <RefreshCw size={17} aria-hidden="true" />
-          Refresh rates
+          {loading ? "Checking rates" : "Check for updates"}
         </button>
       </div>
+
+      {error && <p className="forex-error" role="alert">{error}</p>}
+      {stale && (
+        <p className="forex-stale-notice" role="status">
+          The provider is temporarily unavailable. MoneyTiq is showing the last validated rates.
+        </p>
+      )}
+
+      {!loading && !error && (
+        <p className="forex-reference-note">
+          Indicative daily reference rates for display—not executable trading quotes.
+        </p>
+      )}
 
       <section className="forex-hero-card">
         <div>
@@ -36,6 +71,7 @@ function Forex() {
       <section className="forex-grid">
         {currencies.map((item) => {
           const selected = item.code === currencyCode;
+          const convertedRate = convertFromKes(1, item.code, rates);
           return (
             <button
               type="button"
@@ -50,7 +86,11 @@ function Forex() {
               </div>
               <div className="forex-rate">
                 <ArrowRightLeft size={15} aria-hidden="true" />
-                <span>{convertFromKes(1, item.code).toLocaleString("en-KE", { maximumFractionDigits: 4 })}</span>
+                <span>
+                  {convertedRate === null
+                    ? "Unavailable"
+                    : convertedRate.toLocaleString("en-KE", { maximumFractionDigits: 5 })}
+                </span>
               </div>
               {selected && <Check className="forex-check" size={18} aria-hidden="true" />}
             </button>

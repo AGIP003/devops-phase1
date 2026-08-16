@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.user import User
 
 DATABASE_TABLES = (
+    "forex_rates",
     "budget_items",
     "budgets",
     "transactions",
