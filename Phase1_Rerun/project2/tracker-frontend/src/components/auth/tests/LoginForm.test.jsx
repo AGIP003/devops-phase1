@@ -107,6 +107,72 @@ describe('LoginForm', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
   });
 
+  it('links Google only after the existing MoneyTiq password succeeds', async () => {
+    const user = userEvent.setup();
+    const linkRequired = Object.assign(
+      new Error('Sign in to the existing MoneyTiq account before linking Google.'),
+      { code: 'account_link_required', status: 409 },
+    );
+
+    api.post
+      .mockRejectedValueOnce(linkRequired)
+      .mockResolvedValueOnce({
+        data: { token: 'fresh-moneytiq-jwt', user: authenticatedUser },
+      })
+      .mockResolvedValueOnce({
+        data: { user: authenticatedUser },
+      });
+    renderLogin();
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }));
+    expect(await screen.findByRole('dialog', { name: /link your existing account/i })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/moneytiq email/i), 'person@example.com');
+    await user.type(screen.getByLabelText(/moneytiq password/i), 'StrongPass123!');
+    await user.click(screen.getByRole('button', { name: /sign in and link/i }));
+
+    expect(api.post).toHaveBeenNthCalledWith(2, '/auth/login', {
+      email: 'person@example.com',
+      password: 'StrongPass123!',
+    });
+    expect(api.post).toHaveBeenNthCalledWith(
+      3,
+      '/auth/google/link',
+      { credential: 'google-id-credential' },
+      { headers: { Authorization: 'Bearer fresh-moneytiq-jwt' } },
+    );
+    await waitFor(() => {
+      expect(window.localStorage.getItem('token')).toBe('fresh-moneytiq-jwt');
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+  });
+
+  it('does not link Google when the existing MoneyTiq password fails', async () => {
+    const user = userEvent.setup();
+    const linkRequired = Object.assign(new Error('Account linking required'), {
+      code: 'account_link_required',
+      status: 409,
+    });
+
+    api.post
+      .mockRejectedValueOnce(linkRequired)
+      .mockRejectedValueOnce(new Error('Invalid email or password'));
+    renderLogin();
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }));
+    await user.type(await screen.findByLabelText(/moneytiq email/i), 'person@example.com');
+    await user.type(screen.getByLabelText(/moneytiq password/i), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: /sign in and link/i }));
+
+    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalledWith(
+      '/auth/google/link',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(window.localStorage.getItem('token')).toBeNull();
+  });
+
   it('shows the backend message when authentication fails', async () => {
     const user = userEvent.setup();
     api.post.mockRejectedValue(new Error('Invalid email or password'));

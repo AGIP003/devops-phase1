@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Link } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, HandCoins } from 'lucide-react';
 import GoogleSignInButton from './GoogleSignInButton';
+import ExistingAccountLinkDialog from './ExistingAccountLinkDialog';
 
 function LoginForm() {
     const navigate = useNavigate();
@@ -28,6 +29,7 @@ function LoginForm() {
     const [successMessage, setSuccessMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [linkCredential, setLinkCredential] = useState('');
 
     function completeAuthentication(data) {
         saveAuthSession({ token: data?.token, user: data?.user });
@@ -91,7 +93,11 @@ function LoginForm() {
             const response = await api.post('/auth/google', { credential });
             completeAuthentication(response.data);
         } catch (err) {
-            setErrorMessage(err.message || 'Unable to sign in with Google');
+            if (err.code === 'account_link_required' || err.status === 409) {
+                setLinkCredential(credential);
+            } else {
+                setErrorMessage(err.message || 'Unable to sign in with Google');
+            }
         } finally {
             setGoogleLoading(false);
         }
@@ -180,6 +186,13 @@ function LoginForm() {
                     Try the preview <ArrowRight size={16} />
                 </Link>
             </form>
+            {linkCredential && (
+                <ExistingAccountLinkDialog
+                    credential={linkCredential}
+                    onClose={() => setLinkCredential('')}
+                    onLinked={completeAuthentication}
+                />
+            )}
         </div>
     )
 }

@@ -5,6 +5,7 @@ import { Eye, EyeOff, HandCoins } from 'lucide-react';
 import api from '../../services/api';
 import { saveAuthSession } from '../../utils/auth';
 import GoogleSignInButton from './GoogleSignInButton';
+import ExistingAccountLinkDialog from './ExistingAccountLinkDialog';
 
 function Register() {
   const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setError } = useForm({
@@ -15,6 +16,7 @@ function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [linkCredential, setLinkCredential] = useState('');
 
   const password = watch('password');
 
@@ -53,7 +55,11 @@ function Register() {
       saveAuthSession({ token: response.data?.token, user: response.data?.user });
       navigate('/dashboard');
     } catch (err) {
-      setServerError(err.message || 'Unable to continue with Google');
+      if (err.code === 'account_link_required' || err.status === 409) {
+        setLinkCredential(credential);
+      } else {
+        setServerError(err.message || 'Unable to continue with Google');
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -182,6 +188,16 @@ function Register() {
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </form>
+      {linkCredential && (
+        <ExistingAccountLinkDialog
+          credential={linkCredential}
+          onClose={() => setLinkCredential('')}
+          onLinked={({ token, user }) => {
+            saveAuthSession({ token, user });
+            navigate('/dashboard');
+          }}
+        />
+      )}
     </div>
   );
 }
