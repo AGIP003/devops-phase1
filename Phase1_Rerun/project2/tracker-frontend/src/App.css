@@ -141,8 +141,9 @@ body.auth-screen {
   display: flex;
   font: inherit;
   font-weight: 700;
+  flex: 0 0 auto;
   gap: 0.65rem;
-  margin-top: auto;
+  margin-top: 0.85rem;
   min-height: 44px;
   padding: 0 0.9rem;
   text-align: left;
@@ -5709,6 +5710,7 @@ body.public-screen {
   }
 
   .logout-btn {
+    align-self: end;
     margin-top: 0;
     width: 56px;
   }
