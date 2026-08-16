@@ -6,11 +6,24 @@ import GoogleSignInButton from '../GoogleSignInButton';
 describe('GoogleSignInButton', () => {
   afterEach(() => {
     delete window.google;
+    vi.restoreAllMocks();
   });
 
   it('uses Google Identity Services and returns only the credential', async () => {
     const onCredential = vi.fn();
     let googleCallback;
+
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      bottom: 44,
+      height: 44,
+      left: 0,
+      right: 248,
+      top: 0,
+      width: 248,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
 
     window.google = {
       accounts: {
@@ -41,6 +54,10 @@ describe('GoogleSignInButton', () => {
         callback: expect.any(Function),
       }),
     );
+    expect(window.google.accounts.id.renderButton).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ width: 248 }),
+    );
 
     act(() => {
       googleCallback({ credential: 'signed-google-id-token' });
@@ -49,5 +66,26 @@ describe('GoogleSignInButton', () => {
     await waitFor(() => {
       expect(onCredential).toHaveBeenCalledWith('signed-google-id-token');
     });
+  });
+
+  it('shows progress while MoneyTiq exchanges the Google credential', () => {
+    window.google = {
+      accounts: {
+        id: {
+          initialize: vi.fn(),
+          renderButton: vi.fn(),
+        },
+      },
+    };
+
+    render(
+      <GoogleSignInButton
+        clientId="progress-client.apps.googleusercontent.com"
+        disabled
+        onCredential={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(/signing you in/i);
   });
 });

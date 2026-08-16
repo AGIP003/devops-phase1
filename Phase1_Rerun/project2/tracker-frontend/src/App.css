@@ -48,7 +48,8 @@ body {
 }
 
 body:has(.app-shell) {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body:has(.auth-page),
@@ -629,6 +630,7 @@ body.auth-screen {
   display: grid;
   gap: 1rem;
   max-width: 430px;
+  min-width: 0;
   padding: clamp(1.1rem, 4vw, 1.55rem);
   position: relative;
   width: min(100%, 430px);
@@ -830,6 +832,7 @@ body.auth-screen {
   justify-content: center;
   min-height: 44px;
   overflow: hidden;
+  position: relative;
   transition: opacity 0.2s;
   width: 100%;
 }
@@ -849,6 +852,19 @@ body.auth-screen {
 .google-signin-button > div,
 .google-signin-button iframe {
   max-width: 100% !important;
+}
+
+.google-signin-loading {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-main);
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 800;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+  z-index: 2;
 }
 
 .google-signin-status {
@@ -2302,6 +2318,10 @@ body.public-screen {
   padding: 0.55rem 0.55rem 0.85rem;
 }
 
+.account-menu-identity > div {
+  min-width: 0;
+}
+
 .account-menu-avatar {
   align-items: center;
   background: var(--text-main);
@@ -2320,6 +2340,13 @@ body.public-screen {
 .account-menu-actions strong {
   display: block;
   margin: 0;
+}
+
+.account-menu-identity strong {
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .account-menu-identity span:not(.account-menu-avatar),

@@ -90,6 +90,13 @@ function GoogleSignInButton({
           initializedClientId = clientId;
         }
 
+        const availableWidth = Math.floor(
+          buttonElement.getBoundingClientRect().width,
+        );
+        const buttonWidth = availableWidth > 0
+          ? Math.min(availableWidth, 320)
+          : 320;
+
         buttonElement.replaceChildren();
         google.accounts.id.renderButton(buttonElement, {
           theme: 'outline',
@@ -97,7 +104,7 @@ function GoogleSignInButton({
           shape: 'pill',
           text,
           logo_alignment: 'left',
-          width: 360,
+          width: buttonWidth,
         });
       })
       .catch((error) => {
@@ -120,6 +127,11 @@ function GoogleSignInButton({
       aria-busy={disabled}
     >
       <div className="google-signin-button" ref={buttonRef} />
+      {disabled && (
+        <span className="google-signin-loading" role="status">
+          Signing you in...
+        </span>
+      )}
     </div>
   );
 }
