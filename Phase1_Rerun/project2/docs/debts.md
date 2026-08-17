@@ -86,6 +86,17 @@ GET /api/debts/{debt_id}
 An unknown debt and another user's debt both return `404` to avoid disclosing
 whether the identifier exists.
 
+### Edit debt details
+
+```http
+PATCH /api/debts/{debt_id}
+```
+
+This accepts the same debt fields as creation and updates the plan without
+discarding repayment history. The server recalculates the outstanding balance
+from the corrected opening amount and the existing activity rows. It rejects an
+opening amount that would make that calculated balance negative.
+
 ### Record debt activity
 
 ```http
@@ -103,6 +114,26 @@ Content-Type: application/json
 
 When `createTransaction` is true, the repayment entry and normal MoneyTiq
 transaction share one database commit. A failure rolls both back.
+
+### Correct debt activity
+
+```http
+PATCH /api/debts/{debt_id}/entries/{entry_id}
+Content-Type: application/json
+
+{
+  "entryType": "repayment",
+  "amount": "900.00",
+  "occurredOn": "2026-08-16",
+  "notes": "Corrected amount"
+}
+```
+
+The outstanding balance is derived again after the correction. If a repayment
+created a transaction, MoneyTiq updates that transaction's amount, date and
+description in the same database transaction. A linked repayment cannot be
+changed into interest or a fee because its transaction would then describe a
+different financial event.
 
 ### Archive a debt
 
@@ -127,7 +158,9 @@ statement contents should not be copied into debt notes or application logs.
 - Opening and current balances are calculated correctly.
 - Repayments, interest, fees, and adjustments have the correct sign.
 - Other users receive `404` and cannot mutate the debt.
+- Owners can correct details and activity without replacing calculated totals.
 - Custom fees require a name.
+- A linked repayment and its transaction stay consistent after correction.
 - Linked transaction failures roll back the entire operation.
 - Repeated external references do not create duplicate debts.
 - Archived debts are hidden but preserved.

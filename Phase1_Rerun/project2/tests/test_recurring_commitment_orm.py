@@ -122,6 +122,63 @@ def test_paid_and_skipped_cycles_append_history_and_advance_due_date(
     assert skipped_bill["occurrences"][0]["actualAmount"] is None
 
 
+def test_owner_can_edit_commitment_and_correct_a_paid_cycle(
+    client,
+    register_user,
+):
+    owner = register_user("bill-editor", "bill-editor@example.com")
+    intruder = register_user("bill-edit-intruder", "bill-edit-intruder@example.com")
+    owner_headers = authorization(owner["token"])
+    intruder_headers = authorization(intruder["token"])
+    bill = create_bill(client, owner_headers)
+
+    details = bill_payload(
+        name="Home electricity",
+        amount="3000.00",
+        notes="Updated estimate",
+    )
+    updated = client.patch(
+        f"/api/commitments/{bill['id']}",
+        headers=owner_headers,
+        json=details,
+    )
+    assert updated.status_code == 200, updated.get_json()
+    assert updated.get_json()["data"]["amount"] == "3000.00"
+
+    recorded = client.post(
+        f"/api/commitments/{bill['id']}/cycles",
+        headers=owner_headers,
+        json={
+            "resolution": "paid",
+            "actualAmount": "2800.00",
+            "resolvedOn": "2026-08-29",
+        },
+    )
+    occurrence = recorded.get_json()["data"]["occurrences"][0]
+    advanced_due_date = recorded.get_json()["data"]["nextDueDate"]
+
+    corrected = client.patch(
+        f"/api/commitments/{bill['id']}/cycles/{occurrence['id']}",
+        headers=owner_headers,
+        json={
+            "resolution": "paid",
+            "actualAmount": "2600.00",
+            "resolvedOn": "2026-08-30",
+            "notes": "Corrected receipt amount",
+        },
+    )
+    assert corrected.status_code == 200, corrected.get_json()
+    assert corrected.get_json()["data"]["occurrences"][0]["actualAmount"] == "2600.00"
+    assert corrected.get_json()["data"]["nextDueDate"] == advanced_due_date
+
+    hidden = client.patch(
+        f"/api/commitments/{bill['id']}",
+        headers=intruder_headers,
+        json=details,
+    )
+    assert hidden.status_code == 404
+
+
 def test_month_end_recurrence_keeps_its_original_anchor():
     commitment = RecurringCommitment(
         user_id=1,

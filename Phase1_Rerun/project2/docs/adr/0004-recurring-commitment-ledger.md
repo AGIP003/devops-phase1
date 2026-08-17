@@ -29,13 +29,15 @@ or a background scheduler in v1.
 
 ## Decision
 
-Use one normalized `recurring_commitments` table and one append-only
-`commitment_occurrences` table.
+Use one normalized `recurring_commitments` table and one
+`commitment_occurrences` history table.
 
 - `kind` is `bill` or `subscription`; both are recurring by definition.
 - Bills may have a fixed or estimated amount. Subscriptions use a fixed amount.
 - A successful paid/skipped command appends one occurrence and advances the next
   due date inside the same database transaction.
+- An owner may correct an occurrence entered incorrectly. A correction changes
+  that row but never advances the next due date again.
 - Each command advances exactly one cycle. An item several months overdue stays
   overdue until each missing cycle is deliberately resolved.
 - Calendar cycles retain their original day. A January 31 monthly item becomes

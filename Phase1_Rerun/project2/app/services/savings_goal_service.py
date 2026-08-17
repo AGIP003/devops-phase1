@@ -90,7 +90,11 @@ def _validate_source(source: str) -> str:
     return normalized
 
 
-def _validate_create(data: CreateSavingsGoalInput) -> CreateSavingsGoalInput:
+def _validate_create(
+    data: CreateSavingsGoalInput,
+    *,
+    allow_past_target: bool = False,
+) -> CreateSavingsGoalInput:
     name = _clean_text(data.name, "Goal name", 120, required=True) or ""
     notes = _clean_text(data.notes, "Notes", 1000)
     target_amount = _money(data.target_amount, "Target amount")
@@ -102,7 +106,7 @@ def _validate_create(data: CreateSavingsGoalInput) -> CreateSavingsGoalInput:
     frequency = str(data.contribution_frequency or "").strip().lower()
     if frequency not in GOAL_FREQUENCIES:
         raise SavingsGoalValidationError("Invalid saving frequency")
-    if data.target_date < date.today():
+    if not allow_past_target and data.target_date < date.today():
         raise SavingsGoalValidationError("Target date cannot be in the past")
 
     currency_code = str(data.currency_code or "").strip().upper()
@@ -132,6 +136,8 @@ def _validate_entry(
     entry_type = str(data.entry_type or "").strip().lower()
     if entry_type not in GOAL_ENTRY_TYPES:
         raise SavingsGoalValidationError("Activity must be money added or removed")
+    if data.occurred_on > date.today():
+        raise SavingsGoalValidationError("Activity date cannot be in the future")
     return CreateSavingsGoalEntryInput(
         entry_type=entry_type,
         amount=_money(data.amount, "Activity amount"),
@@ -336,6 +342,84 @@ def add_savings_goal_entry_for_user(
             if existing_entry is not None:
                 return get_savings_goal_for_user(user_id, goal_id)
         raise error
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def update_savings_goal_for_user(
+    user_id: int,
+    goal_id: int,
+    data: CreateSavingsGoalInput,
+) -> SavingsGoal | None:
+    """Update goal planning details without rewriting its savings activity."""
+    validated = _validate_create(data, allow_past_target=True)
+
+    try:
+        goal = get_savings_goal_for_user(user_id, goal_id, for_update=True)
+        if goal is None:
+            db.session.rollback()
+            return None
+
+        goal.name = validated.name
+        goal.target_amount = validated.target_amount
+        goal.target_date = validated.target_date
+        goal.contribution_frequency = validated.contribution_frequency
+        goal.currency_code = validated.currency_code
+        goal.notes = validated.notes
+        db.session.commit()
+        return get_savings_goal_for_user(user_id, goal_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def update_savings_goal_entry_for_user(
+    user_id: int,
+    goal_id: int,
+    entry_id: int,
+    data: CreateSavingsGoalEntryInput,
+) -> SavingsGoal | None:
+    """Correct one activity row and keep the calculated savings non-negative."""
+    validated = _validate_entry(data)
+
+    try:
+        goal = get_savings_goal_for_user(user_id, goal_id, for_update=True)
+        if goal is None:
+            db.session.rollback()
+            return None
+
+        entry = next((item for item in goal.entries if item.id == entry_id), None)
+        if entry is None:
+            db.session.rollback()
+            return None
+
+        balance_without_entry = sum(
+            (
+                Decimal(item.amount)
+                if item.entry_type == "contribution"
+                else -Decimal(item.amount)
+                for item in goal.entries
+                if item.id != entry_id
+            ),
+            Decimal("0"),
+        )
+        corrected_amount = (
+            validated.amount
+            if validated.entry_type == "contribution"
+            else -validated.amount
+        )
+        if balance_without_entry + corrected_amount < 0:
+            raise SavingsGoalValidationError(
+                "This correction would make current savings negative"
+            )
+
+        entry.entry_type = validated.entry_type
+        entry.amount = validated.amount
+        entry.occurred_on = validated.occurred_on
+        entry.notes = validated.notes
+        db.session.commit()
+        return get_savings_goal_for_user(user_id, goal_id)
     except Exception:
         db.session.rollback()
         raise

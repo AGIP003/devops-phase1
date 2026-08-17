@@ -150,6 +150,72 @@ def test_entries_change_balance_and_repayment_can_link_transaction(
     assert interest_response.get_json()["data"]["currentBalance"] == "7500.00"
 
 
+def test_owner_can_correct_debt_and_linked_repayment_atomically(
+    app,
+    client,
+    register_user,
+    payment_method,
+):
+    owner = register_user("debt-editor", "debt-editor@example.com")
+    intruder = register_user("debt-edit-intruder", "debt-edit-intruder@example.com")
+    owner_headers = authorization(owner["token"])
+    intruder_headers = authorization(intruder["token"])
+    debt = create_debt(client, owner_headers)
+
+    details = new_debt_payload()
+    details.update({
+        "title": "Corrected KCB M-PESA loan",
+        "originalAmount": "12000.00",
+    })
+    updated = client.patch(
+        f"/api/debts/{debt['id']}",
+        headers=owner_headers,
+        json=details,
+    )
+    assert updated.status_code == 200, updated.get_json()
+    assert updated.get_json()["data"]["openingBalance"] == "10000.00"
+    assert updated.get_json()["data"]["amountRepaidBeforeTracking"] == "2000.00"
+
+    repayment_response = client.post(
+        f"/api/debts/{debt['id']}/entries",
+        headers=owner_headers,
+        json={
+            "entryType": "repayment",
+            "amount": "1000.00",
+            "occurredOn": date.today().isoformat(),
+            "createTransaction": True,
+            "paymentMethod": "m-pesa",
+        },
+    )
+    repayment = repayment_response.get_json()["data"]["entries"][0]
+
+    corrected = client.patch(
+        f"/api/debts/{debt['id']}/entries/{repayment['id']}",
+        headers=owner_headers,
+        json={
+            "entryType": "repayment",
+            "amount": "500.00",
+            "occurredOn": date.today().isoformat(),
+            "notes": "Corrected repayment",
+        },
+    )
+    assert corrected.status_code == 200, corrected.get_json()
+    assert corrected.get_json()["data"]["currentBalance"] == "9500.00"
+
+    with app.app_context():
+        linked = db.session.get(Transaction, repayment["transactionId"])
+        assert linked is not None
+        assert linked.amount == Decimal("500.00")
+        assert linked.description == "Debt repayment: Corrected KCB M-PESA loan"
+
+    hidden = client.patch(
+        f"/api/debts/{debt['id']}",
+        headers=intruder_headers,
+        json=details,
+    )
+    assert hidden.status_code == 404
+
+
 def test_other_fee_requires_custom_name(client, register_user):
     owner = register_user("fee-owner", "fee-owner@example.com")
     headers = authorization(owner["token"])

@@ -49,6 +49,10 @@ const goal = {
   ],
 };
 
+function localToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   api.get.mockResolvedValue({ data: [goal] });
@@ -166,6 +170,24 @@ describe("Goals", () => {
     const payload = api.post.mock.calls.at(-1)[1];
     expect(payload).not.toHaveProperty("transactionId");
     expect(payload).not.toHaveProperty("createTransaction");
+  });
+
+  it("does not offer a future date for savings activity", async () => {
+    const user = userEvent.setup();
+    render(<Goals />);
+
+    await user.click((await screen.findByText("Emergency fund")).closest("button"));
+    await user.click(screen.getByRole("button", { name: "Update savings" }));
+
+    const form = screen.getByRole("button", { name: "Save update" }).closest("form");
+    expect(within(form).getByLabelText("Date")).toHaveAttribute("max", localToday());
+
+    await user.click(screen.getByRole("button", { name: /view activity/i }));
+    await user.click(screen.getByRole("button", { name: /edit opening savings/i }));
+    expect(screen.getByLabelText("Edit savings date")).toHaveAttribute(
+      "max",
+      localToday(),
+    );
   });
 
   it("edits the activity that produced the saved total", async () => {

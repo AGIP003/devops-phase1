@@ -47,6 +47,12 @@ entry rather than a mutable balance shortcut.
 Returns one owned, non-archived goal. An unknown or another user's ID returns
 404 to avoid disclosing whether the record exists.
 
+### `PATCH /api/goals/{goal_id}`
+
+Edits the goal's name, target, target date, saving frequency, currency and notes.
+It does not overwrite contribution history or accept a replacement
+`currentSavings` value.
+
 ### `POST /api/goals/{goal_id}/entries`
 
 ```json
@@ -59,7 +65,14 @@ Returns one owned, non-archived goal. An unknown or another user's ID returns
 ```
 
 `entryType` is `contribution` or `withdrawal`. A withdrawal cannot exceed the
-current saved balance.
+current saved balance. The activity date cannot be in the future: future money
+must not affect today's saved balance or suggested contribution.
+
+### `PATCH /api/goals/{goal_id}/entries/{entry_id}`
+
+Corrects one owned contribution or withdrawal. Current savings and the suggested
+contribution are recalculated from the activity rows. A correction that would
+make current savings negative is rejected.
 
 ### `DELETE /api/goals/{goal_id}`
 
@@ -71,3 +84,14 @@ Trusted Telegram or import adapters call the service layer directly with a
 supported `created_via` value and an `external_reference`. The uniqueness
 constraints make retried messages safe. Public browser payloads cannot choose
 their own source or external reference.
+
+## Correction policy
+
+MoneyTiq does not expose a direct balance editor. A balance is a result, not an
+independent fact: changing it without changing the activity that produced it
+would leave two conflicting versions of the user's finances.
+
+The suggestion uses today's date, not the most recent activity date. If the user
+has not saved for several weeks, using an old activity date would count periods
+that have already passed and suggest too little. The calculation therefore uses
+the current confirmed balance and the periods from today to the target date.

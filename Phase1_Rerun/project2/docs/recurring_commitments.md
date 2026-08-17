@@ -21,7 +21,9 @@ ID.
 | `GET` | `/api/commitments` | List the current user's non-archived items |
 | `GET` | `/api/commitments/{id}` | Fetch one owned item |
 | `POST` | `/api/commitments` | Create a bill or subscription |
+| `PATCH` | `/api/commitments/{id}` | Edit future commitment details |
 | `POST` | `/api/commitments/{id}/cycles` | Record a paid or skipped cycle |
+| `PATCH` | `/api/commitments/{id}/cycles/{occurrence_id}` | Correct a paid or skipped cycle |
 | `PATCH` | `/api/commitments/{id}/status` | Cancel or reactivate recurrence |
 | `DELETE` | `/api/commitments/{id}` | Soft-archive an item |
 
@@ -52,6 +54,16 @@ Example payment:
 }
 ```
 
+Editing commitment details changes the current plan and future due date; it does
+not rewrite earlier payment rows. Correcting an earlier payment updates only
+that occurrence and deliberately does not advance the next due date a second
+time.
+
+The Bills screen uses compact rows for quick scanning and expands one row at a
+time for details and history. Known providers such as Spotify, Netflix, ChatGPT,
+YouTube and Figma use bundled interface marks; unknown providers receive the
+normal fallback icon. No third-party logo is fetched while the page loads.
+
 ## Integrity and failure behavior
 
 - PostgreSQL checks kind, cadence, amounts, lifecycle status, custom interval and
@@ -60,11 +72,19 @@ Example payment:
   confirming whether that resource exists.
 - Cycle resolution locks the commitment row, writes history and advances the due
   date in one ACID transaction. A failure rolls back both changes.
+- Correcting an existing cycle never advances the schedule again.
 - Future external commands use `(owner, source, external_reference)` uniqueness.
   Retrying the same Telegram message returns the existing result rather than
   adding another cycle.
 - Responses use `Cache-Control: private, no-store` because payment schedules are
   private financial information.
+
+## Correction policy
+
+Occurrences are historical records but are correctable when the user entered an
+amount, date or status incorrectly. This is a practical v1 compromise: existing
+timestamps show that a row changed, but the system does not yet retain every
+prior value as a regulated audit ledger would.
 
 ## Operations
 

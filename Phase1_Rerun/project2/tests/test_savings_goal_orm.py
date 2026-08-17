@@ -132,6 +132,95 @@ def test_contribution_and_withdrawal_update_balance(client, register_user):
     assert withdrawal.get_json()["data"]["entries"][0]["entryType"] == "withdrawal"
 
 
+def test_future_savings_activity_is_rejected_on_create_and_correction(
+    client,
+    register_user,
+):
+    owner = register_user("future-goal-owner", "future-goal-owner@example.com")
+    headers = authorization(owner["token"])
+    goal = create_goal(client, headers)
+    future_date = (date.today() + timedelta(days=1)).isoformat()
+
+    future_entry = client.post(
+        f"/api/goals/{goal['id']}/entries",
+        headers=headers,
+        json={
+            "entryType": "contribution",
+            "amount": "5000.00",
+            "occurredOn": future_date,
+        },
+    )
+    assert future_entry.status_code == 400
+
+    opening_entry_id = goal["entries"][0]["id"]
+    future_correction = client.patch(
+        f"/api/goals/{goal['id']}/entries/{opening_entry_id}",
+        headers=headers,
+        json={
+            "entryType": "contribution",
+            "amount": "5000.00",
+            "occurredOn": future_date,
+        },
+    )
+    assert future_correction.status_code == 400
+
+    unchanged = client.get(f"/api/goals/{goal['id']}", headers=headers)
+    assert unchanged.status_code == 200
+    assert unchanged.get_json()["currentSavings"] == "20000.00"
+    assert unchanged.get_json()["entries"][0]["occurredOn"] == date.today().isoformat()
+
+
+def test_owner_can_correct_goal_details_and_savings_activity(
+    client,
+    register_user,
+):
+    owner = register_user("goal-editor", "goal-editor@example.com")
+    intruder = register_user("goal-editor-intruder", "goal-editor-intruder@example.com")
+    owner_headers = authorization(owner["token"])
+    intruder_headers = authorization(intruder["token"])
+    goal = create_goal(client, owner_headers)
+
+    details = goal_payload()
+    details.update({
+        "name": "Emergency reserve",
+        "targetAmount": "120000.00",
+        "contributionFrequency": "monthly",
+    })
+    updated = client.patch(
+        f"/api/goals/{goal['id']}",
+        headers=owner_headers,
+        json=details,
+    )
+    assert updated.status_code == 200, updated.get_json()
+    assert updated.get_json()["data"]["name"] == "Emergency reserve"
+    assert updated.get_json()["data"]["targetAmount"] == "120000.00"
+
+    opening_entry_id = goal["entries"][0]["id"]
+    corrected = client.patch(
+        f"/api/goals/{goal['id']}/entries/{opening_entry_id}",
+        headers=owner_headers,
+        json={
+            "entryType": "contribution",
+            "amount": "5000.00",
+            "occurredOn": date.today().isoformat(),
+            "notes": "Corrected opening savings",
+        },
+    )
+    assert corrected.status_code == 200, corrected.get_json()
+    assert corrected.get_json()["data"]["currentSavings"] == "5000.00"
+
+    hidden = client.patch(
+        f"/api/goals/{goal['id']}/entries/{opening_entry_id}",
+        headers=intruder_headers,
+        json={
+            "entryType": "contribution",
+            "amount": "1.00",
+            "occurredOn": date.today().isoformat(),
+        },
+    )
+    assert hidden.status_code == 404
+
+
 def test_invalid_withdrawal_rolls_back_and_session_recovers(
     app,
     client,

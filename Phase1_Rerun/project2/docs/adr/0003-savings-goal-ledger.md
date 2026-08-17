@@ -14,9 +14,13 @@ entries when a message is retried.
 ## Decision
 
 A goal stores the plan: name, target, target date, and weekly, fortnightly, or
-monthly contribution frequency. A separate append-only entry table stores each
+monthly contribution frequency. A separate activity table stores each
 contribution or withdrawal. The current balance and suggested contribution are
 derived rather than maintained as independently editable totals.
+
+Activity may be corrected when the user made an input mistake, following ADR
+0005, but it cannot be dated in the future. Suggestions use the confirmed
+balance and the periods from the current date to the target date.
 
 The browser uses `created_via=manual`. Trusted future adapters may call the
 service with `created_via=telegram` and an `external_reference` such as a

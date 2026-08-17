@@ -140,6 +140,7 @@ def debt_to_dict(debt: Debt) -> dict[str, object]:
         "trackingKind": debt.tracking_kind,
         "originalAmount": str(original_amount) if original_amount is not None else None,
         "openingBalance": str(debt.opening_balance),
+        "amountRepaidBeforeTracking": str(debt.amount_repaid_before_tracking),
         "currentBalance": str(debt.current_balance),
         "paidAmount": str(debt.paid_amount),
         "progress": progress,

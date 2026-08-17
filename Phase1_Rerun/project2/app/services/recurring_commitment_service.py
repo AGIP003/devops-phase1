@@ -384,6 +384,82 @@ def resolve_commitment_cycle_for_user(
         raise
 
 
+def update_recurring_commitment_for_user(
+    user_id: int,
+    commitment_id: int,
+    data: CreateRecurringCommitmentInput,
+) -> RecurringCommitment | None:
+    """Update future recurring-payment details without rewriting past cycles."""
+    validated = _validate_create(data)
+
+    try:
+        commitment = get_recurring_commitment_for_user(
+            user_id,
+            commitment_id,
+            for_update=True,
+        )
+        if commitment is None:
+            db.session.rollback()
+            return None
+
+        commitment.kind = validated.kind
+        commitment.name = validated.name
+        commitment.provider = validated.provider
+        commitment.category = validated.category
+        commitment.amount = validated.amount
+        commitment.amount_kind = validated.amount_kind
+        commitment.currency_code = validated.currency_code
+        commitment.next_due_date = validated.next_due_date
+        commitment.frequency = validated.frequency
+        commitment.custom_interval_days = validated.custom_interval_days
+        commitment.recurrence_anchor_day = validated.next_due_date.day
+        commitment.auto_renews = validated.auto_renews
+        commitment.notes = validated.notes
+        db.session.commit()
+        return get_recurring_commitment_for_user(user_id, commitment_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def update_commitment_occurrence_for_user(
+    user_id: int,
+    commitment_id: int,
+    occurrence_id: int,
+    data: ResolveCommitmentCycleInput,
+) -> RecurringCommitment | None:
+    """Correct a recorded paid/skipped cycle without advancing the schedule again."""
+    validated = _validate_resolution(data)
+
+    try:
+        commitment = get_recurring_commitment_for_user(
+            user_id,
+            commitment_id,
+            for_update=True,
+        )
+        if commitment is None:
+            db.session.rollback()
+            return None
+
+        occurrence = next(
+            (item for item in commitment.occurrences if item.id == occurrence_id),
+            None,
+        )
+        if occurrence is None:
+            db.session.rollback()
+            return None
+
+        occurrence.resolution = validated.resolution
+        occurrence.actual_amount = validated.actual_amount
+        occurrence.resolved_on = validated.resolved_on
+        occurrence.notes = validated.notes
+        db.session.commit()
+        return get_recurring_commitment_for_user(user_id, commitment_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def set_recurring_commitment_status_for_user(
     user_id: int,
     commitment_id: int,

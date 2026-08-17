@@ -37,6 +37,8 @@ from app.services.debt_service import (
     create_debt_for_user,
     get_debt_for_user,
     list_debts_for_user,
+    update_debt_entry_for_user,
+    update_debt_for_user,
 )
 from app.savings_goal_validation import (
     parse_savings_goal_create_payload,
@@ -49,6 +51,8 @@ from app.services.savings_goal_service import (
     create_savings_goal_for_user,
     get_savings_goal_for_user,
     list_savings_goals_for_user,
+    update_savings_goal_entry_for_user,
+    update_savings_goal_for_user,
 )
 from app.recurring_commitment_validation import (
     parse_commitment_cycle_payload,
@@ -63,6 +67,8 @@ from app.services.recurring_commitment_service import (
     list_recurring_commitments_for_user,
     resolve_commitment_cycle_for_user,
     set_recurring_commitment_status_for_user,
+    update_commitment_occurrence_for_user,
+    update_recurring_commitment_for_user,
 )
 from finance_tracker.utils.validations import (
     validate_amount, validate_category, validate_date, validate_description, 
@@ -166,6 +172,42 @@ def register_routes(app):
             "status": "success",
         }), 201
 
+    @app.route("/api/debts/<int:debt_id>", methods=["PATCH"])
+    @login_required
+    def update_debt(debt_id):
+        try:
+            command = parse_debt_create_payload(request.get_json(silent=True))
+            debt = update_debt_for_user(
+                g.current_user["user_id"],
+                debt_id,
+                command,
+            )
+        except DebtValidationError as error:
+            abort(400, description=str(error))
+        if debt is None:
+            abort(404, description="Debt not found")
+        return jsonify({"data": debt_to_dict(debt), "status": "success"}), 200
+
+    @app.route(
+        "/api/debts/<int:debt_id>/entries/<int:entry_id>",
+        methods=["PATCH"],
+    )
+    @login_required
+    def update_debt_entry(debt_id, entry_id):
+        try:
+            command = parse_debt_entry_payload(request.get_json(silent=True))
+            debt = update_debt_entry_for_user(
+                g.current_user["user_id"],
+                debt_id,
+                entry_id,
+                command,
+            )
+        except (DebtValidationError, ValueError) as error:
+            abort(400, description=str(error))
+        if debt is None:
+            abort(404, description="Debt activity not found")
+        return jsonify({"data": debt_to_dict(debt), "status": "success"}), 200
+
     @app.route("/api/debts/<int:debt_id>", methods=["DELETE"])
     @login_required
     def archive_debt(debt_id):
@@ -234,6 +276,52 @@ def register_routes(app):
             "status": "success",
         }), 201
 
+    @app.route("/api/goals/<int:goal_id>", methods=["PATCH"])
+    @login_required
+    def update_savings_goal(goal_id):
+        try:
+            command = parse_savings_goal_create_payload(
+                request.get_json(silent=True)
+            )
+            goal = update_savings_goal_for_user(
+                g.current_user["user_id"],
+                goal_id,
+                command,
+            )
+        except SavingsGoalValidationError as error:
+            abort(400, description=str(error))
+        if goal is None:
+            abort(404, description="Savings goal not found")
+        return jsonify({
+            "data": savings_goal_to_dict(goal),
+            "status": "success",
+        }), 200
+
+    @app.route(
+        "/api/goals/<int:goal_id>/entries/<int:entry_id>",
+        methods=["PATCH"],
+    )
+    @login_required
+    def update_savings_goal_entry(goal_id, entry_id):
+        try:
+            command = parse_savings_goal_entry_payload(
+                request.get_json(silent=True)
+            )
+            goal = update_savings_goal_entry_for_user(
+                g.current_user["user_id"],
+                goal_id,
+                entry_id,
+                command,
+            )
+        except SavingsGoalValidationError as error:
+            abort(400, description=str(error))
+        if goal is None:
+            abort(404, description="Savings activity not found")
+        return jsonify({
+            "data": savings_goal_to_dict(goal),
+            "status": "success",
+        }), 200
+
     @app.route("/api/goals/<int:goal_id>", methods=["DELETE"])
     @login_required
     def archive_savings_goal(goal_id):
@@ -292,6 +380,27 @@ def register_routes(app):
             "status": "success",
         }), 201
 
+    @app.route("/api/commitments/<int:commitment_id>", methods=["PATCH"])
+    @login_required
+    def update_recurring_commitment(commitment_id):
+        try:
+            command = parse_recurring_commitment_create_payload(
+                request.get_json(silent=True)
+            )
+            commitment = update_recurring_commitment_for_user(
+                g.current_user["user_id"],
+                commitment_id,
+                command,
+            )
+        except RecurringCommitmentValidationError as error:
+            abort(400, description=str(error))
+        if commitment is None:
+            abort(404, description="Bill or subscription not found")
+        return jsonify({
+            "data": recurring_commitment_to_dict(commitment),
+            "status": "success",
+        }), 200
+
     @app.route(
         "/api/commitments/<int:commitment_id>/cycles",
         methods=["POST"],
@@ -315,6 +424,31 @@ def register_routes(app):
             "data": recurring_commitment_to_dict(commitment),
             "status": "success",
         }), 201
+
+    @app.route(
+        "/api/commitments/<int:commitment_id>/cycles/<int:occurrence_id>",
+        methods=["PATCH"],
+    )
+    @login_required
+    def update_commitment_cycle(commitment_id, occurrence_id):
+        try:
+            command = parse_commitment_cycle_payload(
+                request.get_json(silent=True)
+            )
+            commitment = update_commitment_occurrence_for_user(
+                g.current_user["user_id"],
+                commitment_id,
+                occurrence_id,
+                command,
+            )
+        except RecurringCommitmentValidationError as error:
+            abort(400, description=str(error))
+        if commitment is None:
+            abort(404, description="Payment history entry not found")
+        return jsonify({
+            "data": recurring_commitment_to_dict(commitment),
+            "status": "success",
+        }), 200
 
     @app.route(
         "/api/commitments/<int:commitment_id>/status",

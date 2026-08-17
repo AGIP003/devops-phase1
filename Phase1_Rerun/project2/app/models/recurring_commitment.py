@@ -143,7 +143,7 @@ class RecurringCommitment(TimeStampMixin, SoftDeleteMixin, Base):
 
 
 class CommitmentOccurrence(TimeStampMixin, Base):
-    """An immutable record of one due cycle being paid or skipped."""
+    """A historical due-cycle record that the owner may correct."""
 
     __tablename__ = "commitment_occurrences"
     __table_args__ = (

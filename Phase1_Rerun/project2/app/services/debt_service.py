@@ -241,14 +241,20 @@ def _validate_create_input(data: CreateDebtInput) -> tuple[CreateDebtInput, Deci
     ), opening_balance
 
 
-def get_debt_for_user(user_id: int, debt_id: int) -> Debt | None:
-    return db.session.scalar(
-        _debt_select().where(
-            Debt.id == debt_id,
-            Debt.user_id == user_id,
-            Debt.deleted_at.is_(None),
-        )
+def get_debt_for_user(
+    user_id: int,
+    debt_id: int,
+    *,
+    for_update: bool = False,
+) -> Debt | None:
+    statement = _debt_select().where(
+        Debt.id == debt_id,
+        Debt.user_id == user_id,
+        Debt.deleted_at.is_(None),
     )
+    if for_update:
+        statement = statement.with_for_update()
+    return db.session.scalar(statement)
 
 
 def list_debts_for_user(user_id: int) -> list[Debt]:
@@ -443,6 +449,163 @@ def add_debt_entry_for_user(
 
         if debt.status not in {"written_off", "cancelled"}:
             debt.status = "settled" if debt.current_balance == 0 else "active"
+
+        db.session.commit()
+        return get_debt_for_user(user_id, debt_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def _raw_debt_balance(
+    debt: Debt,
+    *,
+    replacing_entry_id: int | None = None,
+    replacement_type: str | None = None,
+    replacement_amount: Decimal | None = None,
+) -> Decimal:
+    balance = Decimal(debt.opening_balance)
+    for entry in debt.entries:
+        if entry.id == replacing_entry_id:
+            continue
+        amount = Decimal(entry.amount)
+        if entry.entry_type in {"interest", "fee", "adjustment_increase"}:
+            balance += amount
+        else:
+            balance -= amount
+
+    if replacement_type and replacement_amount is not None:
+        if replacement_type in {"interest", "fee", "adjustment_increase"}:
+            balance += replacement_amount
+        else:
+            balance -= replacement_amount
+    return balance
+
+
+def update_debt_for_user(
+    user_id: int,
+    debt_id: int,
+    data: CreateDebtInput,
+) -> Debt | None:
+    """Update the debt plan while preserving all recorded activity rows."""
+    validated, opening_balance = _validate_create_input(data)
+
+    try:
+        debt = get_debt_for_user(user_id, debt_id, for_update=True)
+        if debt is None:
+            db.session.rollback()
+            return None
+
+        debt.title = validated.title
+        debt.direction = validated.direction
+        debt.category = validated.category
+        debt.counterparty = validated.counterparty
+        debt.currency_code = validated.currency_code
+        debt.tracking_kind = validated.tracking_kind
+        debt.original_amount = validated.original_amount
+        debt.opening_balance = opening_balance
+        debt.amount_repaid_before_tracking = validated.amount_repaid_before_tracking
+        debt.opened_on = validated.opened_on
+        debt.notes = validated.notes
+        debt.has_interest = validated.has_interest
+        debt.stated_interest_rate = validated.stated_interest_rate
+        debt.interest_period = validated.interest_period
+
+        if _raw_debt_balance(debt) < 0:
+            raise DebtValidationError(
+                "The corrected opening amount cannot be lower than recorded repayments"
+            )
+
+        if validated.schedule is None:
+            debt.schedule = None
+        elif debt.schedule is None:
+            debt.schedule = DebtSchedule(
+                frequency=validated.schedule.frequency,
+                interval_count=validated.schedule.interval_count,
+                installment_amount=validated.schedule.installment_amount,
+                next_due_date=validated.schedule.next_due_date,
+                final_due_date=validated.schedule.final_due_date,
+            )
+        else:
+            debt.schedule.frequency = validated.schedule.frequency
+            debt.schedule.interval_count = validated.schedule.interval_count
+            debt.schedule.installment_amount = validated.schedule.installment_amount
+            debt.schedule.next_due_date = validated.schedule.next_due_date
+            debt.schedule.final_due_date = validated.schedule.final_due_date
+
+        debt.fee_terms.clear()
+        db.session.flush()
+        debt.fee_terms.extend(
+            DebtFeeTerm(
+                fee_category=term.fee_category,
+                custom_fee_name=term.custom_fee_name,
+            )
+            for term in validated.fee_terms
+        )
+
+        for entry in debt.entries:
+            if entry.transaction is not None:
+                entry.transaction.description = f"Debt repayment: {debt.title}"
+
+        if debt.status not in {"written_off", "cancelled"}:
+            debt.status = "settled" if _raw_debt_balance(debt) == 0 else "active"
+
+        db.session.commit()
+        return get_debt_for_user(user_id, debt_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def update_debt_entry_for_user(
+    user_id: int,
+    debt_id: int,
+    entry_id: int,
+    data: CreateDebtEntryInput,
+) -> Debt | None:
+    """Correct one debt activity and its linked transaction as one ACID unit."""
+    validated = _validate_entry_input(data)
+
+    try:
+        debt = get_debt_for_user(user_id, debt_id, for_update=True)
+        if debt is None:
+            db.session.rollback()
+            return None
+
+        entry = next((item for item in debt.entries if item.id == entry_id), None)
+        if entry is None:
+            db.session.rollback()
+            return None
+        if entry.transaction is not None and validated.entry_type != "repayment":
+            raise DebtValidationError(
+                "A linked repayment must remain a repayment"
+            )
+        if _raw_debt_balance(
+            debt,
+            replacing_entry_id=entry_id,
+            replacement_type=validated.entry_type,
+            replacement_amount=validated.amount,
+        ) < 0:
+            raise DebtValidationError(
+                "This correction would make the outstanding balance negative"
+            )
+
+        entry.entry_type = validated.entry_type
+        entry.amount = validated.amount
+        entry.occurred_on = validated.occurred_on
+        entry.fee_category = validated.fee_category
+        entry.custom_fee_name = validated.custom_fee_name
+        entry.notes = validated.notes
+
+        if entry.transaction is not None:
+            if entry.transaction.user_id != user_id:
+                raise RuntimeError("Linked transaction ownership is inconsistent")
+            entry.transaction.amount = validated.amount
+            entry.transaction.date = validated.occurred_on
+            entry.transaction.description = f"Debt repayment: {debt.title}"
+
+        if debt.status not in {"written_off", "cancelled"}:
+            debt.status = "settled" if _raw_debt_balance(debt) == 0 else "active"
 
         db.session.commit()
         return get_debt_for_user(user_id, debt_id)

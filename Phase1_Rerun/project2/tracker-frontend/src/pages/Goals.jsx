@@ -367,7 +367,7 @@ function Goals() {
           </select>
         </label>
         <label className="debt-field"><span>Amount</span><input type="number" min="0.01" step="0.01" value={entryForm.amount} onChange={(event) => setEntryForm({ ...entryForm, amount: event.target.value })} /></label>
-        <label className="debt-field"><span>Date</span><input type="date" value={entryForm.occurredOn} onChange={(event) => setEntryForm({ ...entryForm, occurredOn: event.target.value })} /></label>
+        <label className="debt-field"><span>Date</span><input type="date" max={todayValue()} value={entryForm.occurredOn} onChange={(event) => setEntryForm({ ...entryForm, occurredOn: event.target.value })} /></label>
         <label className="debt-field"><span>Note <em>optional</em></span><input value={entryForm.notes} onChange={(event) => setEntryForm({ ...entryForm, notes: event.target.value })} placeholder="Weekly saving" /></label>
         {formError && <p className="debt-form-error goal-field-wide" role="alert">{formError}</p>}
         <div className="debt-form-actions goal-field-wide"><button type="button" className="debt-secondary-button" onClick={() => setShowEntryForm(false)}>Cancel</button><button type="submit" className="feature-primary-button" disabled={saving}>{saving ? "Saving…" : "Save update"}</button></div>
@@ -524,7 +524,7 @@ function Goals() {
           <div className="edit-panel-grid">
             <label className="debt-field"><span>Change</span><select aria-label="Edit savings change" value={editEntryForm.entryType} onChange={(event) => setEditEntryForm({ ...editEntryForm, entryType: event.target.value })}><option value="contribution">Money added</option><option value="withdrawal">Money removed</option></select></label>
             <label className="debt-field"><span>Amount</span><input aria-label="Edit savings amount" type="number" min="0.01" step="0.01" value={editEntryForm.amount} onChange={(event) => setEditEntryForm({ ...editEntryForm, amount: event.target.value })} /></label>
-            <label className="debt-field"><span>Date</span><input aria-label="Edit savings date" type="date" value={editEntryForm.occurredOn} onChange={(event) => setEditEntryForm({ ...editEntryForm, occurredOn: event.target.value })} /></label>
+            <label className="debt-field"><span>Date</span><input aria-label="Edit savings date" type="date" max={todayValue()} value={editEntryForm.occurredOn} onChange={(event) => setEditEntryForm({ ...editEntryForm, occurredOn: event.target.value })} /></label>
             <label className="debt-field edit-panel-wide"><span>Note <em>optional</em></span><input aria-label="Edit savings note" value={editEntryForm.notes} onChange={(event) => setEditEntryForm({ ...editEntryForm, notes: event.target.value })} /></label>
           </div>
         </EditPanel>
