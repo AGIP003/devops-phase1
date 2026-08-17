@@ -6193,72 +6193,32 @@ body.public-screen {
 }
 
 .subscription-icon-brand {
-  background: transparent;
-  border-radius: 0;
-  width: 48px;
-}
-
-.subscription-icon-brand.subscription-icon-small {
-  width: 38px;
-}
-
-.subscription-icon-netflix svg {
-  height: 30px;
-  width: 30px;
-}
-
-.subscription-icon-small.subscription-icon-netflix svg {
-  height: 24px;
-  width: 24px;
-}
-
-.subscription-icon-spotify svg {
-  background: #1db954;
+  border: 1px solid rgba(28, 39, 31, 0.1);
   border-radius: 50%;
-  color: #111111;
-  height: 32px;
-  padding: 5px;
-  width: 32px;
+  box-shadow: 0 5px 12px rgba(28, 39, 31, 0.08);
 }
 
-.subscription-icon-small.subscription-icon-spotify svg {
-  height: 25px;
-  padding: 4px;
-  width: 25px;
+.subscription-icon-brand svg {
+  height: 23px;
+  max-width: 25px;
+  width: 23px;
 }
 
-.subscription-icon-figma svg {
-  height: 31px;
-  width: 31px;
+.subscription-icon-brand.subscription-icon-small svg {
+  height: 18px;
+  max-width: 20px;
+  width: 18px;
 }
 
-.subscription-icon-chatgpt,
-.subscription-icon-openai {
-  background: #202123;
-  color: #ffffff;
+.subscription-icon-label {
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
-.subscription-icon-chatgpt svg,
-.subscription-icon-openai svg,
-.subscription-icon-youtube svg {
-  height: 31px;
-  width: 31px;
-}
-
-.subscription-icon-small.subscription-icon-chatgpt svg,
-.subscription-icon-small.subscription-icon-openai svg,
-.subscription-icon-small.subscription-icon-youtube svg {
-  height: 25px;
-  width: 25px;
-}
-
-.subscription-icon-youtube {
-  background: transparent;
-}
-
-.subscription-icon-small.subscription-icon-figma svg {
-  height: 25px;
-  width: 25px;
+.subscription-icon-small .subscription-icon-label {
+  font-size: 0.6rem;
 }
 
 .bills-layout {

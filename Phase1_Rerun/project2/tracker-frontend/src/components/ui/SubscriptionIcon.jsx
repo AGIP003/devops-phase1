@@ -1,108 +1,56 @@
 import { ReceiptText, Repeat2, Wifi, Zap } from "lucide-react";
-
-function NetflixMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M6 3h4.1l7.9 18h-4.2L6 3Z" fill="#e50914" />
-      <path d="M14 3h4v18h-4V3Z" fill="#b20710" />
-      <path d="M6 3h4v18H6V3Z" fill="#e50914" />
-    </svg>
-  );
-}
-
-function SpotifyMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M7.1 9.4c3.5-1 7.5-.6 10.5 1.1M7.7 12.5c2.8-.8 6-.5 8.4.9M8.3 15.4c2-.5 4.2-.4 6 .6"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function FigmaMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="9" cy="6" r="3" fill="#f24e1e" />
-      <circle cx="15" cy="6" r="3" fill="#ff7262" />
-      <circle cx="9" cy="12" r="3" fill="#a259ff" />
-      <circle cx="15" cy="12" r="3" fill="#1abcfe" />
-      <circle cx="9" cy="18" r="3" fill="#0acf83" />
-    </svg>
-  );
-}
-
-function ChatGptMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
-        <path d="M12 4.1a4 4 0 0 1 6.8 2.9 4 4 0 0 1 1 7.2 4 4 0 0 1-5.8 5.1 4 4 0 0 1-6.8-2.9 4 4 0 0 1-1-7.2A4 4 0 0 1 12 4.1Z" />
-        <path d="m8.2 9.2 3.8-2.1 3.8 2.1v4.3L12 15.7l-3.8-2.2V9.2Zm3.8-2.1v4.3l3.8 2.1M8.2 9.2l3.8 2.2v4.3" />
-      </g>
-    </svg>
-  );
-}
-
-function YouTubeMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="2" y="5" width="20" height="14" rx="4" fill="#ff0000" />
-      <path d="m10 9 5 3-5 3V9Z" fill="#ffffff" />
-    </svg>
-  );
-}
-
-const brandIcons = {
-  netflix: NetflixMark,
-  spotify: SpotifyMark,
-  figma: FigmaMark,
-  chatgpt: ChatGptMark,
-  openai: ChatGptMark,
-  youtube: YouTubeMark,
-};
-
-function getSubscriptionKey(subscription) {
-  const searchableName = `${subscription.provider || ""} ${subscription.name || ""}`
-    .trim()
-    .toLowerCase();
-  return Object.keys(brandIcons).find((key) => searchableName.includes(key))
-    || searchableName.replace(/\s+/g, "-");
-}
+import {
+  normalizeSubscriptionBrand,
+  resolveSubscriptionBrand,
+} from "./subscriptionBrands";
 
 function SubscriptionIcon({ subscription, small = false }) {
-  const key = getSubscriptionKey(subscription);
-  const BrandIcon = brandIcons[key];
-  const isBrandIcon = Boolean(BrandIcon);
+  const brand = resolveSubscriptionBrand(subscription);
+  const key = brand?.key || "generic";
+  const searchableName = normalizeSubscriptionBrand(
+    `${subscription.provider || ""} ${subscription.name || ""}`,
+  );
   const fallbackColors = subscription.kind === "bill"
     ? { backgroundColor: "#eef0dc", color: "#59652f" }
     : { backgroundColor: "#e8f2eb", color: "#287a4d" };
-  const customColors = subscription.brandColor
+  const customColors = brand
+    ? {
+        backgroundColor: brand.backgroundColor,
+        color: brand.color,
+      }
+    : subscription.brandColor
     ? {
         backgroundColor: subscription.brandColor,
         color: subscription.accentColor,
       }
     : fallbackColors;
 
-  let fallbackIcon = <Zap size={small ? 18 : 21} />;
-  if (subscription.kind === "bill") {
-    fallbackIcon = <ReceiptText size={small ? 18 : 21} />;
-  } else if (subscription.kind === "subscription") {
-    fallbackIcon = <Repeat2 size={small ? 18 : 21} />;
-  } else if (key === "wifi") {
+  let fallbackIcon = <Repeat2 size={small ? 18 : 21} />;
+  if (searchableName.includes("wifi") || searchableName.includes("internet")) {
     fallbackIcon = <Wifi size={small ? 18 : 21} />;
+  } else if (
+    searchableName.includes("electric")
+    || searchableName.includes("power")
+  ) {
+    fallbackIcon = <Zap size={small ? 18 : 21} />;
+  } else if (subscription.kind === "bill") {
+    fallbackIcon = <ReceiptText size={small ? 18 : 21} />;
   }
 
   return (
     <span
-      className={`subscription-icon ${isBrandIcon ? "subscription-icon-brand" : ""} ${small ? "subscription-icon-small" : ""} subscription-icon-${key}`}
-      style={isBrandIcon ? undefined : customColors}
+      className={`subscription-icon ${brand ? "subscription-icon-brand" : ""} ${small ? "subscription-icon-small" : ""} subscription-icon-${key}`}
+      data-brand-key={key}
+      style={customColors}
       aria-hidden="true"
     >
-      {BrandIcon ? <BrandIcon /> : fallbackIcon}
+      {brand?.icon && (
+        <svg viewBox="0 0 24 24">
+          <path d={brand.icon.path} fill="currentColor" />
+        </svg>
+      )}
+      {brand?.label && <b className="subscription-icon-label">{brand.label}</b>}
+      {!brand && fallbackIcon}
     </span>
   );
 }
