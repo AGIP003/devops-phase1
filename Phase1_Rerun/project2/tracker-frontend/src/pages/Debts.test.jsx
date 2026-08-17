@@ -10,6 +10,7 @@ vi.mock("../services/api", () => ({
   default: {
     delete: vi.fn(),
     get: vi.fn(),
+    patch: vi.fn(),
     post: vi.fn(),
   },
 }));
@@ -58,6 +59,7 @@ beforeEach(() => {
   api.get.mockResolvedValue({ data: [debt] });
   api.delete.mockResolvedValue({ data: { status: "success" } });
   api.post.mockResolvedValue({ data: { data: debt, status: "success" } });
+  api.patch.mockResolvedValue({ data: { data: debt, status: "success" } });
 });
 
 describe("Debts", () => {
@@ -170,5 +172,43 @@ describe("Debts", () => {
       }),
     ));
     expect(await screen.findByText(/Linked transaction/)).toBeInTheDocument();
+  });
+
+  it("corrects a linked repayment from its activity row", async () => {
+    const user = userEvent.setup();
+    const repayment = {
+      id: 11,
+      entryType: "repayment",
+      amount: "1000.00",
+      occurredOn: "2026-08-16",
+      notes: "First repayment",
+      transactionId: 44,
+      createdVia: "manual",
+    };
+    api.get.mockResolvedValue({ data: [{ ...debt, entries: [repayment] }] });
+    api.patch.mockResolvedValue({
+      data: {
+        data: {
+          ...debt,
+          currentBalance: "7500.00",
+          entries: [{ ...repayment, amount: "500.00" }],
+        },
+      },
+    });
+    render(<Debts />);
+
+    await user.click((await screen.findByText("KCB M-PESA loan")).closest("button"));
+    await user.click(screen.getByRole("button", { name: /edit first repayment/i }));
+    expect(screen.getByLabelText("Edit debt activity type")).toBeDisabled();
+    const amount = screen.getByLabelText("Edit debt activity amount");
+    await user.clear(amount);
+    await user.type(amount, "500");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      "/debts/7/entries/11",
+      expect.objectContaining({ amount: "500", entryType: "repayment" }),
+    ));
+    expect(await screen.findByText(/linked transaction corrected/i)).toBeInTheDocument();
   });
 });

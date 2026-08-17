@@ -36,14 +36,41 @@ function FigmaMark() {
   );
 }
 
+function ChatGptMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7">
+        <path d="M12 4.1a4 4 0 0 1 6.8 2.9 4 4 0 0 1 1 7.2 4 4 0 0 1-5.8 5.1 4 4 0 0 1-6.8-2.9 4 4 0 0 1-1-7.2A4 4 0 0 1 12 4.1Z" />
+        <path d="m8.2 9.2 3.8-2.1 3.8 2.1v4.3L12 15.7l-3.8-2.2V9.2Zm3.8-2.1v4.3l3.8 2.1M8.2 9.2l3.8 2.2v4.3" />
+      </g>
+    </svg>
+  );
+}
+
+function YouTubeMark() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="4" fill="#ff0000" />
+      <path d="m10 9 5 3-5 3V9Z" fill="#ffffff" />
+    </svg>
+  );
+}
+
 const brandIcons = {
   netflix: NetflixMark,
   spotify: SpotifyMark,
   figma: FigmaMark,
+  chatgpt: ChatGptMark,
+  openai: ChatGptMark,
+  youtube: YouTubeMark,
 };
 
 function getSubscriptionKey(subscription) {
-  return subscription.name.toLowerCase().replace(/\s+/g, "-");
+  const searchableName = `${subscription.provider || ""} ${subscription.name || ""}`
+    .trim()
+    .toLowerCase();
+  return Object.keys(brandIcons).find((key) => searchableName.includes(key))
+    || searchableName.replace(/\s+/g, "-");
 }
 
 function SubscriptionIcon({ subscription, small = false }) {

@@ -7,6 +7,7 @@ import {
   FastForward,
   History,
   PauseCircle,
+  Pencil,
   PlayCircle,
   Plus,
   ReceiptText,
@@ -17,6 +18,8 @@ import {
 import InfoHint from "../components/ui/InfoHint";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import api from "../services/api";
+import EditPanel from "../components/ui/EditPanel";
+import SubscriptionIcon from "../components/ui/SubscriptionIcon";
 
 
 const frequencyLabels = {
@@ -82,6 +85,22 @@ function emptyCycleForm(amount = "") {
   };
 }
 
+function commitmentPayload(form) {
+  return {
+    ...form,
+    name: form.name.trim(),
+    provider: form.provider.trim() || null,
+    category: form.category.trim() || null,
+    customIntervalDays: form.frequency === "custom"
+      ? Number(form.customIntervalDays)
+      : null,
+    autoRenews: form.kind === "subscription" ? form.autoRenews : null,
+    amountKind: form.kind === "subscription" ? "fixed" : form.amountKind,
+    notes: form.notes.trim() || null,
+    currencyCode: "KES",
+  };
+}
+
 function monthlyEquivalent(commitment) {
   const amount = Number(commitment.amount || 0);
   const multipliers = {
@@ -95,15 +114,6 @@ function monthlyEquivalent(commitment) {
     return amount * (30 / Math.max(Number(commitment.customIntervalDays), 1));
   }
   return amount * (multipliers[commitment.frequency] || 0);
-}
-
-function CommitmentIcon({ commitment }) {
-  const subscription = commitment.kind === "subscription";
-  return (
-    <span className={`commitment-icon ${subscription ? "subscription" : "bill"}`} aria-hidden="true">
-      {subscription ? <Repeat2 size={21} /> : <ReceiptText size={21} />}
-    </span>
-  );
 }
 
 function Bills() {
@@ -120,6 +130,10 @@ function Bills() {
   const [showHistory, setShowHistory] = useState(false);
   const [form, setForm] = useState(emptyCommitmentForm);
   const [cycleForm, setCycleForm] = useState(emptyCycleForm);
+  const [editingCommitment, setEditingCommitment] = useState(null);
+  const [editingOccurrence, setEditingOccurrence] = useState(null);
+  const [editForm, setEditForm] = useState(emptyCommitmentForm);
+  const [editCycleForm, setEditCycleForm] = useState(emptyCycleForm);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
@@ -229,18 +243,7 @@ function Bills() {
 
     setSaving(true);
     try {
-      const response = await api.post("/commitments", {
-        ...form,
-        name: form.name.trim(),
-        provider: form.provider.trim() || null,
-        category: form.category.trim() || null,
-        customIntervalDays: form.frequency === "custom"
-          ? Number(form.customIntervalDays)
-          : null,
-        autoRenews: form.kind === "subscription" ? form.autoRenews : null,
-        notes: form.notes.trim() || null,
-        currencyCode: "KES",
-      });
+      const response = await api.post("/commitments", commitmentPayload(form));
       const saved = response.data?.data;
       if (saved) setCommitments((current) => [...current, saved]);
       setShowCreateForm(false);
@@ -322,6 +325,115 @@ function Bills() {
       setSuccess(nextStatus === "cancelled" ? "Recurrence stopped." : "Recurrence restored.");
     } catch (requestError) {
       setError(requestError.message || "Unable to change this item");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openCommitmentEditor(commitment) {
+    setEditForm({
+      kind: commitment.kind,
+      name: commitment.name,
+      provider: commitment.provider || "",
+      category: commitment.category || "",
+      amount: commitment.amount,
+      amountKind: commitment.amountKind,
+      nextDueDate: commitment.nextDueDate,
+      frequency: commitment.frequency,
+      customIntervalDays: commitment.customIntervalDays || "",
+      autoRenews: commitment.autoRenews ?? true,
+      notes: commitment.notes || "",
+    });
+    setEditingOccurrence(null);
+    setFormError("");
+    setEditingCommitment(commitment);
+  }
+
+  function changeEditKind(kind) {
+    setEditForm((current) => ({
+      ...current,
+      kind,
+      amountKind: kind === "subscription" ? "fixed" : current.amountKind,
+      autoRenews: kind === "subscription" ? (current.autoRenews ?? true) : null,
+    }));
+  }
+
+  async function saveCommitmentChanges(event) {
+    event.preventDefault();
+    if (!editForm.name.trim() || !editForm.amount || !editForm.nextDueDate) {
+      setFormError("Name, amount and next due date are required");
+      return;
+    }
+    if (editForm.frequency === "custom" && !editForm.customIntervalDays) {
+      setFormError("Enter how many days are in the custom cycle");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      const response = await api.patch(
+        `/commitments/${editingCommitment.id}`,
+        commitmentPayload(editForm),
+      );
+      const updated = response.data?.data;
+      if (updated) {
+        setCommitments((current) => current.map((item) => (
+          item.id === updated.id ? updated : item
+        )));
+      }
+      setEditingCommitment(null);
+      setSuccess("Recurring payment details updated.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to update this item");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openOccurrenceEditor(commitment, occurrence) {
+    setEditCycleForm({
+      resolution: occurrence.resolution,
+      actualAmount: occurrence.actualAmount || "",
+      resolvedOn: occurrence.resolvedOn,
+      notes: occurrence.notes || "",
+    });
+    setEditingCommitment(null);
+    setFormError("");
+    setEditingOccurrence({ commitment, occurrence });
+  }
+
+  async function saveOccurrenceChanges(event) {
+    event.preventDefault();
+    if (editCycleForm.resolution === "paid" && !editCycleForm.actualAmount) {
+      setFormError("Enter the amount that was paid");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      const { commitment, occurrence } = editingOccurrence;
+      const response = await api.patch(
+        `/commitments/${commitment.id}/cycles/${occurrence.id}`,
+        {
+          ...editCycleForm,
+          actualAmount: editCycleForm.resolution === "paid"
+            ? editCycleForm.actualAmount
+            : null,
+          notes: editCycleForm.notes.trim() || null,
+        },
+      );
+      const updated = response.data?.data;
+      if (updated) {
+        setCommitments((current) => current.map((item) => (
+          item.id === updated.id ? updated : item
+        )));
+      }
+      setEditingOccurrence(null);
+      setSuccess("Payment history corrected.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to correct payment history");
     } finally {
       setSaving(false);
     }
@@ -411,6 +523,7 @@ function Bills() {
         <div className="commitment-actions">
           <button type="button" className="feature-primary-button" disabled={!active} onClick={() => openCycleForm(commitment, "paid")}><CheckCircle2 size={16} aria-hidden="true" /> Mark paid</button>
           <button type="button" className="debt-secondary-button" disabled={!active} onClick={() => openCycleForm(commitment, "skipped")}><FastForward size={16} aria-hidden="true" /> Skip cycle</button>
+          <button type="button" className="debt-secondary-button" onClick={() => openCommitmentEditor(commitment)}><Pencil size={16} aria-hidden="true" /> Edit details</button>
           <button type="button" className="debt-secondary-button" onClick={() => setShowHistory((current) => !current)} aria-expanded={showHistory}><History size={16} aria-hidden="true" /> {showHistory ? "Hide history" : `History (${commitment.occurrences.length})`}</button>
         </div>
 
@@ -423,6 +536,7 @@ function Bills() {
                 <span className={occurrence.resolution}>{occurrence.resolution === "paid" ? <CheckCircle2 size={16} /> : <FastForward size={16} />}</span>
                 <div><strong>{occurrence.notes || (occurrence.resolution === "paid" ? "Payment recorded" : "Cycle skipped")}</strong><small>Due {formatDate(occurrence.dueDate)} · resolved {formatDate(occurrence.resolvedOn)}</small></div>
                 <b>{occurrence.actualAmount ? formatCurrency(Number(occurrence.actualAmount)) : "Skipped"}</b>
+                <button type="button" className="activity-edit-button" onClick={() => openOccurrenceEditor(commitment, occurrence)} aria-label={`Edit ${occurrence.notes || "payment history"}`}><Pencil size={15} aria-hidden="true" /></button>
               </div>
             ))}
           </div>
@@ -463,13 +577,17 @@ function Bills() {
       {loading && <div className="goal-loading-card">Loading your recurring payments…</div>}
       {!loading && visibleCommitments.length === 0 && <div className="goal-empty-state"><CalendarClock size={30} aria-hidden="true" /><h2>No recurring items in this view</h2><p>Add a bill or subscription you want MoneyTiq to monitor.</p></div>}
 
-      <section className="commitment-list">
-        {visibleCommitments.map((commitment) => {
+      <section className="subscription-card-large commitment-ledger-card">
+        <div className="subscription-card-header">
+          <div><h2><CalendarClock size={18} aria-hidden="true" /> Bill & Subscription</h2><p>Sorted by nearest due date</p></div>
+        </div>
+        <div className="subscription-list commitment-list">
+          {visibleCommitments.map((commitment) => {
           const expanded = commitment.id === expandedId;
           return (
             <article className={`commitment-card ${expanded ? "expanded" : ""} ${commitment.status === "cancelled" ? "cancelled" : ""}`} key={commitment.id} ref={expanded ? expandedCardRef : null}>
               <button type="button" className="commitment-summary" onClick={() => toggleCommitment(commitment)} aria-expanded={expanded} aria-controls={`commitment-details-${commitment.id}`}>
-                <CommitmentIcon commitment={commitment} />
+                <SubscriptionIcon subscription={commitment} />
                 <div className="commitment-summary-copy"><span>{commitment.kind}{commitment.status === "cancelled" ? " · stopped" : commitment.overdue ? " · overdue" : ""}</span><h2>{commitment.name}</h2><p>{formatDate(commitment.nextDueDate)} · {dueLabel(commitment)}</p></div>
                 <div className="commitment-summary-amount"><strong>{formatCurrency(Number(commitment.amount))}</strong><small>{commitment.amountKind === "estimated" ? "estimated" : frequencyLabels[commitment.frequency]?.toLowerCase() || "recurring"}</small></div>
                 <ChevronDown className="commitment-chevron" size={19} aria-hidden="true" />
@@ -477,8 +595,57 @@ function Bills() {
               {expanded && renderDetails(commitment)}
             </article>
           );
-        })}
+          })}
+        </div>
       </section>
+
+      {editingCommitment && (
+        <EditPanel
+          error={formError}
+          onClose={() => { setEditingCommitment(null); setFormError(""); }}
+          onSubmit={saveCommitmentChanges}
+          saving={saving}
+          title={`Edit ${editingCommitment.name}`}
+        >
+          <div className="edit-panel-grid">
+            <fieldset className="commitment-kind-choice edit-panel-wide">
+              <legend>Type</legend>
+              <div className="debt-segmented-control">
+                <label className={editForm.kind === "bill" ? "active" : ""}><input type="radio" name="edit-kind" checked={editForm.kind === "bill"} onChange={() => changeEditKind("bill")} /><ReceiptText size={17} aria-hidden="true" /> Bill</label>
+                <label className={editForm.kind === "subscription" ? "active" : ""}><input type="radio" name="edit-kind" checked={editForm.kind === "subscription"} onChange={() => changeEditKind("subscription")} /><Repeat2 size={17} aria-hidden="true" /> Subscription</label>
+              </div>
+            </fieldset>
+            <label className="debt-field edit-panel-wide"><span>{editForm.kind === "subscription" ? "Service name" : "Bill description"}</span><input aria-label="Edit recurring payment name" value={editForm.name} onChange={(event) => setEditForm({ ...editForm, name: event.target.value })} maxLength="120" /></label>
+            <label className="debt-field"><span>Provider <em>optional</em></span><input aria-label="Edit recurring payment provider" value={editForm.provider} onChange={(event) => setEditForm({ ...editForm, provider: event.target.value })} maxLength="120" /></label>
+            <label className="debt-field"><span>Category <em>optional</em></span><input aria-label="Edit recurring payment category" value={editForm.category} onChange={(event) => setEditForm({ ...editForm, category: event.target.value })} maxLength="80" /></label>
+            <label className="debt-field"><span>Expected amount</span><input aria-label="Edit recurring payment amount" type="number" min="0.01" step="0.01" value={editForm.amount} onChange={(event) => setEditForm({ ...editForm, amount: event.target.value })} /></label>
+            {editForm.kind === "bill" && <label className="debt-field"><span>Amount type</span><select aria-label="Edit recurring amount type" value={editForm.amountKind} onChange={(event) => setEditForm({ ...editForm, amountKind: event.target.value })}><option value="fixed">Fixed</option><option value="estimated">Estimated</option></select></label>}
+            <label className="debt-field"><span>Next due date</span><input aria-label="Edit next due date" type="date" value={editForm.nextDueDate} onChange={(event) => setEditForm({ ...editForm, nextDueDate: event.target.value })} /></label>
+            <label className="debt-field"><span>Frequency</span><select aria-label="Edit recurring frequency" value={editForm.frequency} onChange={(event) => setEditForm({ ...editForm, frequency: event.target.value })}><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="termly">Termly (every 4 months)</option><option value="yearly">Yearly</option><option value="custom">Custom</option></select></label>
+            {editForm.frequency === "custom" && <label className="debt-field"><span>Repeat every how many days?</span><input aria-label="Edit custom interval" type="number" min="1" max="366" value={editForm.customIntervalDays} onChange={(event) => setEditForm({ ...editForm, customIntervalDays: event.target.value })} /></label>}
+            {editForm.kind === "subscription" && <label className="debt-switch-row edit-panel-wide"><span><strong>Renews automatically?</strong><small>Whether the provider normally renews it without another action</small></span><input aria-label="Edit auto renew" type="checkbox" checked={editForm.autoRenews} onChange={(event) => setEditForm({ ...editForm, autoRenews: event.target.checked })} /></label>}
+            <label className="debt-field edit-panel-wide"><span>Notes <em>optional</em></span><textarea aria-label="Edit recurring payment notes" rows="4" value={editForm.notes} onChange={(event) => setEditForm({ ...editForm, notes: event.target.value })} /></label>
+          </div>
+        </EditPanel>
+      )}
+
+      {editingOccurrence && (
+        <EditPanel
+          error={formError}
+          eyebrow="Correct history"
+          onClose={() => { setEditingOccurrence(null); setFormError(""); }}
+          onSubmit={saveOccurrenceChanges}
+          saving={saving}
+          title={`${editingOccurrence.commitment.name} payment`}
+        >
+          <div className="edit-panel-grid">
+            <label className="debt-field"><span>Result</span><select aria-label="Edit payment result" value={editCycleForm.resolution} onChange={(event) => setEditCycleForm({ ...editCycleForm, resolution: event.target.value, actualAmount: event.target.value === "paid" ? editingOccurrence.occurrence.expectedAmount : "" })}><option value="paid">Paid</option><option value="skipped">Skipped</option></select></label>
+            {editCycleForm.resolution === "paid" && <label className="debt-field"><span>Actual amount paid</span><input aria-label="Edit actual amount paid" type="number" min="0.01" step="0.01" value={editCycleForm.actualAmount} onChange={(event) => setEditCycleForm({ ...editCycleForm, actualAmount: event.target.value })} /></label>}
+            <label className="debt-field"><span>{editCycleForm.resolution === "paid" ? "Payment" : "Decision"} date</span><input aria-label="Edit payment date" type="date" value={editCycleForm.resolvedOn} onChange={(event) => setEditCycleForm({ ...editCycleForm, resolvedOn: event.target.value })} /></label>
+            <label className="debt-field edit-panel-wide"><span>Note <em>optional</em></span><input aria-label="Edit payment note" value={editCycleForm.notes} onChange={(event) => setEditCycleForm({ ...editCycleForm, notes: event.target.value })} /></label>
+          </div>
+        </EditPanel>
+      )}
     </div>
   );
 }

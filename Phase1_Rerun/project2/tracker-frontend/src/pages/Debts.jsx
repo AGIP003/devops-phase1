@@ -3,6 +3,7 @@ import {
   ChevronDown,
   CircleDollarSign,
   Landmark,
+  Pencil,
   Plus,
   ReceiptText,
   Trash2,
@@ -14,6 +15,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import InfoHint from "../components/ui/InfoHint";
+import EditPanel from "../components/ui/EditPanel";
 
 
 const DEBT_COLORS = ["#6f7f3f", "#c2413b", "#2f8f5b", "#3b82f6", "#8b5cf6"];
@@ -101,6 +103,44 @@ function getEmptyEntryForm() {
   };
 }
 
+function debtPayload(form) {
+  return {
+    title: form.title.trim(),
+    direction: form.direction,
+    category: form.category,
+    counterparty: form.counterparty.trim() || null,
+    trackingKind: form.trackingKind,
+    originalAmount: form.originalAmount || null,
+    currentBalance: form.currentBalance || null,
+    amountAlreadyRepaid: form.amountAlreadyRepaid || "0",
+    currencyCode: "KES",
+    openedOn: form.openedOn || null,
+    notes: form.notes.trim() || null,
+    hasInterest: form.hasInterest,
+    statedInterestRate: form.hasInterest
+      ? form.statedInterestRate || null
+      : null,
+    interestPeriod: form.hasInterest ? form.interestPeriod : null,
+    feeTerms: form.hasFees
+      ? form.selectedFees.map((feeCategory) => ({
+          feeCategory,
+          customFeeName: feeCategory === "other"
+            ? form.customFeeName.trim()
+            : null,
+        }))
+      : [],
+    schedule: form.hasSchedule
+      ? {
+          frequency: form.frequency,
+          intervalCount: Number(form.intervalCount || 1),
+          installmentAmount: form.installmentAmount || null,
+          nextDueDate: form.nextDueDate,
+          finalDueDate: form.finalDueDate || null,
+        }
+      : null,
+  };
+}
+
 function labelFor(options, value) {
   return options.find(([key]) => key === value)?.[1]
     || value?.replaceAll("_", " ")
@@ -154,6 +194,10 @@ function Debts() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [debtForm, setDebtForm] = useState(getEmptyDebtForm);
   const [entryForm, setEntryForm] = useState(getEmptyEntryForm);
+  const [editingDebt, setEditingDebt] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editDebtForm, setEditDebtForm] = useState(getEmptyDebtForm);
+  const [editEntryForm, setEditEntryForm] = useState(getEmptyEntryForm);
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -291,41 +335,7 @@ function Debts() {
       return;
     }
 
-    const payload = {
-      title: debtForm.title.trim(),
-      direction: debtForm.direction,
-      category: debtForm.category,
-      counterparty: debtForm.counterparty.trim() || null,
-      trackingKind: debtForm.trackingKind,
-      originalAmount: debtForm.originalAmount || null,
-      currentBalance: debtForm.currentBalance || null,
-      amountAlreadyRepaid: debtForm.amountAlreadyRepaid || "0",
-      currencyCode: "KES",
-      openedOn: debtForm.openedOn || null,
-      notes: debtForm.notes.trim() || null,
-      hasInterest: debtForm.hasInterest,
-      statedInterestRate: debtForm.hasInterest
-        ? debtForm.statedInterestRate || null
-        : null,
-      interestPeriod: debtForm.hasInterest ? debtForm.interestPeriod : null,
-      feeTerms: debtForm.hasFees
-        ? debtForm.selectedFees.map((feeCategory) => ({
-            feeCategory,
-            customFeeName: feeCategory === "other"
-              ? debtForm.customFeeName.trim()
-              : null,
-          }))
-        : [],
-      schedule: debtForm.hasSchedule
-        ? {
-            frequency: debtForm.frequency,
-            intervalCount: Number(debtForm.intervalCount || 1),
-            installmentAmount: debtForm.installmentAmount || null,
-            nextDueDate: debtForm.nextDueDate,
-            finalDueDate: debtForm.finalDueDate || null,
-          }
-        : null,
-    };
+    const payload = debtPayload(debtForm);
 
     setSaving(true);
     try {
@@ -409,6 +419,162 @@ function Debts() {
     }
   }
 
+  function openDebtEditor(debt) {
+    const otherFee = debt.feeTerms.find((fee) => fee.feeCategory === "other");
+    const priorRepayment = debt.amountRepaidBeforeTracking
+      ?? Math.max(
+        0,
+        Number(debt.paidAmount || 0) - debt.entries
+          .filter((entry) => entry.entryType === "repayment")
+          .reduce((sum, entry) => sum + Number(entry.amount), 0),
+      ).toFixed(2);
+    setEditDebtForm({
+      ...getEmptyDebtForm(),
+      title: debt.title,
+      direction: debt.direction,
+      category: debt.category,
+      counterparty: debt.counterparty || "",
+      trackingKind: debt.trackingKind,
+      originalAmount: debt.originalAmount || "",
+      currentBalance: debt.trackingKind === "existing" ? debt.openingBalance : "",
+      amountAlreadyRepaid: priorRepayment,
+      openedOn: debt.openedOn || "",
+      notes: debt.notes || "",
+      hasInterest: debt.hasInterest,
+      statedInterestRate: debt.statedInterestRate || "",
+      interestPeriod: debt.interestPeriod || "annual",
+      hasFees: debt.feeTerms.length > 0,
+      selectedFees: debt.feeTerms.map((fee) => fee.feeCategory),
+      customFeeName: otherFee?.customFeeName || "",
+      hasSchedule: Boolean(debt.schedule),
+      frequency: debt.schedule?.frequency || "one_time",
+      intervalCount: String(debt.schedule?.intervalCount || 1),
+      installmentAmount: debt.schedule?.installmentAmount || "",
+      nextDueDate: debt.schedule?.nextDueDate || "",
+      finalDueDate: debt.schedule?.finalDueDate || "",
+    });
+    setFormError("");
+    setEditingEntry(null);
+    setEditingDebt(debt);
+  }
+
+  function toggleEditFee(feeCategory) {
+    setEditDebtForm((current) => ({
+      ...current,
+      selectedFees: current.selectedFees.includes(feeCategory)
+        ? current.selectedFees.filter((item) => item !== feeCategory)
+        : [...current.selectedFees, feeCategory],
+    }));
+  }
+
+  async function saveDebtChanges(event) {
+    event.preventDefault();
+    setFormError("");
+    if (!editDebtForm.title.trim()) {
+      setFormError("Debt description is required");
+      return;
+    }
+    if (editDebtForm.trackingKind === "new" && !editDebtForm.originalAmount) {
+      setFormError("Original amount is required for a new debt");
+      return;
+    }
+    if (editDebtForm.trackingKind === "existing" && !editDebtForm.currentBalance) {
+      setFormError("Opening outstanding balance is required");
+      return;
+    }
+    if (editDebtForm.hasSchedule && !editDebtForm.nextDueDate) {
+      setFormError("Next payment date is required while a schedule is enabled");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await api.patch(
+        `/debts/${editingDebt.id}`,
+        debtPayload(editDebtForm),
+      );
+      const updatedDebt = response.data?.data;
+      if (updatedDebt) {
+        setDebts((current) => current.map((debt) => (
+          debt.id === updatedDebt.id ? updatedDebt : debt
+        )));
+      }
+      setEditingDebt(null);
+      setSuccess("Debt details updated.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to update debt details");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEntryEditor(debt, entry) {
+    setEditEntryForm({
+      ...getEmptyEntryForm(),
+      entryType: entry.entryType,
+      amount: entry.amount,
+      occurredOn: entry.occurredOn,
+      feeCategory: entry.feeCategory || "processing",
+      customFeeName: entry.customFeeName || "",
+      notes: entry.notes || "",
+    });
+    setFormError("");
+    setEditingDebt(null);
+    setEditingEntry({ debt, entry });
+  }
+
+  async function saveEntryChanges(event) {
+    event.preventDefault();
+    if (!editEntryForm.amount) {
+      setFormError("Entry amount is required");
+      return;
+    }
+    if (
+      editEntryForm.entryType === "fee"
+      && editEntryForm.feeCategory === "other"
+      && !editEntryForm.customFeeName.trim()
+    ) {
+      setFormError("Name the custom fee");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      const { debt, entry } = editingEntry;
+      const response = await api.patch(
+        `/debts/${debt.id}/entries/${entry.id}`,
+        {
+          entryType: editEntryForm.entryType,
+          amount: editEntryForm.amount,
+          occurredOn: editEntryForm.occurredOn,
+          feeCategory: editEntryForm.entryType === "fee"
+            ? editEntryForm.feeCategory
+            : null,
+          customFeeName: (
+            editEntryForm.entryType === "fee"
+            && editEntryForm.feeCategory === "other"
+          ) ? editEntryForm.customFeeName.trim() : null,
+          notes: editEntryForm.notes.trim() || null,
+        },
+      );
+      const updatedDebt = response.data?.data;
+      if (updatedDebt) {
+        setDebts((current) => current.map((item) => (
+          item.id === updatedDebt.id ? updatedDebt : item
+        )));
+      }
+      setEditingEntry(null);
+      setSuccess(entry.transactionId
+        ? "Repayment and linked transaction corrected."
+        : "Debt activity corrected.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to correct debt activity");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function renderDebtDetails(debt) {
     return (
       <div className="debt-expanded-content" id={`debt-details-${debt.id}`}>
@@ -475,6 +641,7 @@ function Debts() {
                       <small>{formatDate(entry.occurredOn)}{entry.transactionId ? " · Linked transaction" : ""}</small>
                     </div>
                     <b>{decreases ? "−" : "+"}{formatCurrency(Number(entry.amount))}</b>
+                    <button type="button" className="activity-edit-button" onClick={() => openEntryEditor(debt, entry)} aria-label={`Edit ${entry.notes || "debt activity"}`}><Pencil size={15} aria-hidden="true" /></button>
                   </div>
                 );
               })}
@@ -486,7 +653,10 @@ function Debts() {
 
         <div className="debt-expanded-actions">
           <span><CalendarClock size={16} aria-hidden="true" /> Added via {debt.createdVia.replaceAll("_", " ")}</span>
-          <button type="button" className="debt-danger-button" onClick={() => archiveDebt(debt)} disabled={saving}><Trash2 size={15} aria-hidden="true" /> Archive</button>
+          <div>
+            <button type="button" className="debt-secondary-button" onClick={() => openDebtEditor(debt)}><Pencil size={15} aria-hidden="true" /> Edit details</button>
+            <button type="button" className="debt-danger-button" onClick={() => archiveDebt(debt)} disabled={saving}><Trash2 size={15} aria-hidden="true" /> Archive</button>
+          </div>
         </div>
       </div>
     );
@@ -659,6 +829,72 @@ function Debts() {
           )}
         </aside>
       </div>
+
+      {editingDebt && (
+        <EditPanel
+          error={formError}
+          onClose={() => { setEditingDebt(null); setFormError(""); }}
+          onSubmit={saveDebtChanges}
+          saving={saving}
+          title={`Edit ${editingDebt.title}`}
+        >
+          <div className="edit-panel-grid">
+            <label className="debt-field edit-panel-wide"><span>Description</span><input aria-label="Edit debt description" value={editDebtForm.title} onChange={(event) => setEditDebtForm({ ...editDebtForm, title: event.target.value })} maxLength="140" /></label>
+            <label className="debt-field"><span>Direction</span><select aria-label="Edit debt direction" value={editDebtForm.direction} onChange={(event) => setEditDebtForm({ ...editDebtForm, direction: event.target.value })}><option value="i_owe">I owe</option><option value="owed_to_me">Owed to me</option></select></label>
+            <label className="debt-field"><span>Category</span><select aria-label="Edit debt category" value={editDebtForm.category} onChange={(event) => setEditDebtForm({ ...editDebtForm, category: event.target.value })}>{categories.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+            <label className="debt-field"><span>Counterparty <em>optional</em></span><input aria-label="Edit debt counterparty" value={editDebtForm.counterparty} onChange={(event) => setEditDebtForm({ ...editDebtForm, counterparty: event.target.value })} /></label>
+            <label className="debt-field"><span>Tracking began as</span><select aria-label="Edit tracking type" value={editDebtForm.trackingKind} onChange={(event) => setEditDebtForm({ ...editDebtForm, trackingKind: event.target.value })}><option value="new">New debt</option><option value="existing">Existing debt</option></select></label>
+            {editDebtForm.trackingKind === "new" ? (
+              <label className="debt-field"><span>Original amount</span><input aria-label="Edit original amount" type="number" min="0.01" step="0.01" value={editDebtForm.originalAmount} onChange={(event) => setEditDebtForm({ ...editDebtForm, originalAmount: event.target.value })} /></label>
+            ) : (
+              <>
+                <label className="debt-field"><span>Opening outstanding balance</span><input aria-label="Edit opening balance" type="number" min="0.01" step="0.01" value={editDebtForm.currentBalance} onChange={(event) => setEditDebtForm({ ...editDebtForm, currentBalance: event.target.value })} /></label>
+                <label className="debt-field"><span>Original amount <em>optional</em></span><input aria-label="Edit original amount" type="number" min="0.01" step="0.01" value={editDebtForm.originalAmount} onChange={(event) => setEditDebtForm({ ...editDebtForm, originalAmount: event.target.value })} /></label>
+              </>
+            )}
+            <label className="debt-field"><span>Repaid before tracking</span><input aria-label="Edit amount already repaid" type="number" min="0" step="0.01" value={editDebtForm.amountAlreadyRepaid} onChange={(event) => setEditDebtForm({ ...editDebtForm, amountAlreadyRepaid: event.target.value })} /></label>
+            <label className="debt-field"><span>Opened / tracking date</span><input aria-label="Edit debt date" type="date" value={editDebtForm.openedOn} onChange={(event) => setEditDebtForm({ ...editDebtForm, openedOn: event.target.value })} /></label>
+
+            <section className={`debt-option-panel edit-panel-wide ${editDebtForm.hasInterest ? "active" : ""}`}>
+              <label className="debt-switch-row"><span><strong>Interest</strong><small>Store only the lender-reported rate</small></span><input aria-label="Edit debt interest" type="checkbox" checked={editDebtForm.hasInterest} onChange={(event) => setEditDebtForm({ ...editDebtForm, hasInterest: event.target.checked })} /></label>
+              {editDebtForm.hasInterest && <div className="debt-inline-fields"><label className="debt-field"><span>Stated rate <em>optional</em></span><input aria-label="Edit interest rate" type="number" min="0.0001" step="0.0001" value={editDebtForm.statedInterestRate} onChange={(event) => setEditDebtForm({ ...editDebtForm, statedInterestRate: event.target.value })} /></label><label className="debt-field"><span>Rate period</span><select aria-label="Edit interest period" value={editDebtForm.interestPeriod} onChange={(event) => setEditDebtForm({ ...editDebtForm, interestPeriod: event.target.value })}><option value="annual">Annual</option><option value="monthly">Monthly</option><option value="fixed">Fixed loan cost</option><option value="other">Other</option></select></label></div>}
+            </section>
+
+            <section className={`debt-option-panel edit-panel-wide ${editDebtForm.hasFees ? "active" : ""}`}>
+              <label className="debt-switch-row"><span><strong>Fees</strong><small>Choose fee types that apply</small></span><input aria-label="Edit debt fees" type="checkbox" checked={editDebtForm.hasFees} onChange={(event) => setEditDebtForm({ ...editDebtForm, hasFees: event.target.checked, selectedFees: event.target.checked ? editDebtForm.selectedFees : [] })} /></label>
+              {editDebtForm.hasFees && <div className="debt-fee-options">{feeOptions.map(([value, label]) => <label key={value} className={editDebtForm.selectedFees.includes(value) ? "selected" : ""}><input type="checkbox" checked={editDebtForm.selectedFees.includes(value)} onChange={() => toggleEditFee(value)} />{label}</label>)}{editDebtForm.selectedFees.includes("other") && <input aria-label="Edit custom fee name" className="debt-custom-fee-input" value={editDebtForm.customFeeName} onChange={(event) => setEditDebtForm({ ...editDebtForm, customFeeName: event.target.value })} placeholder="Name the other fee" />}</div>}
+            </section>
+
+            <section className={`debt-option-panel edit-panel-wide ${editDebtForm.hasSchedule ? "active" : ""}`}>
+              <label className="debt-switch-row"><span><strong>Repayment schedule</strong><small>Change the expected future schedule</small></span><input aria-label="Edit repayment schedule" type="checkbox" checked={editDebtForm.hasSchedule} onChange={(event) => setEditDebtForm({ ...editDebtForm, hasSchedule: event.target.checked })} /></label>
+              {editDebtForm.hasSchedule && <div className="edit-panel-grid"><label className="debt-field"><span>Frequency</span><select aria-label="Edit repayment frequency" value={editDebtForm.frequency} onChange={(event) => setEditDebtForm({ ...editDebtForm, frequency: event.target.value })}>{frequencyOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label><label className="debt-field"><span>Every</span><input aria-label="Edit schedule interval" type="number" min="1" value={editDebtForm.intervalCount} onChange={(event) => setEditDebtForm({ ...editDebtForm, intervalCount: event.target.value })} /></label><label className="debt-field"><span>Instalment <em>optional</em></span><input aria-label="Edit instalment amount" type="number" min="0.01" step="0.01" value={editDebtForm.installmentAmount} onChange={(event) => setEditDebtForm({ ...editDebtForm, installmentAmount: event.target.value })} /></label><label className="debt-field"><span>Next payment</span><input aria-label="Edit next payment date" type="date" value={editDebtForm.nextDueDate} onChange={(event) => setEditDebtForm({ ...editDebtForm, nextDueDate: event.target.value })} /></label><label className="debt-field"><span>Final payoff <em>optional</em></span><input aria-label="Edit final payoff date" type="date" value={editDebtForm.finalDueDate} onChange={(event) => setEditDebtForm({ ...editDebtForm, finalDueDate: event.target.value })} /></label></div>}
+            </section>
+
+            <label className="debt-field edit-panel-wide"><span>Notes <em>optional</em></span><textarea aria-label="Edit debt notes" rows="4" value={editDebtForm.notes} onChange={(event) => setEditDebtForm({ ...editDebtForm, notes: event.target.value })} /></label>
+          </div>
+        </EditPanel>
+      )}
+
+      {editingEntry && (
+        <EditPanel
+          error={formError}
+          eyebrow="Correct activity"
+          onClose={() => { setEditingEntry(null); setFormError(""); }}
+          onSubmit={saveEntryChanges}
+          saving={saving}
+          title={editingEntry.entry.notes || "Debt activity"}
+        >
+          <div className="edit-panel-grid">
+            <label className="debt-field"><span>Activity</span><select aria-label="Edit debt activity type" disabled={Boolean(editingEntry.entry.transactionId)} value={editEntryForm.entryType} onChange={(event) => setEditEntryForm({ ...editEntryForm, entryType: event.target.value })}><option value="repayment">Repayment</option><option value="interest">Reported interest</option><option value="fee">Fee charged</option><option value="adjustment_increase">Balance increase</option><option value="adjustment_decrease">Balance decrease</option></select></label>
+            <label className="debt-field"><span>Amount</span><input aria-label="Edit debt activity amount" type="number" min="0.01" step="0.01" value={editEntryForm.amount} onChange={(event) => setEditEntryForm({ ...editEntryForm, amount: event.target.value })} /></label>
+            <label className="debt-field"><span>Date</span><input aria-label="Edit debt activity date" type="date" value={editEntryForm.occurredOn} onChange={(event) => setEditEntryForm({ ...editEntryForm, occurredOn: event.target.value })} /></label>
+            {editEntryForm.entryType === "fee" && <label className="debt-field"><span>Fee type</span><select aria-label="Edit debt fee type" value={editEntryForm.feeCategory} onChange={(event) => setEditEntryForm({ ...editEntryForm, feeCategory: event.target.value })}>{feeOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>}
+            {editEntryForm.entryType === "fee" && editEntryForm.feeCategory === "other" && <label className="debt-field edit-panel-wide"><span>Custom fee name</span><input aria-label="Edit debt custom fee" value={editEntryForm.customFeeName} onChange={(event) => setEditEntryForm({ ...editEntryForm, customFeeName: event.target.value })} /></label>}
+            <label className="debt-field edit-panel-wide"><span>Notes <em>optional</em></span><input aria-label="Edit debt activity note" value={editEntryForm.notes} onChange={(event) => setEditEntryForm({ ...editEntryForm, notes: event.target.value })} /></label>
+            {editingEntry.entry.transactionId && <p className="debt-muted-copy edit-panel-wide">This repayment is linked to Transactions. Saving changes updates both records together.</p>}
+          </div>
+        </EditPanel>
+      )}
     </div>
   );
 }

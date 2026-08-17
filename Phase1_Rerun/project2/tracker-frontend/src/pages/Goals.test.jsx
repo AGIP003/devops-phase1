@@ -10,6 +10,7 @@ vi.mock("../services/api", () => ({
   default: {
     delete: vi.fn(),
     get: vi.fn(),
+    patch: vi.fn(),
     post: vi.fn(),
   },
 }));
@@ -53,6 +54,7 @@ beforeEach(() => {
   api.get.mockResolvedValue({ data: [goal] });
   api.delete.mockResolvedValue({ data: { status: "success" } });
   api.post.mockResolvedValue({ data: { data: goal, status: "success" } });
+  api.patch.mockResolvedValue({ data: { data: goal, status: "success" } });
 });
 
 describe("Goals", () => {
@@ -71,7 +73,7 @@ describe("Goals", () => {
     await user.click(screen.getByRole("button", { name: /view activity/i }));
     expect(screen.getByText("Opening savings")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("heading", { name: "Savings Goals" }));
+    await user.click(screen.getByRole("heading", { name: "Savings & Goals" }));
     expect(screen.queryByText("Still needed")).not.toBeInTheDocument();
   });
 
@@ -164,5 +166,35 @@ describe("Goals", () => {
     const payload = api.post.mock.calls.at(-1)[1];
     expect(payload).not.toHaveProperty("transactionId");
     expect(payload).not.toHaveProperty("createTransaction");
+  });
+
+  it("edits the activity that produced the saved total", async () => {
+    const user = userEvent.setup();
+    api.patch.mockResolvedValue({
+      data: {
+        data: {
+          ...goal,
+          currentSavings: "5000.00",
+          remainingAmount: "115000.00",
+          entries: [{ ...goal.entries[0], amount: "5000.00" }],
+        },
+      },
+    });
+    render(<Goals />);
+
+    await user.click((await screen.findByText("Emergency fund")).closest("button"));
+    await user.click(screen.getByRole("button", { name: /view activity/i }));
+    await user.click(screen.getByRole("button", { name: /edit opening savings/i }));
+
+    const amount = screen.getByLabelText("Edit savings amount");
+    await user.clear(amount);
+    await user.type(amount, "5000");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      "/goals/12/entries/30",
+      expect.objectContaining({ amount: "5000" }),
+    ));
+    expect(await screen.findByText("Savings activity corrected.")).toBeInTheDocument();
   });
 });

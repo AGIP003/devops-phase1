@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   History,
+  Pencil,
   PiggyBank,
   Plus,
   Target,
@@ -13,6 +14,7 @@ import {
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import InfoHint from "../components/ui/InfoHint";
+import EditPanel from "../components/ui/EditPanel";
 
 
 const GOAL_COLORS = ["#6f7f3f", "#2f8f5b", "#3b82f6", "#a16207", "#7c3aed"];
@@ -78,6 +80,10 @@ function Goals() {
   const [showActivity, setShowActivity] = useState(false);
   const [goalForm, setGoalForm] = useState(emptyGoalForm);
   const [entryForm, setEntryForm] = useState(emptyEntryForm);
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editGoalForm, setEditGoalForm] = useState(emptyGoalForm);
+  const [editEntryForm, setEditEntryForm] = useState(emptyEntryForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -243,6 +249,98 @@ function Goals() {
     }
   }
 
+  function openGoalEditor(goal) {
+    setEditingEntry(null);
+    setEditGoalForm({
+      name: goal.name,
+      targetAmount: goal.targetAmount,
+      currentSavings: "",
+      targetDate: goal.targetDate,
+      contributionFrequency: goal.contributionFrequency,
+      notes: goal.notes || "",
+    });
+    setFormError("");
+    setEditingGoal(goal);
+  }
+
+  async function saveGoalChanges(event) {
+    event.preventDefault();
+    if (!editGoalForm.name.trim() || !editGoalForm.targetAmount || !editGoalForm.targetDate) {
+      setFormError("Name, target amount and target date are required");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      const response = await api.patch(`/goals/${editingGoal.id}`, {
+        name: editGoalForm.name.trim(),
+        targetAmount: editGoalForm.targetAmount,
+        targetDate: editGoalForm.targetDate,
+        contributionFrequency: editGoalForm.contributionFrequency,
+        currencyCode: editingGoal.currencyCode || "KES",
+        notes: editGoalForm.notes.trim() || null,
+      });
+      const updatedGoal = response.data?.data;
+      if (updatedGoal) {
+        setGoals((current) => current.map((goal) => (
+          goal.id === updatedGoal.id ? updatedGoal : goal
+        )));
+      }
+      setEditingGoal(null);
+      setSuccess("Goal details updated.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to update goal details");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEntryEditor(goal, entry) {
+    setEditingGoal(null);
+    setEditEntryForm({
+      entryType: entry.entryType,
+      amount: entry.amount,
+      occurredOn: entry.occurredOn,
+      notes: entry.notes || "",
+    });
+    setFormError("");
+    setEditingEntry({ goal, entry });
+  }
+
+  async function saveEntryChanges(event) {
+    event.preventDefault();
+    if (!editEntryForm.amount) {
+      setFormError("Amount is required");
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      const { goal, entry } = editingEntry;
+      const response = await api.patch(
+        `/goals/${goal.id}/entries/${entry.id}`,
+        {
+          ...editEntryForm,
+          notes: editEntryForm.notes.trim() || null,
+        },
+      );
+      const updatedGoal = response.data?.data;
+      if (updatedGoal) {
+        setGoals((current) => current.map((item) => (
+          item.id === updatedGoal.id ? updatedGoal : item
+        )));
+      }
+      setEditingEntry(null);
+      setSuccess("Savings activity corrected.");
+    } catch (requestError) {
+      setFormError(requestError.message || "Unable to correct savings activity");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function archiveGoal(goal) {
     if (!window.confirm(`Archive “${goal.name}”? Its activity will be preserved.`)) return;
     setSaving(true);
@@ -291,6 +389,7 @@ function Goals() {
 
         <div className="goal-expanded-actions">
           <button type="button" className="feature-primary-button" onClick={() => { setShowEntryForm((current) => !current); setFormError(""); }}><Plus size={15} aria-hidden="true" /> Update savings</button>
+          <button type="button" className="debt-secondary-button" onClick={() => openGoalEditor(goal)}><Pencil size={15} aria-hidden="true" /> Edit details</button>
           <button type="button" className="debt-secondary-button" onClick={() => setShowActivity((current) => !current)} aria-expanded={showActivity}><History size={15} aria-hidden="true" /> {showActivity ? "Hide activity" : `View activity (${goal.entries.length})`}</button>
         </div>
 
@@ -307,6 +406,7 @@ function Goals() {
                   <span className={removed ? "removed" : "added"}>{removed ? "−" : "+"}</span>
                   <div><strong>{entry.notes || (removed ? "Money removed" : "Money added")}</strong><small>{formatDate(entry.occurredOn)}</small></div>
                   <b>{removed ? "−" : "+"}{formatCurrency(Number(entry.amount))}</b>
+                  <button type="button" className="activity-edit-button" onClick={() => openEntryEditor(goal, entry)} aria-label={`Edit ${entry.notes || "savings activity"}`}><Pencil size={15} aria-hidden="true" /></button>
                 </div>
               );
             })}
@@ -326,8 +426,8 @@ function Goals() {
       <div className="feature-page-header">
         <div>
           <span className="coming-soon-pill">Live goal tracker</span>
-          <h1>Savings Goals</h1>
-          <p>Choose a target and rhythm. MoneyTiq recalculates what to save as your progress changes.</p>
+          <h1>Savings & Goals</h1>
+          <p>Choose a reasonable target. Get informed on what to save as your progress changes.</p>
         </div>
         <button type="button" className="feature-primary-button" onClick={openCreateForm}><Plus size={17} aria-hidden="true" /> Add goal</button>
       </div>
@@ -338,15 +438,15 @@ function Goals() {
       {showCreateForm && (
         <form className="debt-create-card goal-create-card" onSubmit={saveGoal} ref={createFormRef}>
           <div className="debt-form-heading">
-            <div><span>New plan</span><h2>Add a savings goal</h2><p>Enter the destination, deadline and saving rhythm. The suggested amount is calculated for you.</p></div>
+            <div><span>New plan</span><h2>Add a savings goal</h2><p>Enter the target amount, deadline and saving frequency. The suggested amount is calculated for you.</p></div>
             <button type="button" className="debt-icon-button" onClick={cancelCreateForm} aria-label="Close goal form"><X size={19} aria-hidden="true" /></button>
           </div>
           <div className="debt-form-grid">
             <label className="debt-field debt-field-wide"><span>Goal name</span><input value={goalForm.name} onChange={(event) => setGoalForm({ ...goalForm, name: event.target.value })} placeholder="Emergency fund" maxLength="120" /></label>
             <label className="debt-field"><span>Target amount <InfoHint label="target amount" text="The total amount you want this goal to reach." /></span><input aria-label="Target amount" type="number" min="0.01" step="0.01" value={goalForm.targetAmount} onChange={(event) => setGoalForm({ ...goalForm, targetAmount: event.target.value })} placeholder="120000" /></label>
-            <label className="debt-field"><span>Already saved <em>optional</em> <InfoHint label="already saved" text="Creates an opening savings entry so the amount remains explainable in activity." /></span><input aria-label="Already saved" type="number" min="0" step="0.01" value={goalForm.currentSavings} onChange={(event) => setGoalForm({ ...goalForm, currentSavings: event.target.value })} placeholder="20000" /></label>
-            <label className="debt-field"><span>Target date <InfoHint label="target date" text="MoneyTiq uses this deadline to calculate the remaining saving periods." /></span><input aria-label="Target date" type="date" min={todayValue()} value={goalForm.targetDate} onChange={(event) => setGoalForm({ ...goalForm, targetDate: event.target.value })} /></label>
-            <label className="debt-field"><span>Saving frequency <InfoHint label="saving frequency" text="Choose whether the suggested contribution is calculated per week, fortnight, or calendar month." /></span><select aria-label="Saving frequency" value={goalForm.contributionFrequency} onChange={(event) => setGoalForm({ ...goalForm, contributionFrequency: event.target.value })}><option value="weekly">Weekly</option><option value="fortnightly">Fortnightly</option><option value="monthly">Monthly</option></select></label>
+            <label className="debt-field"><span>Already saved <em>optional</em> <InfoHint label="already saved" text="Only indicate the amount, you have already saved." /></span><input aria-label="Already saved" type="number" min="0" step="0.01" value={goalForm.currentSavings} onChange={(event) => setGoalForm({ ...goalForm, currentSavings: event.target.value })} placeholder="20000" /></label>
+            <label className="debt-field"><span>Target date <InfoHint label="target date" text="The deadline is used to calculate the remaining saving periods." /></span><input aria-label="Target date" type="date" min={todayValue()} value={goalForm.targetDate} onChange={(event) => setGoalForm({ ...goalForm, targetDate: event.target.value })} /></label>
+            <label className="debt-field"><span>Saving frequency <InfoHint label="saving frequency" text="Choose to save per week, fortnight, or monthly." /></span><select aria-label="Saving frequency" value={goalForm.contributionFrequency} onChange={(event) => setGoalForm({ ...goalForm, contributionFrequency: event.target.value })}><option value="weekly">Weekly</option><option value="fortnightly">Fortnightly</option><option value="monthly">Monthly</option></select></label>
             <label className="debt-field debt-field-wide"><span>Notes <em>optional</em></span><textarea rows="3" value={goalForm.notes} onChange={(event) => setGoalForm({ ...goalForm, notes: event.target.value })} placeholder="Why this goal matters or what the amount covers" /></label>
           </div>
           {formError && <p className="debt-form-error" role="alert">{formError}</p>}
@@ -391,7 +491,43 @@ function Goals() {
       </section>
 
       {!loading && goals.length > 0 && (
-        <div className="goal-engineering-note"><TrendingUp size={18} aria-hidden="true" /><p>The suggested amount is guidance. MoneyTiq records only the savings you confirm.</p></div>
+        <div className="goal-engineering-note"><TrendingUp size={18} aria-hidden="true" /><p>The suggested amount is guidance. Only the savings you update are recorded.</p></div>
+      )}
+
+      {editingGoal && (
+        <EditPanel
+          error={formError}
+          onClose={() => { setEditingGoal(null); setFormError(""); }}
+          onSubmit={saveGoalChanges}
+          saving={saving}
+          title={`Edit ${editingGoal.name}`}
+        >
+          <div className="edit-panel-grid">
+            <label className="debt-field edit-panel-wide"><span>Goal name</span><input aria-label="Edit goal name" value={editGoalForm.name} onChange={(event) => setEditGoalForm({ ...editGoalForm, name: event.target.value })} maxLength="120" /></label>
+            <label className="debt-field"><span>Target amount</span><input aria-label="Edit target amount" type="number" min="0.01" step="0.01" value={editGoalForm.targetAmount} onChange={(event) => setEditGoalForm({ ...editGoalForm, targetAmount: event.target.value })} /></label>
+            <label className="debt-field"><span>Target date</span><input aria-label="Edit target date" type="date" value={editGoalForm.targetDate} onChange={(event) => setEditGoalForm({ ...editGoalForm, targetDate: event.target.value })} /></label>
+            <label className="debt-field"><span>Saving frequency</span><select aria-label="Edit saving frequency" value={editGoalForm.contributionFrequency} onChange={(event) => setEditGoalForm({ ...editGoalForm, contributionFrequency: event.target.value })}><option value="weekly">Weekly</option><option value="fortnightly">Fortnightly</option><option value="monthly">Monthly</option></select></label>
+            <label className="debt-field edit-panel-wide"><span>Notes <em>optional</em></span><textarea rows="4" value={editGoalForm.notes} onChange={(event) => setEditGoalForm({ ...editGoalForm, notes: event.target.value })} /></label>
+          </div>
+        </EditPanel>
+      )}
+
+      {editingEntry && (
+        <EditPanel
+          error={formError}
+          eyebrow="Correct activity"
+          onClose={() => { setEditingEntry(null); setFormError(""); }}
+          onSubmit={saveEntryChanges}
+          saving={saving}
+          title={editingEntry.entry.notes || "Savings activity"}
+        >
+          <div className="edit-panel-grid">
+            <label className="debt-field"><span>Change</span><select aria-label="Edit savings change" value={editEntryForm.entryType} onChange={(event) => setEditEntryForm({ ...editEntryForm, entryType: event.target.value })}><option value="contribution">Money added</option><option value="withdrawal">Money removed</option></select></label>
+            <label className="debt-field"><span>Amount</span><input aria-label="Edit savings amount" type="number" min="0.01" step="0.01" value={editEntryForm.amount} onChange={(event) => setEditEntryForm({ ...editEntryForm, amount: event.target.value })} /></label>
+            <label className="debt-field"><span>Date</span><input aria-label="Edit savings date" type="date" value={editEntryForm.occurredOn} onChange={(event) => setEditEntryForm({ ...editEntryForm, occurredOn: event.target.value })} /></label>
+            <label className="debt-field edit-panel-wide"><span>Note <em>optional</em></span><input aria-label="Edit savings note" value={editEntryForm.notes} onChange={(event) => setEditEntryForm({ ...editEntryForm, notes: event.target.value })} /></label>
+          </div>
+        </EditPanel>
       )}
     </div>
   );

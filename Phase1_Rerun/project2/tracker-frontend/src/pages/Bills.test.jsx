@@ -175,4 +175,48 @@ describe("Bills and subscriptions", () => {
     expect(screen.getAllByText("Electricity").length).toBeGreaterThan(0);
     expect(await screen.findByText("Recurrence stopped.")).toBeInTheDocument();
   });
+
+  it("uses a stored provider mark and edits a recorded payment", async () => {
+    const user = userEvent.setup();
+    const occurrence = {
+      id: 81,
+      resolution: "paid",
+      dueDate: "2026-08-31",
+      expectedAmount: "490.00",
+      actualAmount: "490.00",
+      resolvedOn: "2026-08-29",
+      notes: "Spotify payment",
+      createdVia: "manual",
+    };
+    const spotify = {
+      ...electricity,
+      kind: "subscription",
+      name: "Spotify Premium",
+      provider: "Spotify",
+      amount: "490.00",
+      amountKind: "fixed",
+      autoRenews: true,
+      occurrences: [occurrence],
+    };
+    api.get.mockResolvedValue({ data: [spotify] });
+    api.patch.mockResolvedValue({
+      data: { data: { ...spotify, occurrences: [{ ...occurrence, actualAmount: "450.00" }] } },
+    });
+    const { container } = render(<Bills />);
+
+    expect((await screen.findAllByText("Spotify Premium")).length).toBeGreaterThan(0);
+    expect(container.querySelector(".subscription-icon-spotify")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /subscription Spotify Premium/i }));
+    await user.click(screen.getByRole("button", { name: /history \(1\)/i }));
+    await user.click(screen.getByRole("button", { name: /edit spotify payment/i }));
+    const amount = screen.getByLabelText("Edit actual amount paid");
+    await user.clear(amount);
+    await user.type(amount, "450");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      "/commitments/41/cycles/81",
+      expect.objectContaining({ actualAmount: "450" }),
+    ));
+  });
 });
