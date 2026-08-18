@@ -9,6 +9,7 @@ import Transaction from './pages/Transactions';
 import Landing from './pages/Landing';
 import DemoPreview from './pages/DemoPreview';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 const Goals = lazy(() => import('./pages/Goals'));
 const Debts = lazy(() => import('./pages/Debts'));
 const Forex = lazy(() => import('./pages/Forex'));
@@ -48,6 +49,7 @@ function App() {
             }>
                 
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>}/>
+                <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>}/>
                 <Route path="/transactions" element={<ErrorBoundary><Transaction /></ErrorBoundary>}/>
                 <Route path="/goals" element={<ErrorBoundary><Goals /></ErrorBoundary>}/>
                 <Route path="/debts" element={<ErrorBoundary><Debts /></ErrorBoundary>}/>

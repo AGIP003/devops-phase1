@@ -29,6 +29,10 @@ from app.services.transaction_service import (
 )
 from app.services.user_service import delete_user as delete_user_record, get_user_by_id
 from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
+from app.services.analytics_service import (
+    AnalyticsPeriodError,
+    build_analytics_summary,
+)
 from app.debt_validation import parse_debt_create_payload, parse_debt_entry_payload
 from app.services.debt_service import (
     DebtValidationError,
@@ -87,6 +91,23 @@ def register_routes(app):
             "status" : "ok",
             "environment": os.getenv("FLASK_ENV", "development")
         }, 200
+
+    @app.route("/api/analytics/summary", methods=["GET"])
+    @login_required
+    def get_analytics_summary():
+        """Return database-aggregated finance analytics for the signed-in user."""
+        period = request.args.get("period", "12-months")
+        try:
+            summary = build_analytics_summary(
+                g.current_user["user_id"],
+                period,
+            )
+        except AnalyticsPeriodError as error:
+            abort(400, description=str(error))
+
+        response = jsonify(summary)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
 
     @app.route("/api/forex/rates", methods=["GET"])
     @login_required
