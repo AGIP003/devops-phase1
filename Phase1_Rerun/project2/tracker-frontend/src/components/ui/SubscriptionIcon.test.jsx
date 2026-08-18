@@ -11,6 +11,10 @@ describe("SubscriptionIcon", () => {
     ["Electricity", "KPLC", "kenya-power"],
     ["Home internet", "Safaricom Home Fibre", "safaricom"],
     ["Streaming", "Viu.to", "viu-to"],
+    ["Snapchat+", "Snapchat", "snapchat"],
+    ["Blue check", "X Premium", "x"],
+    ["Cloud storage", "iCloud+", "icloud"],
+    ["Photo storage", "Google Photos", "google-photos"],
   ])("normalizes %s / %s to %s", (name, provider, expectedKey) => {
     const { container } = render(
       <SubscriptionIcon
