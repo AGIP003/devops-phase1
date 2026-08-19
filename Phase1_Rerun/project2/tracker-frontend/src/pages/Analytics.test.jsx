@@ -16,7 +16,24 @@ vi.mock("../hooks/useAdjustedCurrency", () => ({
 }));
 
 vi.mock("../components/analytics/EChart", () => ({
-  default: ({ ariaLabel }) => <div role="img" aria-label={ariaLabel} />,
+  default: ({ ariaLabel, option }) => {
+    const calendarData = option?.series?.[0]?.coordinateSystem === "calendar"
+      ? option.series[0].data
+      : null;
+    const sample = calendarData?.find((item) => item.dayNumber === 18);
+    const sampleLabel = sample && option.series[0].label?.formatter
+      ? option.series[0].label.formatter({ data: sample })
+      : "";
+    return (
+      <div
+        role="img"
+        aria-label={ariaLabel}
+        data-calendar-days={calendarData?.length}
+        data-calendar-sample={sample ? JSON.stringify(sample) : ""}
+        data-calendar-label={sampleLabel}
+      />
+    );
+  },
 }));
 
 const summary = {
@@ -94,7 +111,10 @@ describe("Analytics", () => {
     expect(screen.getByText("KES 32500.00")).toBeInTheDocument();
     expect(screen.getByText("Review Housing spending")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /monthly income, expenses and net/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /daily spending calendar for 2026/i })).toBeInTheDocument();
+    const calendar = screen.getByRole("img", { name: /daily income and expense calendar for 2026-08/i });
+    expect(calendar).toHaveAttribute("data-calendar-days", "31");
+    expect(calendar).toHaveAttribute("data-calendar-sample", expect.stringContaining('"direction":"income"'));
+    expect(calendar.getAttribute("data-calendar-label")).toMatch(/\+.*100K/);
     expect(screen.getByRole("img", { name: /estimated monthly commitments/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /budget use and savings goal progress/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /debt balance, repayments and recorded fees/i })).toBeInTheDocument();

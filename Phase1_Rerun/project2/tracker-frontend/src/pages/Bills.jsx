@@ -556,7 +556,7 @@ function Bills() {
   return (
     <div className="feature-page">
       <div className="feature-page-header">
-        <div><span className="coming-soon-pill">Live recurring tracker</span><h1>Bills & Subscriptions</h1><p>Monitor payments that return. Record each cycle without turning ordinary spending into a bill.</p></div>
+        <div><span className="coming-soon-pill">Live recurring tracker</span><h1>Bills & Subscriptions</h1><p>Monitor recurring payments. Record each cycle and get informed when almost due.</p></div>
         <button type="button" className="feature-primary-button" onClick={openCreateForm}><Plus size={17} aria-hidden="true" /> Add item</button>
       </div>
 

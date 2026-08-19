@@ -35,16 +35,58 @@ function useCompactCalendar() {
   return compact;
 }
 
-function shiftCalendar(anchor, amount, compact) {
+function shiftCalendar(anchor, amount) {
   const [year, month = "01"] = anchor.split("-").map(Number);
-  const shifted = new Date(year, month - 1 + (compact ? amount : amount * 12), 1);
+  const shifted = new Date(year, month - 1 + amount, 1);
   const nextYear = shifted.getFullYear();
   const nextMonth = String(shifted.getMonth() + 1).padStart(2, "0");
-  return compact ? `${nextYear}-${nextMonth}` : String(nextYear);
+  return `${nextYear}-${nextMonth}`;
+}
+
+function compactCurrency(amount, currencyCode, rates) {
+  const rate = Number(rates?.[currencyCode] || 1);
+  return new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: currencyCode || "KES",
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(Number(amount) * rate);
+}
+
+function calendarMonthDays(monthKey, activity) {
+  const [year, month] = monthKey.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const activityByDate = new Map(activity.map((day) => [day.date, day]));
+
+  return Array.from({ length: lastDay }, (_, index) => {
+    const dayNumber = index + 1;
+    const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+    const source = activityByDate.get(dateKey) || {
+      date: dateKey,
+      income: "0",
+      expenses: "0",
+      transactionCount: 0,
+    };
+    const income = Number(source.income || 0);
+    const expenses = Number(source.expenses || 0);
+    const direction = income > expenses
+      ? "income"
+      : expenses > income
+        ? "expense"
+        : "neutral";
+
+    return {
+      ...source,
+      dayNumber,
+      direction,
+      dominant: Math.max(income, expenses),
+    };
+  });
 }
 
 function Analytics() {
-  const { formatCurrency } = useAdjustedCurrency();
+  const { currencyCode, formatCurrency, rates } = useAdjustedCurrency();
   const compactCalendar = useCompactCalendar();
   const [period, setPeriod] = useState("12-months");
   const [summary, setSummary] = useState(null);
@@ -319,55 +361,81 @@ function Analytics() {
     }],
   }), [formatCurrency, scenario, scenarioCategory]);
 
-  const calendarRange = compactCalendar ? calendarAnchor : calendarAnchor.slice(0, 4);
+  const calendarRange = calendarAnchor;
   const calendarOption = useMemo(() => {
     const activity = summary?.dailyActivity || [];
-    const maximum = Math.max(...activity.map((day) => Number(day.expenses)), 1);
-    const activityByDate = new Map(activity.map((day) => [day.date, day]));
+    const monthDays = calendarMonthDays(calendarRange, activity);
+    const maximum = Math.max(...monthDays.map((day) => day.dominant), 1);
     return {
-      aria: { enabled: true, description: "Daily expense calendar heatmap" },
+      aria: { enabled: true, description: "Monthly calendar showing the dominant income or expense amount for every day" },
       tooltip: {
-        formatter: ({ value }) => {
-          const day = activityByDate.get(value[0]);
-          if (!day) return value[0];
+        formatter: ({ data }) => {
           return [
-            `<strong>${value[0]}</strong>`,
-            `Expenses: ${formatCurrency(day.expenses)}`,
-            `Income: ${formatCurrency(day.income)}`,
-            `Transactions: ${day.transactionCount}`,
+            `<strong>${data.date}</strong>`,
+            `Income: ${formatCurrency(data.income)}`,
+            `Expenses: ${formatCurrency(data.expenses)}`,
+            `Transactions: ${data.transactionCount}`,
           ].join("<br />");
         },
       },
+
+       // ECharts requires visualMap for a heatmap series. It stays hidden because
+      // direction-specific item styles and the visible legend carry the meaning.
       visualMap: {
+        show: false,
         min: 0,
         max: maximum,
-        calculable: false,
-        orient: "horizontal",
-        left: "center",
-        bottom: 0,
-        text: ["Higher", "Lower"],
-        inRange: { color: ["#f4f5e8", "#e0c35a", "#dd8d35", "#b84a35"] },
+        dimension: 1,
       },
+
       calendar: {
-        top: 42,
-        left: compactCalendar ? 42 : 70,
-        right: 24,
-        bottom: 62,
+        top: 36,
+        left: compactCalendar ? 34 : 52,
+        right: 16,
+        bottom: 12,
         range: calendarRange,
-        cellSize: compactCalendar ? ["auto", 34] : ["auto", 18],
-        splitLine: { lineStyle: { color: "#ffffff", width: 2 } },
-        itemStyle: { borderColor: "#ffffff", borderWidth: 2 },
+        cellSize: ["auto", compactCalendar ? 58 : 74],
+        splitLine: { show: false },
+        itemStyle: { borderColor: "#ffffff", borderWidth: 3 },
         dayLabel: { firstDay: 1, nameMap: "en" },
-        monthLabel: { nameMap: "en", color: CHART_COLORS.muted },
-        yearLabel: { show: !compactCalendar, color: CHART_COLORS.muted },
+        monthLabel: { show: false },
+        yearLabel: { show: false },
       },
       series: [{
         type: "heatmap",
         coordinateSystem: "calendar",
-        data: activity.map((day) => [day.date, Number(day.expenses)]),
+        data: monthDays.map((day) => ({
+          ...day,
+          value: [day.date, day.dominant],
+          itemStyle: {
+            color: day.direction === "income"
+              ? "#e4f3e8"
+              : day.direction === "expense"
+                ? "#fde8e5"
+                : "#f5f6f1",
+            borderColor: "#ffffff",
+            borderWidth: 3,
+          },
+        })),
+        label: {
+          show: true,
+          formatter: ({ data }) => {
+            const amount = data.dominant > 0
+              ? compactCurrency(data.dominant, currencyCode, rates)
+              : "—";
+            const sign = data.direction === "income" ? "+" : data.direction === "expense" ? "−" : "";
+            return `{day|${data.dayNumber}}\n{${data.direction}|${sign}${amount}}`;
+          },
+          rich: {
+            day: { color: "#59635c", fontSize: compactCalendar ? 10 : 12, fontWeight: 800, lineHeight: 20 },
+            income: { color: "#237044", fontSize: compactCalendar ? 8 : 11, fontWeight: 900, lineHeight: 18 },
+            expense: { color: "#a43e35", fontSize: compactCalendar ? 8 : 11, fontWeight: 900, lineHeight: 18 },
+            neutral: { color: "#8a938c", fontSize: compactCalendar ? 8 : 11, fontWeight: 700, lineHeight: 18 },
+          },
+        },
       }],
     };
-  }, [calendarRange, compactCalendar, formatCurrency, summary?.dailyActivity]);
+  }, [calendarRange, compactCalendar, currencyCode, formatCurrency, rates, summary?.dailyActivity]);
 
   if (loading && !summary) {
     return <div className="analytics-state">Loading your financial picture…</div>;
@@ -427,7 +495,7 @@ function Analytics() {
         <div>
           <span className="coming-soon-pill">Live financial analytics</span>
           <h1>Analytics</h1>
-          <p>See what changed, what is committed, and where a review may help.</p>
+          <p>See what changed, useful insights, and where a review may help.</p>
         </div>
         <div className="analytics-periods" aria-label="Analytics period">
           {PERIODS.map(([value, label]) => (
@@ -484,7 +552,22 @@ function Analytics() {
           </div>
           {lastUpdated && <small className="analytics-refresh-time">Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>}
         </article>
-
+        <section className="analytics-panel analytics-calendar-panel">
+            <header>
+              <div><span>Daily rhythm</span><h2>Spending calendar</h2><p>Intensity shows which days carried the most expense activity.</p></div>
+              <div className="calendar-controls">
+                <button type="button" aria-label="Previous month" onClick={() => setCalendarAnchor((value) => shiftCalendar(value, -1))}><ArrowLeft size={16} /></button>
+                <strong>{calendarRange}</strong>
+                <button type="button" aria-label="Next month" onClick={() => setCalendarAnchor((value) => shiftCalendar(value, 1))}><ArrowRight size={16} /></button>
+              </div>
+            </header>
+            <div className="analytics-calendar-legend" aria-label="Calendar color key">
+              <span className="income">+ Income dominant</span>
+              <span className="expense">− Expense dominant</span>
+              <span className="neutral">— No movement or equal</span>
+            </div>
+            <EChart option={calendarOption} ariaLabel={`Daily income and expense calendar for ${calendarRange}`} className={compactCalendar ? "compact-calendar" : "month-calendar"} />
+        </section>
         <article className="analytics-panel">
           <header><div><span>Spending mix</span><h2>Where money went</h2><p>Expense categories ranked by total.</p></div></header>
           {(summary?.expenseCategories || []).length
@@ -539,17 +622,6 @@ function Analytics() {
           <small className="scenario-disclaimer">Illustration only: category spending is converted to a monthly average for the selected period. Actual savings depend on future behaviour and obligations.</small>
         </section>
 
-        <section className="analytics-panel analytics-calendar-panel">
-            <header>
-              <div><span>Daily rhythm</span><h2>Spending calendar</h2><p>Intensity shows which days carried the most expense activity.</p></div>
-              <div className="calendar-controls">
-                <button type="button" aria-label={`Previous ${compactCalendar ? "month" : "year"}`} onClick={() => setCalendarAnchor((value) => shiftCalendar(value, -1, compactCalendar))}><ArrowLeft size={16} /></button>
-                <strong>{calendarRange}</strong>
-                <button type="button" aria-label={`Next ${compactCalendar ? "month" : "year"}`} onClick={() => setCalendarAnchor((value) => shiftCalendar(value, 1, compactCalendar))}><ArrowRight size={16} /></button>
-              </div>
-            </header>
-            <EChart option={calendarOption} ariaLabel={`Daily spending calendar for ${calendarRange}`} className={compactCalendar ? "compact-calendar" : "year-calendar"} />
-        </section>
       </section>
 
       <section className="analytics-method-note">

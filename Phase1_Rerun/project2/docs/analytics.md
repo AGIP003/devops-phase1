@@ -55,9 +55,12 @@ them to cancel a service or make a financial decision.
 
 ## Calendar
 
-The ECharts heatmap represents daily transaction expenses. Desktop shows a year;
-screens at or below 760 px show one month with previous/next controls. Tooltips
-show income, expenses and transaction count for the day.
+The ECharts calendar shows one selected month on every screen size. Every date
+cell displays its day number and the larger of that day's income or expense
+totals in the user's selected display currency. Income-dominant cells use green
+and a `+` prefix; expense-dominant cells use red and a `−` prefix; equal or empty
+days are neutral. The prefixes ensure meaning does not depend on colour alone.
+Tooltips show the full income, expense and transaction count for the date.
 
 ## Chart-led frontend and What-if Lab
 

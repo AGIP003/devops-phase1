@@ -8474,8 +8474,8 @@ body.public-screen {
   margin-top: 0.2rem;
 }
 
-.analytics-calendar-panel .year-calendar {
-  height: 270px;
+.analytics-calendar-panel .month-calendar {
+  height: 520px;
 }
 
 .calendar-controls {
@@ -8633,7 +8633,7 @@ body.public-screen {
   }
 
   .analytics-calendar-panel .compact-calendar {
-    height: 330px;
+    height: 430px;
   }
 }
 
@@ -8822,6 +8822,35 @@ body.public-screen {
   font-size: 0.68rem;
 }
 
+.analytics-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.analytics-calendar-legend span {
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.3rem 0.5rem;
+}
+
+.analytics-calendar-legend .income {
+  background: #e4f3e8;
+  color: #237044;
+}
+
+.analytics-calendar-legend .expense {
+  background: #fde8e5;
+  color: #a43e35;
+}
+
+.analytics-calendar-legend .neutral {
+  background: #f5f6f1;
+  color: #69746b;
+}
+
 .scenario-result strong {
   font-size: 1.1rem;
 }
@@ -8873,6 +8902,27 @@ body.public-screen {
 
   .scenario-result {
     text-align: left;
+  }
+
+  .analytics-calendar-panel > header {
+    align-items: flex-start;
+    flex-direction: row;
+  }
+
+  .analytics-calendar-panel .calendar-controls {
+    align-self: flex-start;
+    margin-left: auto;
+  }
+
+  .analytics-calendar-legend {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    justify-content: start;
+  }
+
+  .analytics-calendar-legend .neutral {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 }
 
