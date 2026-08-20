@@ -81,6 +81,54 @@ def create_transaction(
     raise RuntimeError(_error_message(response, "Failed to create transaction"))
 
 
+def preview_transaction_import(token, message):
+    response = requests.post(
+        f"{API_BASE}/transaction-imports/preview",
+        json={"message": message},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 200:
+        return response.json()
+
+    raise RuntimeError(
+        _error_message(response, "Unable to recognize that provider message")
+    )
+
+
+def import_transaction_message(
+    token,
+    message,
+    description,
+    category,
+    remember_alias=None,
+):
+    payload = {
+        "message": message,
+        "description": description,
+        "category": category,
+    }
+    if remember_alias:
+        payload["rememberAlias"] = remember_alias
+
+    response = requests.post(
+        f"{API_BASE}/transaction-imports",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 201:
+        return response.json()
+    if response.status_code == 409:
+        raise RuntimeError(
+            _error_message(response, "That message was already imported")
+        )
+
+    raise RuntimeError(
+        _error_message(response, "Failed to import transaction")
+    )
+
+
 def get_transactions(token):
     response = requests.get(
         f"{API_BASE}/transactions",

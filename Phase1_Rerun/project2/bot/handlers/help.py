@@ -7,6 +7,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Finance Tracker bot commands\n\n"
         "/link CODE — Connect your web account\n"
         "/add AMOUNT DESCRIPTION — Add a transaction\n"
+        "/import PROVIDER_SMS — Review and import an M-Pesa or Airtel message\n"
         "/balance — View your financial summary\n"
         "/default PAYMENT — Set your default payment method\n"
         "/alias WORD=CATEGORY — Create a category alias\n"

@@ -6,6 +6,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
+    ConversationHandler,
     filters,
 )
 from bot.handlers.start import start_handler
@@ -22,6 +23,17 @@ from bot.handlers.link import link_handler
 from bot.handlers.welcome import welcome_handler
 from bot.handlers.balance import balance_handler
 from bot.handlers.help import help_handler
+from bot.handlers.import_message import (
+    IMPORT_CATEGORY,
+    IMPORT_CONFIRM,
+    IMPORT_DESCRIPTION,
+    cancel_import_callback,
+    cancel_import_command,
+    import_category_callback,
+    import_description_handler,
+    import_message_handler,
+    import_save_callback,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -53,8 +65,7 @@ def main():
     if not token:
         logger.error("Telegram token not set")
         raise RuntimeError('TELEGRAM_BOT_TOKEN not set')
-        
-    
+
     #Build the app
     app = Application.builder().token(token).build()
 
@@ -66,6 +77,40 @@ def main():
     app.add_handler(CommandHandler('link', link_handler))
     app.add_handler(CommandHandler('balance', balance_handler))
     app.add_handler(CommandHandler('help', help_handler))
+    app.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler("import", import_message_handler)],
+            states={
+                IMPORT_DESCRIPTION: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        import_description_handler,
+                    )
+                ],
+                IMPORT_CATEGORY: [
+                    CallbackQueryHandler(
+                        import_category_callback,
+                        pattern=r"^importcat\|",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_import_callback,
+                        pattern=r"^importcancel$",
+                    ),
+                ],
+                IMPORT_CONFIRM: [
+                    CallbackQueryHandler(
+                        import_save_callback,
+                        pattern=r"^importsave\|(?:once|remember)$",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_import_callback,
+                        pattern=r"^importcancel$",
+                    ),
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", cancel_import_command)],
+        )
+    )
     app.add_handler(CallbackQueryHandler(category_callback, pattern=r"^addcat\|"))
     app.add_handler(CallbackQueryHandler(category_menu_callback, pattern=r"^addmore\|"))
     app.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^addpm\|"))

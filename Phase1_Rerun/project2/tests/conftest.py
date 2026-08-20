@@ -17,6 +17,7 @@ DATABASE_TABLES = (
     "forex_rates",
     "budget_items",
     "budgets",
+    "transaction_imports",
     "transactions",
     "categories",
     "telegram_user_preferences",

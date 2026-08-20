@@ -2,6 +2,7 @@ from app.models.base import Base, TimeStampMixin, SoftDeleteMixin
 from app.models.user import User
 from app.models.category import Category
 from app.models.transaction import Transaction
+from app.models.transaction_import import TransactionImport
 from app.models.budget import Budget, BudgetItem
 from app.models.payment_method import PaymentMethod, PaymentMethodGroup
 from app.models.telegram_link import TelegramLink
@@ -21,6 +22,7 @@ __all__ = [
     "User",
     "Category",
     "Transaction",
+    "TransactionImport",
     "Budget",
     "BudgetItem",
     "PaymentMethod",

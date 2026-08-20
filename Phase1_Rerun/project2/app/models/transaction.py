@@ -34,6 +34,13 @@ class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
     user = relationship("User", back_populates="transactions")
     category = relationship("Category", back_populates="transactions")
     payment_method = relationship("PaymentMethod", back_populates="transactions")
+    import_record = relationship(
+        "TransactionImport",
+        back_populates="transaction",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
 
     def soft_delete(self):
         self.deleted_at = datetime.now(UTC)

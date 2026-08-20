@@ -27,6 +27,19 @@ from app.services.transaction_service import (
     soft_delete_transaction_for_user,
     update_transaction_for_user,
 )
+from app.importers import (
+    ParsedFulizaNotice,
+    ParsedTransactionMessage,
+    UnsupportedFinancialMessageError,
+    parse_financial_message,
+)
+from app.importers.contracts import TransactionDirection
+from app.services.transaction_import_service import (
+    DuplicateTransactionImportError,
+    TransactionMessageNotImportableError,
+    import_transaction_message_for_user,
+    payment_method_for_provider,
+)
 from app.services.user_service import delete_user as delete_user_record, get_user_by_id
 from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
 from app.services.analytics_service import (
@@ -553,6 +566,179 @@ def register_routes(app):
             raise
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
+
+    @app.route("/api/transaction-imports/preview", methods=["POST"])
+    @login_required
+    def preview_transaction_import():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Payload must be an object")
+
+        raw_message = data.get("message")
+        if not isinstance(raw_message, str) or not raw_message.strip():
+            abort(400, description="A provider message is required")
+        if len(raw_message) > 4000:
+            abort(400, description="Provider message is too long")
+
+        try:
+            parsed = parse_financial_message(raw_message)
+        except UnsupportedFinancialMessageError as error:
+            abort(400, description=str(error))
+
+        if isinstance(parsed, ParsedFulizaNotice):
+            response = jsonify({
+                "kind": "fuliza_notice",
+                "importable": False,
+                "provider": parsed.provider,
+                "noticeType": parsed.notice_type.value,
+                "amount": str(parsed.amount),
+                "currency": parsed.currency,
+                "financingFee": (
+                    str(parsed.financing_fee)
+                    if parsed.financing_fee is not None
+                    else None
+                ),
+                "dailyMaintenanceFee": (
+                    str(parsed.daily_maintenance_fee)
+                    if parsed.daily_maintenance_fee is not None
+                    else None
+                ),
+                "outstandingAmount": (
+                    str(parsed.outstanding_amount)
+                    if parsed.outstanding_amount is not None
+                    else None
+                ),
+                "dueDate": (
+                    parsed.due_date.isoformat()
+                    if parsed.due_date is not None
+                    else None
+                ),
+                "message": (
+                    "Fuliza financing is recognized but is not recorded as "
+                    "a separate transaction or debt."
+                ),
+            })
+            response.headers["Cache-Control"] = "private, no-store"
+            return response, 200
+
+        if not isinstance(parsed, ParsedTransactionMessage):
+            abort(400, description="Unsupported financial message")
+        importable = parsed.direction is not TransactionDirection.TRANSFER
+        suggested_category = (
+            "airtime"
+            if parsed.provider_transaction_type in {"airtime", "data_bundle"}
+            else None
+        )
+        response = jsonify({
+            "kind": "transaction",
+            "importable": importable,
+            "provider": parsed.provider,
+            "providerTransactionType": parsed.provider_transaction_type,
+            "direction": parsed.direction.value,
+            "amount": str(parsed.amount),
+            "currency": parsed.currency,
+            "occurredAt": parsed.occurred_at.isoformat(),
+            "counterparty": parsed.counterparty,
+            "fee": str(parsed.fee) if parsed.fee is not None else None,
+            "paymentMethod": (
+                payment_method_for_provider(parsed.provider)
+                if importable
+                else None
+            ),
+            "suggestedCategory": suggested_category,
+            "message": (
+                None
+                if importable
+                else "Cash withdrawals need account-to-account tracking first."
+            ),
+        })
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/transaction-imports", methods=["POST"])
+    @login_required
+    def create_transaction_import():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Payload must be an object")
+
+        raw_message = data.get("message")
+        if not isinstance(raw_message, str) or not raw_message.strip():
+            abort(400, description="A provider message is required")
+        if len(raw_message) > 4000:
+            abort(400, description="Provider message is too long")
+
+        try:
+            parsed = parse_financial_message(raw_message)
+            if not isinstance(parsed, ParsedTransactionMessage):
+                raise TransactionMessageNotImportableError(
+                    "Fuliza notices are informational and are not saved as transactions."
+                )
+            if parsed.direction is TransactionDirection.TRANSFER:
+                raise TransactionMessageNotImportableError(
+                    "Transfers need account-to-account tracking and cannot be imported yet."
+                )
+
+            validate_amount(parsed.amount)
+            validate_date(parsed.occurred_at.date().isoformat())
+            description = validate_description(data.get("description"))
+            if not description:
+                abort(400, description="Describe what this transaction was for")
+            category_name = validate_category(
+                parsed.direction.value,
+                data.get("category"),
+            )
+            remember_alias = data.get("rememberAlias")
+            if remember_alias is not None:
+                if not isinstance(remember_alias, str):
+                    abort(400, description="Remembered alias must be text")
+                remember_alias = " ".join(
+                    remember_alias.strip().lower().split()
+                )
+                if not remember_alias:
+                    remember_alias = None
+                elif len(remember_alias) > 100:
+                    abort(400, description="Remembered alias is too long")
+            transaction, import_record = import_transaction_message_for_user(
+                user_id=g.current_user["user_id"],
+                raw_message=raw_message,
+                parsed=parsed,
+                description=description,
+                category_name=category_name,
+                remember_alias=remember_alias,
+            )
+        except UnsupportedFinancialMessageError as error:
+            abort(400, description=str(error))
+        except TransactionMessageNotImportableError as error:
+            abort(400, description=str(error))
+        except DuplicateTransactionImportError as error:
+            return jsonify({
+                "error": "Duplicate transaction import",
+                "message": str(error),
+                "transactionId": error.transaction_id,
+            }), 409
+        except ValidationError as error:
+            abort(400, description=str(error))
+        except HTTPException:
+            raise
+
+        response = jsonify({
+            "data": transaction_to_dict(transaction),
+            "import": {
+                "provider": import_record.provider,
+                "providerTransactionType": import_record.provider_transaction_type,
+                "occurredAt": import_record.occurred_at.isoformat(),
+                "fee": (
+                    str(import_record.fee)
+                    if import_record.fee is not None
+                    else None
+                ),
+            },
+            "status": "success",
+            "rememberedAlias": remember_alias,
+        })
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 201
        
     @app.route("/api/transactions/<int:transaction_id>", methods=["GET"])
     @login_required
