@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 
 import requests
@@ -6,16 +7,22 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
 from bot.api_client import (
+    UnsupportedProviderMessageError,
     get_telegram_preferences,
     get_telegram_session,
     import_transaction_message,
     preview_transaction_import,
 )
 from bot.transaction_parser import CATEGORIES, category_candidates
+from bot.handlers.welcome import welcome_handler
 
 
 IMPORT_DESCRIPTION, IMPORT_CATEGORY, IMPORT_CONFIRM = range(3)
 IMPORT_TTL_SECONDS = 10 * 60
+PROVIDER_MESSAGE_PREFIX = re.compile(
+    r"^\s*(?:TID:\s*)?[A-Z0-9]{10,11}(?:\s+confirmed\.|\.\s+)",
+    re.IGNORECASE,
+)
 
 
 def _clear_pending_import(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -86,6 +93,35 @@ async def import_message_handler(
         return ConversationHandler.END
 
     raw_message = " ".join(context.args).strip()
+    return await _start_import(update, context, raw_message)
+
+
+async def automatic_import_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    """Route provider-looking text to imports and ordinary text to welcome."""
+
+    raw_message = " ".join(update.message.text.strip().split())
+    if not PROVIDER_MESSAGE_PREFIX.match(raw_message):
+        await welcome_handler(update, context)
+        return ConversationHandler.END
+
+    return await _start_import(
+        update,
+        context,
+        raw_message,
+        fallback_to_welcome=True,
+    )
+
+
+async def _start_import(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    raw_message: str,
+    *,
+    fallback_to_welcome: bool = False,
+):
     try:
         session = await asyncio.to_thread(
             get_telegram_session,
@@ -106,6 +142,14 @@ async def import_message_handler(
         await update.message.reply_text(
             "I can’t reach Finance Tracker right now. Please try again shortly."
         )
+        return ConversationHandler.END
+    except UnsupportedProviderMessageError as error:
+        if fallback_to_welcome:
+            await welcome_handler(update, context)
+        else:
+            await update.message.reply_text(
+                f"Could not read that message: {error}"
+            )
         return ConversationHandler.END
     except RuntimeError as error:
         await update.message.reply_text(f"Could not read that message: {error}")
@@ -323,4 +367,3 @@ async def cancel_import_command(
     _clear_pending_import(context)
     await update.message.reply_text("Transaction import cancelled.")
     return ConversationHandler.END
-

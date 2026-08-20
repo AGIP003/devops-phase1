@@ -4,7 +4,6 @@ from hashlib import sha256
 from hmac import compare_digest
 from datetime import UTC, datetime, timedelta
 
-import jwt
 from flask import Blueprint, abort, g, jsonify, request
 
 from app.services.telegram_service import (
@@ -19,7 +18,7 @@ from app.services.telegram_service import (
 )
 from app.extensions import limiter
 from app.middleware import login_required
-from config import get_config
+from app.services.token_service import issue_access_token
 from finance_tracker.utils.validations import (
     ValidationError,
     validate_category,
@@ -28,8 +27,6 @@ from finance_tracker.utils.validations import (
 
 
 telegram_bp = Blueprint("telegram", __name__, url_prefix="/api/telegram")
-config = get_config()
-SECRET_KEY = config.SECRET_KEY
 LINK_TOKEN_TTL_MINUTES = 10
 SCHEMA_SETUP_MESSAGE = (
     "Telegram linking is temporarily unavailable. Please try again shortly."
@@ -41,18 +38,6 @@ def schema_not_ready_response():
     if telegram_linking_schema_ready():
         return None
     return jsonify({"error": "Telegram unavailable", "message": SCHEMA_SETUP_MESSAGE}), 503
-
-
-def issue_access_token(user):
-    payload = {
-        "user_id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role or "user",
-        "exp": datetime.now(UTC) + timedelta(hours=1),
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
 
 def require_bot_auth():
     supplied_auth = request.headers.get("X-Telegram-Bot-Auth", "")

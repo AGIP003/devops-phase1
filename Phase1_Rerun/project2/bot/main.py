@@ -20,7 +20,6 @@ from bot.handlers.add import (
     payment_callback,
 )
 from bot.handlers.link import link_handler
-from bot.handlers.welcome import welcome_handler
 from bot.handlers.balance import balance_handler
 from bot.handlers.help import help_handler
 from bot.handlers.import_message import (
@@ -29,6 +28,7 @@ from bot.handlers.import_message import (
     IMPORT_DESCRIPTION,
     cancel_import_callback,
     cancel_import_command,
+    automatic_import_handler,
     import_category_callback,
     import_description_handler,
     import_message_handler,
@@ -79,7 +79,13 @@ def main():
     app.add_handler(CommandHandler('help', help_handler))
     app.add_handler(
         ConversationHandler(
-            entry_points=[CommandHandler("import", import_message_handler)],
+            entry_points=[
+                CommandHandler("import", import_message_handler),
+                MessageHandler(
+                    filters.TEXT & ~filters.COMMAND,
+                    automatic_import_handler,
+                ),
+            ],
             states={
                 IMPORT_DESCRIPTION: [
                     MessageHandler(
@@ -115,7 +121,6 @@ def main():
     app.add_handler(CallbackQueryHandler(category_menu_callback, pattern=r"^addmore\|"))
     app.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^addpm\|"))
     app.add_handler(CallbackQueryHandler(cancel_add_callback, pattern=r"^addcancel$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, welcome_handler))
     app.add_error_handler(error_handler)
 
     print('Bot is running...')

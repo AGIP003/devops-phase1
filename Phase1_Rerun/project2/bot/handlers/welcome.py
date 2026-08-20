@@ -55,6 +55,7 @@ async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Hello {username}! 👋\n\n"
         "What would you like to do today?\n\n"
         "➕ /add — Add a transaction\n"
+        "📩 Paste an M-Pesa or Airtel SMS — Import with confirmation\n"
         "💰 /balance — Check your balance\n"
         "⚙️ /default — Set your payment method\n"
         "❓ /help — View help",

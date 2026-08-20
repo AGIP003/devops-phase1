@@ -27,6 +27,97 @@ class FakeCallbackQuery:
         self.edits.append((text, kwargs))
 
 
+def test_plain_provider_message_starts_import_without_command(monkeypatch):
+    captured = {}
+
+    async def fake_start(update, context, raw_message, **kwargs):
+        captured["message"] = raw_message
+        captured["fallback_to_welcome"] = kwargs["fallback_to_welcome"]
+        return import_message.IMPORT_DESCRIPTION
+
+    monkeypatch.setattr(import_message, "_start_import", fake_start)
+    message = FakeMessage(
+        "A3Q4ABCDE12. Ksh 50 sent to SAMPLE PERSON 700000000 "
+        "on 17/08/26 at 02:13 PM. Fee: Ksh 0. Bal: Ksh 1228.5. "
+        "MPESA ID: UAA4W36EKG"
+    )
+
+    state = asyncio.run(
+        import_message.automatic_import_handler(
+            SimpleNamespace(message=message),
+            SimpleNamespace(user_data={}),
+        )
+    )
+
+    assert state == import_message.IMPORT_DESCRIPTION
+    assert captured["message"].startswith("A3Q4ABCDE12.")
+    assert captured["fallback_to_welcome"] is True
+
+
+def test_ordinary_text_continues_to_welcome_handler(monkeypatch):
+    welcomed = []
+
+    async def fake_welcome(update, context):
+        welcomed.append(update.message.text)
+
+    monkeypatch.setattr(import_message, "welcome_handler", fake_welcome)
+    message = FakeMessage("hello there")
+
+    state = asyncio.run(
+        import_message.automatic_import_handler(
+            SimpleNamespace(message=message),
+            SimpleNamespace(user_data={}),
+        )
+    )
+
+    assert state == ConversationHandler.END
+    assert welcomed == ["hello there"]
+
+
+def test_provider_like_text_that_fails_full_parse_returns_to_welcome(monkeypatch):
+    welcomed = []
+
+    async def run_immediately(function, *args):
+        return function(*args)
+
+    async def fake_welcome(update, context):
+        welcomed.append(update.message.text)
+
+    def reject_preview(token, message):
+        raise import_message.UnsupportedProviderMessageError(
+            "Unsupported provider message"
+        )
+
+    monkeypatch.setattr(import_message.asyncio, "to_thread", run_immediately)
+    monkeypatch.setattr(
+        import_message,
+        "get_telegram_session",
+        lambda telegram_id: {"linked": True, "token": "temporary-token"},
+    )
+    monkeypatch.setattr(
+        import_message,
+        "get_telegram_preferences",
+        lambda token: {"category_aliases": {}},
+    )
+    monkeypatch.setattr(import_message, "preview_transaction_import", reject_preview)
+    monkeypatch.setattr(import_message, "welcome_handler", fake_welcome)
+    message = FakeMessage("ABCDEFGHIJK. ordinary text after a provider-like prefix")
+    update = SimpleNamespace(
+        message=message,
+        effective_user=SimpleNamespace(id=123),
+    )
+
+    state = asyncio.run(
+        import_message.automatic_import_handler(
+            update,
+            SimpleNamespace(user_data={}),
+        )
+    )
+
+    assert state == ConversationHandler.END
+    assert welcomed == [message.text]
+
+
 def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     raw_message = "SAFE SAMPLE PROVIDER MESSAGE"
     captured_import = {}

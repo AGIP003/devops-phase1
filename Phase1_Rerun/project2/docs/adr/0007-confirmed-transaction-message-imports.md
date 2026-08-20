@@ -24,8 +24,12 @@ regex match would create silent classification errors and duplicate spending.
 
 Choose option 3.
 
-- Imports are explicit through `/import`; ordinary chat is never treated as a
-  financial instruction.
+- A complete provider-looking SMS can start the preview automatically; `/import`
+  remains an explicit alternative. A conservative local prefix gate prevents
+  ordinary chat from being sent for financial parsing, and unsupported text
+  returns to normal welcome handling.
+- No parsed message becomes a financial instruction until the user supplies a
+  description, chooses a category and confirms the final preview.
 - Regex performs deterministic fact extraction. Full-pattern matching prevents
   partial messages from being accepted as complete transactions.
 - A user-written description and selected category are mandatory. The parser's
@@ -64,4 +68,3 @@ and require a reviewed parser fixture before support is expanded.
 - An AI categorizer has a documented provider, privacy assessment and evaluation
   set.
 - Provider APIs replace user-supplied messages as an authoritative source.
-

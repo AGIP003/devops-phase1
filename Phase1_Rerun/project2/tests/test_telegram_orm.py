@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 
 from app.extensions import db
 from app.models.telegram_link import TelegramLink
@@ -28,6 +29,7 @@ def test_telegram_link_token_is_single_use(client, register_user):
     )
     assert verify_response.status_code == 200, verify_response.get_json()
     assert verify_response.get_json()["user"]["telegram_id"] == 123456789
+    telegram_access_token = verify_response.get_json()["token"]
 
     reused_response = client.post(
         "/api/telegram/verify",
@@ -40,13 +42,55 @@ def test_telegram_link_token_is_single_use(client, register_user):
 
     status_response = client.get(
         "/api/telegram/status",
-        headers=headers,
+        headers=authorization(telegram_access_token),
     )
     assert status_response.status_code == 200
     assert status_response.get_json() == {
         "linked": True,
         "telegram_id": 123456789,
     }
+
+
+def test_telegram_session_issues_a_token_accepted_by_middleware(
+    client,
+    register_user,
+    monkeypatch,
+):
+    owner = register_user("owner", "owner@example.com")
+    link_response = client.post(
+        "/api/telegram/link-token",
+        headers=authorization(owner["token"]),
+    )
+    link_token = link_response.get_json()["token"]
+    telegram_id = 24681012
+    verify_response = client.post(
+        "/api/telegram/verify",
+        json={"token": link_token, "telegram_id": telegram_id},
+    )
+    assert verify_response.status_code == 200
+
+    bot_token = "test-telegram-bot-token"
+    monkeypatch.setattr(
+        "app.telegram_routes.TELEGRAM_BOT_TOKEN",
+        bot_token,
+    )
+    session_response = client.post(
+        "/api/telegram/session",
+        json={"telegram_id": telegram_id},
+        headers={
+            "X-Telegram-Bot-Auth": sha256(
+                bot_token.encode("utf-8")
+            ).hexdigest()
+        },
+    )
+
+    assert session_response.status_code == 200
+    session_token = session_response.get_json()["token"]
+    status_response = client.get(
+        "/api/telegram/status",
+        headers=authorization(session_token),
+    )
+    assert status_response.status_code == 200
 
 def test_expired_telegram_link_token_is_rejected(
     app,

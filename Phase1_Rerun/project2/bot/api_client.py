@@ -11,6 +11,10 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 REQUEST_TIMEOUT = 12
 
 
+class UnsupportedProviderMessageError(RuntimeError):
+    pass
+
+
 def _error_message(response, fallback):
     try:
         payload = response.json()
@@ -90,6 +94,10 @@ def preview_transaction_import(token, message):
     )
     if response.status_code == 200:
         return response.json()
+    if response.status_code == 400:
+        raise UnsupportedProviderMessageError(
+            _error_message(response, "Unsupported provider message")
+        )
 
     raise RuntimeError(
         _error_message(response, "Unable to recognize that provider message")

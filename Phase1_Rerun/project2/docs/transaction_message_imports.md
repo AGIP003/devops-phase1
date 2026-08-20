@@ -2,8 +2,8 @@
 
 ## User flow
 
-1. A linked user sends `/import` followed by one complete M-Pesa or Airtel Money
-   message.
+1. A linked user pastes one complete M-Pesa or Airtel Money message. `/import`
+   followed by the message remains available as an explicit alternative.
 2. The API parses it and returns a privacy-minimized preview.
 3. The bot requires the user's description and category choice.
 4. The bot shows a final preview with **Save once**, **Save & remember**, and
@@ -94,4 +94,3 @@ Linux+ field note: local PostgreSQL commonly uses a Unix-domain socket such as
 `/var/run/postgresql/.s.PGSQL.5432`. `psql -d finance_tracker_test -c '\conninfo'`
 proves the database and role before migration. Socket permission failures prove
 the process cannot reach PostgreSQL; they do not prove application logic failed.
-
