@@ -626,7 +626,8 @@ def register_routes(app):
         importable = parsed.direction is not TransactionDirection.TRANSFER
         suggested_category = (
             "airtime"
-            if parsed.provider_transaction_type in {"airtime", "data_bundle"}
+            if parsed.provider_transaction_type
+            in {"airtime", "airtime_topup", "data_bundle"}
             else None
         )
         response = jsonify({
@@ -637,7 +638,12 @@ def register_routes(app):
             "direction": parsed.direction.value,
             "amount": str(parsed.amount),
             "currency": parsed.currency,
-            "occurredAt": parsed.occurred_at.isoformat(),
+            "occurredAt": (
+                parsed.occurred_at.isoformat()
+                if parsed.occurred_at is not None
+                else None
+            ),
+            "requiresDate": parsed.occurred_at is None,
             "counterparty": parsed.counterparty,
             "fee": str(parsed.fee) if parsed.fee is not None else None,
             "paymentMethod": (
@@ -680,7 +686,11 @@ def register_routes(app):
                 )
 
             validate_amount(parsed.amount)
-            validate_date(parsed.occurred_at.date().isoformat())
+            transaction_date = validate_date(
+                parsed.occurred_at.date().isoformat()
+                if parsed.occurred_at is not None
+                else data.get("date")
+            )
             description = validate_description(data.get("description"))
             if not description:
                 abort(400, description="Describe what this transaction was for")
@@ -703,6 +713,7 @@ def register_routes(app):
                 user_id=g.current_user["user_id"],
                 raw_message=raw_message,
                 parsed=parsed,
+                transaction_date=transaction_date,
                 description=description,
                 category_name=category_name,
                 remember_alias=remember_alias,
@@ -727,7 +738,11 @@ def register_routes(app):
             "import": {
                 "provider": import_record.provider,
                 "providerTransactionType": import_record.provider_transaction_type,
-                "occurredAt": import_record.occurred_at.isoformat(),
+                "occurredAt": (
+                    import_record.occurred_at.isoformat()
+                    if import_record.occurred_at is not None
+                    else None
+                ),
                 "fee": (
                     str(import_record.fee)
                     if import_record.fee is not None

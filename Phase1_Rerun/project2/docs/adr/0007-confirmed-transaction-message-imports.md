@@ -48,6 +48,11 @@ Choose option 3.
   one ACID unit.
 - Fuliza notices are recognized but do not create a debt or duplicate expense.
   Withdrawals remain transfers and wait for an account-transfer model.
+- Failed provider notices are silently ignored during automatic detection and
+  never reach transaction creation.
+- When a successful provider message omits its transaction date, the user must
+  supply the date. The system does not substitute the Telegram receipt time or
+  today's date; unknown provider timestamps remain `NULL` in import provenance.
 
 ## Consequences
 

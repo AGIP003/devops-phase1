@@ -69,6 +69,27 @@ def test_parses_airtel_bundle_without_inventing_a_fee():
     assert result.fee is None
 
 
+def test_parses_airtime_topup_without_retaining_recipient_phone():
+    message = (
+        "29813220000 Successful. Airtime top up of Ksh 300 "
+        "to 0700000000. Bal: Ksh 828.5."
+    )
+
+    result = parse_airtel_money_message(message)
+
+    assert result.provider == "airtel_money"
+    assert result.external_reference == "29813220000"
+    assert result.amount == Decimal("300")
+    assert result.direction is TransactionDirection.EXPENSE
+    assert result.provider_transaction_type == "airtime_topup"
+    assert result.description == "Airtel airtime top up"
+    assert result.counterparty == "Airtel subscriber"
+    assert result.fee is None
+    assert result.resulting_balance == Decimal("828.5")
+    assert result.occurred_at is None
+    assert "0700000000" not in result.description
+
+
 def test_parses_airtel_paybill_without_exposing_account_number():
     message = (
         "D3PKHAXK2GW. Ksh 2,284 paid to SAMPLE SUPERMARKET          "

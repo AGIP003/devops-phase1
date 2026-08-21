@@ -109,6 +109,7 @@ def import_transaction_message(
     message,
     description,
     category,
+    transaction_date=None,
     remember_alias=None,
 ):
     payload = {
@@ -118,6 +119,8 @@ def import_transaction_message(
     }
     if remember_alias:
         payload["rememberAlias"] = remember_alias
+    if transaction_date:
+        payload["date"] = transaction_date
 
     response = requests.post(
         f"{API_BASE}/transaction-imports",

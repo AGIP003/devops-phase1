@@ -1,6 +1,7 @@
 import asyncio
 import re
 import time
+from datetime import date
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -17,10 +18,15 @@ from bot.transaction_parser import CATEGORIES, category_candidates
 from bot.handlers.welcome import welcome_handler
 
 
-IMPORT_DESCRIPTION, IMPORT_CATEGORY, IMPORT_CONFIRM = range(3)
+IMPORT_DESCRIPTION, IMPORT_DATE, IMPORT_CATEGORY, IMPORT_CONFIRM = range(4)
 IMPORT_TTL_SECONDS = 10 * 60
 PROVIDER_MESSAGE_PREFIX = re.compile(
-    r"^\s*(?:TID:\s*)?[A-Z0-9]{10,11}(?:\s+confirmed\.|\.\s+)",
+    r"^\s*(?:TID:\s*)?[A-Z0-9]{10,11}"
+    r"(?:\s+(?:confirmed|successful)\.|\.\s+)",
+    re.IGNORECASE,
+)
+FAILED_TRANSACTION_NOTICE = re.compile(
+    r"^Your transaction has failed\..*\bTID:\s*[A-Z0-9]{11}\s*$",
     re.IGNORECASE,
 )
 
@@ -103,6 +109,8 @@ async def automatic_import_handler(
     """Route provider-looking text to imports and ordinary text to welcome."""
 
     raw_message = " ".join(update.message.text.strip().split())
+    if FAILED_TRANSACTION_NOTICE.fullmatch(raw_message):
+        return ConversationHandler.END
     if not PROVIDER_MESSAGE_PREFIX.match(raw_message):
         await welcome_handler(update, context)
         return ConversationHandler.END
@@ -184,12 +192,14 @@ async def _start_import(
     fee_line = f"\nFee: KES {fee}" if fee is not None else ""
     counterparty = preview.get("counterparty")
     counterparty_line = f"\nMerchant/person: {counterparty}" if counterparty else ""
+    occurred_at = preview.get("occurredAt")
+    when_line = occurred_at or "Not included by provider — date required"
     await update.message.reply_text(
         "✅ Provider message recognized\n\n"
         f"Provider: {_provider_label(preview['provider'])}\n"
         f"Amount: {preview['currency']} {preview['amount']}\n"
         f"Type: {preview['direction'].title()}\n"
-        f"When: {preview['occurredAt']}"
+        f"When: {when_line}"
         f"{counterparty_line}{fee_line}\n\n"
         "What was this transaction for? Your description is required."
     )
@@ -218,7 +228,46 @@ async def import_description_handler(
         return IMPORT_DESCRIPTION
 
     pending["description"] = description
+    if pending["preview"].get("requiresDate"):
+        await update.message.reply_text(
+            "This provider message has no transaction date.\n\n"
+            "When did it happen? Use YYYY-MM-DD."
+        )
+        return IMPORT_DATE
+
+    return await _request_import_category(update.message, pending)
+
+
+async def import_date_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    pending = _pending_import(context)
+    if pending is None:
+        await update.message.reply_text(
+            "This import expired. Paste the provider SMS again."
+        )
+        return ConversationHandler.END
+
+    try:
+        transaction_date = date.fromisoformat(update.message.text.strip())
+    except (TypeError, ValueError):
+        await update.message.reply_text(
+            "Enter a valid date in YYYY-MM-DD format, for example 2026-08-20."
+        )
+        return IMPORT_DATE
+
+    if transaction_date > date.today():
+        await update.message.reply_text("The transaction date cannot be in the future.")
+        return IMPORT_DATE
+
+    pending["transaction_date"] = transaction_date.isoformat()
+    return await _request_import_category(update.message, pending)
+
+
+async def _request_import_category(message, pending):
     preview = pending["preview"]
+    description = pending["description"]
     search_text = " ".join(
         value
         for value in (
@@ -238,7 +287,7 @@ async def import_description_handler(
     if provider_suggestion:
         suggestions.insert(0, provider_suggestion)
 
-    await update.message.reply_text(
+    await message.reply_text(
         "Choose the category. Suggestions appear first, but you have the final say:",
         reply_markup=_categories_keyboard(preview["direction"], suggestions),
     )
@@ -280,7 +329,7 @@ async def import_category_callback(
     await query.edit_message_text(
         "Review before saving\n\n"
         f"Amount: {preview['currency']} {preview['amount']}\n"
-        f"Date: {preview['occurredAt'][:10]}\n"
+        f"Date: {pending.get('transaction_date') or preview['occurredAt'][:10]}\n"
         f"Description: {description}\n"
         f"Category: {category.title()}\n"
         f"Payment: {preview['paymentMethod']}"
@@ -315,7 +364,8 @@ async def import_save_callback(
             pending["raw_message"],
             pending["description"],
             pending["category"],
-            remember_alias,
+            transaction_date=pending.get("transaction_date"),
+            remember_alias=remember_alias,
         )
     except requests.RequestException:
         await query.edit_message_text(

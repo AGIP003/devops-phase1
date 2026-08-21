@@ -47,6 +47,14 @@ BUNDLE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+AIRTIME_TOPUP_PATTERN = re.compile(
+    rf"^(?P<reference>[A-Z0-9]{{11}})\s+Successful\.\s*"
+    rf"Airtime top up of Ksh\s*(?P<amount>{MONEY_PATTERN})\s+to\s+"
+    rf"{PHONE_PATTERN}\.\s*"
+    rf"Bal:\s*Ksh\s*(?P<balance>{MONEY_PATTERN})\.$",
+    re.IGNORECASE,
+)
+
 PAYBILL_PATTERN = re.compile(
     rf"^(?P<reference>[A-Z0-9]{{11}})\.\s*"
     rf"Ksh\s*(?P<amount>{MONEY_PATTERN})\s+paid to\s+"
@@ -141,6 +149,23 @@ def parse_airtel_money_message(message: str) -> ParsedTransactionMessage:
             fee=None,
             resulting_balance=_parse_money(bundle_match["balance"]),
             provider_transaction_type="data_bundle",
+        )
+
+    airtime_topup_match = AIRTIME_TOPUP_PATTERN.fullmatch(clean_message)
+
+    if airtime_topup_match is not None:
+        return ParsedTransactionMessage(
+            provider="airtel_money",
+            external_reference=airtime_topup_match["reference"].upper(),
+            occurred_at=None,
+            amount=_parse_money(airtime_topup_match["amount"]),
+            currency="KES",
+            direction=TransactionDirection.EXPENSE,
+            description="Airtel airtime top up",
+            counterparty="Airtel subscriber",
+            fee=None,
+            resulting_balance=_parse_money(airtime_topup_match["balance"]),
+            provider_transaction_type="airtime_topup",
         )
 
     paybill_match = PAYBILL_PATTERN.fullmatch(clean_message)

@@ -19,7 +19,7 @@ class FulizaNoticeType(StrEnum):
 class ParsedTransactionMessage:
     provider: str
     external_reference: str
-    occurred_at: datetime
+    occurred_at: datetime | None
     amount: Decimal
     currency: str
     direction: TransactionDirection

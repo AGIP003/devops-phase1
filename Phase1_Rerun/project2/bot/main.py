@@ -25,12 +25,14 @@ from bot.handlers.help import help_handler
 from bot.handlers.import_message import (
     IMPORT_CATEGORY,
     IMPORT_CONFIRM,
+    IMPORT_DATE,
     IMPORT_DESCRIPTION,
     cancel_import_callback,
     cancel_import_command,
     automatic_import_handler,
     import_category_callback,
     import_description_handler,
+    import_date_handler,
     import_message_handler,
     import_save_callback,
 )
@@ -91,6 +93,12 @@ def main():
                     MessageHandler(
                         filters.TEXT & ~filters.COMMAND,
                         import_description_handler,
+                    )
+                ],
+                IMPORT_DATE: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        import_date_handler,
                     )
                 ],
                 IMPORT_CATEGORY: [

@@ -37,9 +37,8 @@ def test_plain_provider_message_starts_import_without_command(monkeypatch):
 
     monkeypatch.setattr(import_message, "_start_import", fake_start)
     message = FakeMessage(
-        "A3Q4ABCDE12. Ksh 50 sent to SAMPLE PERSON 700000000 "
-        "on 17/08/26 at 02:13 PM. Fee: Ksh 0. Bal: Ksh 1228.5. "
-        "MPESA ID: UAA4W36EKG"
+        "29813220000 Successful. Airtime top up of Ksh 300 "
+        "to 0700000000. Bal: Ksh 828.5."
     )
 
     state = asyncio.run(
@@ -50,7 +49,7 @@ def test_plain_provider_message_starts_import_without_command(monkeypatch):
     )
 
     assert state == import_message.IMPORT_DESCRIPTION
-    assert captured["message"].startswith("A3Q4ABCDE12.")
+    assert captured["message"].startswith("29813220000 Successful.")
     assert captured["fallback_to_welcome"] is True
 
 
@@ -118,14 +117,78 @@ def test_provider_like_text_that_fails_full_parse_returns_to_welcome(monkeypatch
     assert welcomed == [message.text]
 
 
+def test_failed_airtel_notice_is_silently_ignored(monkeypatch):
+    welcomed = []
+
+    async def fake_welcome(update, context):
+        welcomed.append(update.message.text)
+
+    monkeypatch.setattr(import_message, "welcome_handler", fake_welcome)
+    message = FakeMessage(
+        "Your transaction has failed. Your Airtel Money balance is "
+        "Ksh 1000. Please try again later. TID: J3Q4QR1C9UQ"
+    )
+
+    state = asyncio.run(
+        import_message.automatic_import_handler(
+            SimpleNamespace(message=message),
+            SimpleNamespace(user_data={}),
+        )
+    )
+
+    assert state == ConversationHandler.END
+    assert welcomed == []
+    assert message.replies == []
+
+
+def test_missing_provider_date_is_required_before_category_selection():
+    message = FakeMessage("Airtime for family")
+    context = SimpleNamespace(
+        user_data={
+            "pending_import": {
+                "started_at": import_message.time.monotonic(),
+                "preview": {
+                    "requiresDate": True,
+                    "direction": "expense",
+                    "counterparty": "Airtel subscriber",
+                    "providerTransactionType": "airtime_topup",
+                    "suggestedCategory": "airtime",
+                },
+                "aliases": {},
+            }
+        }
+    )
+
+    state = asyncio.run(
+        import_message.import_description_handler(
+            SimpleNamespace(message=message),
+            context,
+        )
+    )
+    assert state == import_message.IMPORT_DATE
+
+    date_message = FakeMessage("2026-08-20")
+    state = asyncio.run(
+        import_message.import_date_handler(
+            SimpleNamespace(message=date_message),
+            context,
+        )
+    )
+
+    assert state == import_message.IMPORT_CATEGORY
+    assert context.user_data["pending_import"]["transaction_date"] == "2026-08-20"
+    keyboard = date_message.replies[-1][1]["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].text == "Airtime"
+
+
 def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     raw_message = "SAFE SAMPLE PROVIDER MESSAGE"
     captured_import = {}
 
-    async def run_immediately(function, *args):
+    async def run_immediately(function, *args, **kwargs):
         # Production deliberately moves blocking requests off the event loop.
         # This unit test replaces the thread boundary with a deterministic call.
-        return function(*args)
+        return function(*args, **kwargs)
 
     monkeypatch.setattr(import_message.asyncio, "to_thread", run_immediately)
 
@@ -163,7 +226,8 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
         message,
         description,
         category,
-        remember_alias,
+        transaction_date=None,
+        remember_alias=None,
     ):
         captured_import.update({
             "token": token,
@@ -171,6 +235,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
             "description": description,
             "category": category,
             "remember_alias": remember_alias,
+            "transaction_date": transaction_date,
         })
         return {
             "data": {

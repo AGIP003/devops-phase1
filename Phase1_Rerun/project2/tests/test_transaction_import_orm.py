@@ -20,6 +20,13 @@ def sample_mpesa_airtime_message() -> str:
     )
 
 
+def sample_airtel_topup_message() -> str:
+    return (
+        "29813220000 Successful. Airtime top up of Ksh 300 "
+        "to 0700000000. Bal: Ksh 828.5."
+    )
+
+
 def seed_provider_payment_methods(app) -> None:
     with app.app_context():
         db.session.add_all([
@@ -66,6 +73,53 @@ def test_import_requires_user_description(
 
     assert response.status_code == 400
     assert "describe" in response.get_json()["message"].lower()
+
+
+def test_airtel_topup_requires_user_supplied_date_when_provider_omits_it(
+    app,
+    client,
+    register_user,
+):
+    seed_provider_payment_methods(app)
+    owner = register_user("owner", "owner@example.com")
+    headers = authorization(owner["token"])
+
+    preview = client.post(
+        "/api/transaction-imports/preview",
+        headers=headers,
+        json={"message": sample_airtel_topup_message()},
+    )
+
+    assert preview.status_code == 200
+    assert preview.get_json()["requiresDate"] is True
+    assert preview.get_json()["occurredAt"] is None
+    assert preview.get_json()["suggestedCategory"] == "airtime"
+
+    missing_date = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": sample_airtel_topup_message(),
+            "description": "Airtime for family",
+            "category": "airtime",
+        },
+    )
+    assert missing_date.status_code == 400
+
+    saved = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": sample_airtel_topup_message(),
+            "description": "Airtime for family",
+            "category": "airtime",
+            "date": "2026-08-20",
+        },
+    )
+
+    assert saved.status_code == 201, saved.get_json()
+    assert saved.get_json()["data"]["date"] == "2026-08-20"
+    assert saved.get_json()["import"]["occurredAt"] is None
 
 
 def test_import_saves_original_date_fee_and_explicit_alias_atomically(

@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import re
+from datetime import date
 
 from flask import current_app
 from sqlalchemy import or_, select
@@ -83,6 +84,7 @@ def import_transaction_message_for_user(
     user_id: int,
     raw_message: str,
     parsed: ParsedTransactionMessage,
+    transaction_date: date,
     description: str,
     category_name: str,
     remember_alias: str | None = None,
@@ -106,7 +108,7 @@ def import_transaction_message_for_user(
             transaction_type=parsed.direction.value,
             payment_method_name=payment_method_for_provider(parsed.provider),
             amount=parsed.amount,
-            transaction_date=parsed.occurred_at.date(),
+            transaction_date=transaction_date,
             description=description,
         )
         db.session.flush()

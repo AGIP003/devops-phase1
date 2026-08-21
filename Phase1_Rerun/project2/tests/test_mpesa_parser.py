@@ -137,3 +137,68 @@ def test_parses_withdrawal_as_transfer_without_exposing_agent_number():
     assert "000000" not in result.description
     assert result.fee == Decimal("11.00")
     assert result.resulting_balance == Decimal("315.11")
+
+
+def test_parses_kcb_mpesa_loan_repayment_as_expense():
+    message = (
+        "UAAIU1QRKT Confirmed. Your loan repayment of Ksh12,345.00 from "
+        "your M-PESA account to KCB M-PESA on 5/8/26 at 10:48 PM is "
+        "successful. Your M-PESA balance is Ksh800.00."
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.amount == Decimal("12345.00")
+    assert result.direction is TransactionDirection.EXPENSE
+    assert result.provider_transaction_type == "loan_repayment"
+    assert result.counterparty == "KCB M-PESA"
+    assert result.description == "KCB M-PESA loan repayment"
+
+
+def test_parses_received_money_with_masked_phone_and_ignores_link():
+    message = (
+        "UAAIU1PBBA Confirmed.You have received Ksh3,000.00 from "
+        "SAMPLE SENDER 0100***000 on 4/8/26 at 12:24 PM "
+        "New M-PESA balance is Ksh3,000.00. "
+        "Download My OneApp on https://saf.cx/example"
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.direction is TransactionDirection.INCOME
+    assert result.counterparty == "SAMPLE SENDER"
+    assert "0100" not in result.description
+    assert result.provider_transaction_type == "received_money"
+
+
+def test_parses_sent_money_with_optional_daily_limit_and_link():
+    message = (
+        "UAAIU1HD8Q Confirmed. Ksh50.00 sent to SAMPLE PERSON 0117000000 "
+        "on 3/8/26 at 7:52 PM. New M-PESA balance is Ksh0.00. "
+        "Transaction cost, Ksh0.00. Amount you can transact within the "
+        "day is 499,950.00. Download My OneApp on https://saf.cx/example"
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.direction is TransactionDirection.EXPENSE
+    assert result.counterparty == "SAMPLE PERSON"
+    assert "0117000000" not in result.description
+    assert result.provider_transaction_type == "send_money"
+
+
+def test_parses_buy_goods_without_exposing_till_or_phone():
+    message = (
+        "UAAIU1RQ41 Confirmed. Ksh100.00 paid to SAMPLE MERCHANT LTD. "
+        "on 6/8/26 at 10:46 AM.New M-PESA balance is Ksh475.11. "
+        "Transaction cost, Ksh0.00. Amount you can transact within the "
+        "day is 499,900.00. Download My OneApp on https://saf.cx/example"
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.amount == Decimal("100.00")
+    assert result.direction is TransactionDirection.EXPENSE
+    assert result.counterparty == "SAMPLE MERCHANT LTD"
+    assert result.description == "Paid SAMPLE MERCHANT LTD"
+    assert result.provider_transaction_type == "buy_goods"

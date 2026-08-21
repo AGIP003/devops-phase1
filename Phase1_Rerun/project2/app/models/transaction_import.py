@@ -54,9 +54,9 @@ class TransactionImport(TimeStampMixin, Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     external_reference: Mapped[str] = mapped_column(String(64), nullable=False)
     message_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(
+    occurred_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
     )
     provider_transaction_type: Mapped[str] = mapped_column(
         String(40),

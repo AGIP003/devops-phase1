@@ -13,6 +13,20 @@
 6. Temporary raw message and JWT state expire after ten minutes and are cleared
    on completion or cancellation.
 
+Supported Airtel Money messages include outgoing and incoming transfers,
+PayBill payments, data bundles, and airtime top-ups to another subscriber. A
+recipient phone number is matched but never retained; the user supplies the
+human description and confirms the `Airtime` category. Airtime top-up notices
+that omit a date require the user to enter `YYYY-MM-DD`; failed-transaction
+notices are ignored and never stored.
+
+Supported M-Pesa messages include outgoing and incoming transfers, PayBill,
+Buy Goods, airtime, cash withdrawal, and KCB M-Pesa loan repayment notices.
+Loan repayment is recorded as an expense with provider subtype
+`loan_repayment`; it does not introduce a separate transaction direction.
+Withdrawals are recognized as transfers but are not importable until the app
+has an account-to-account transfer model.
+
 The description answers “what was this for?” Provider wording only answers “what
 did the payment rail report?” Keeping them separate avoids treating every payment
 to the same person or supermarket as the same category.
@@ -42,10 +56,12 @@ Confirmation request:
   "message": "COMPLETE PROVIDER MESSAGE",
   "description": "Weekly data bundle",
   "category": "airtime",
+  "date": "2026-08-20",
   "rememberAlias": "weekly data bundle"
 }
 ```
 
+`date` is required only when the provider message omits its transaction date.
 `rememberAlias` is optional and only sent after explicit user confirmation. A
 repeat import returns HTTP `409` and does not create a second transaction.
 
@@ -78,7 +94,7 @@ FLASK_ENV=testing SQLALCHEMY_ECHO=false flask db upgrade head
 FLASK_ENV=testing SQLALCHEMY_ECHO=false flask db current
 ```
 
-Expected head: `f1a2b3c4d5e6`.
+Expected head: `a4c7e2f91b30`.
 
 Run focused tests:
 
