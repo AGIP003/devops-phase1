@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, ChevronDown, FileText, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import EmptyState from '../components/ui/EmptyState';
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
@@ -31,6 +31,11 @@ function getDateValue(dateValue) {
     if (Number.isNaN(parsedDate.getTime())) return null;
     parsedDate.setHours(0, 0, 0, 0);
     return parsedDate;
+}
+
+function safeDateParameter(searchParams, name) {
+    const value = searchParams.get(name) || "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
 }
 
 function FilterSelect({ children, ...props }) {
@@ -62,6 +67,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
     const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
     const selectedType = watch("type");
     const selectedDate = watch("date");
+    const feeSource = watch("provider_fee_source");
     const currentCategories = selectedType ? categoryOptions[selectedType] : [];
 
     useEffect(() => {
@@ -96,7 +102,23 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
     async function onSubmit(data) {
         setServerError('');
         try {
-            await api.put(`/transactions/${transactionId}`, data);
+            const providerFee = data.provider_fee;
+            const providerFeeSource = data.provider_fee_source;
+            const transactionData = { ...data };
+            delete transactionData.provider_fee;
+            delete transactionData.provider_fee_source;
+            delete transactionData.provider_fee_original_estimate;
+            await api.put(`/transactions/${transactionId}`, transactionData);
+            if (
+                providerFee !== null
+                && providerFee !== undefined
+                && providerFee !== ""
+                && ["estimated_tariff", "user_confirmed"].includes(providerFeeSource)
+            ) {
+                await api.patch(`/transactions/${transactionId}/provider-fee`, {
+                    fee: providerFee,
+                });
+            }
             onSaved();
         } catch (err) {
             setServerError(err.response?.data?.message || 'Update failed');
@@ -140,6 +162,11 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
                             {errors.description && <span className="error">{errors.description.message}</span>}
                         </label>
 
+                        <label className="transaction-field transaction-field-wide">
+                            <span>Merchant or person (optional)</span>
+                            <input type="text" maxLength="150" {...register("merchant_name")} />
+                        </label>
+
                         <label className="transaction-field">
                             <span>Type</span>
                             <select {...register("type", { required: "Type is required" })}>
@@ -148,6 +175,27 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
                             </select>
                             {errors.type && <span className="error">{errors.type.message}</span>}
                         </label>
+
+                        {feeSource && feeSource !== "unknown" && (
+                            <label className="transaction-field transaction-field-wide">
+                                <span>Provider fee ({feeSource.replaceAll("_", " ")})</span>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    disabled={feeSource === "provider_reported"}
+                                    {...register("provider_fee", {
+                                        valueAsNumber: true,
+                                        min: { value: 0, message: "Fee cannot be negative" },
+                                    })}
+                                />
+                                <small>
+                                    {feeSource === "provider_reported"
+                                        ? "Reported by the provider message, so it is protected from manual overwrite."
+                                        : "Editing an estimate marks it as user-confirmed; the original estimate remains auditable."}
+                                </small>
+                            </label>
+                        )}
 
                         <label className="transaction-field">
                             <span>Category</span>
@@ -215,14 +263,23 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 
 function Transaction() {
     const { toggleSidebar } = useOutletContext();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { formatCurrency } = useAdjustedCurrency();
     const [transactions, setTransactions] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(
+        () => (searchParams.get("query") || "").slice(0, 100),
+    );
     const [filterType, setFilterType] = useState("all");
-    const [filterCategory, setFilterCategory] = useState("all");
-    const [dateRange, setDateRange] = useState("all");
-    const [customStartDate, setCustomStartDate] = useState("");
-    const [customEndDate, setCustomEndDate] = useState("");
+    const [filterCategory, setFilterCategory] = useState(
+        () => searchParams.get("category") || "all",
+    );
+    const initialStartDate = safeDateParameter(searchParams, "from");
+    const initialEndDate = safeDateParameter(searchParams, "to");
+    const [dateRange, setDateRange] = useState(
+        () => initialStartDate || initialEndDate ? "custom" : "all",
+    );
+    const [customStartDate, setCustomStartDate] = useState(initialStartDate);
+    const [customEndDate, setCustomEndDate] = useState(initialEndDate);
     const [sortOrder, setSortOrder] = useState("newest");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -280,6 +337,16 @@ function Transaction() {
         return Array.from(categories).sort((a, b) => a.localeCompare(b));
     }, [transactions]);
 
+    useEffect(() => {
+        if (
+            !loading
+            && filterCategory !== "all"
+            && !categoryOptions.includes(filterCategory)
+        ) {
+            setFilterCategory("all");
+        }
+    }, [categoryOptions, filterCategory, loading]);
+
     const hasActiveFilters = Boolean(
         searchQuery ||
         filterType !== "all" ||
@@ -298,6 +365,7 @@ function Transaction() {
         setCustomStartDate("");
         setCustomEndDate("");
         setSortOrder("newest");
+        setSearchParams({}, { replace: true });
     }
 
     const filteredTransactions = useMemo(() => {
@@ -317,7 +385,8 @@ function Transaction() {
                     const matchesDesc = transaction.description?.toLowerCase().includes(query);
                     const matchesCat = transaction.category?.toLowerCase().includes(query);
                     const matchesPM = transaction.payment_method?.toLowerCase().includes(query);
-                    if (!matchesCat && !matchesDesc && !matchesPM) return false;
+                    const matchesMerchant = transaction.merchant_name?.toLowerCase().includes(query);
+                    if (!matchesCat && !matchesDesc && !matchesPM && !matchesMerchant) return false;
                 }
 
                 return true;
@@ -404,7 +473,7 @@ function Transaction() {
             <div className="transactions-toolbar">
                 <input
                     type='text'
-                    placeholder="Search description, category, payment"
+                    placeholder="Search description, merchant, category, payment"
                     aria-label="Search transactions"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -519,7 +588,10 @@ function Transaction() {
                                     [...Array(5)].map((_, i) => <TransactionSkelton key={i} />)
                                 ) : filteredTransactions.map((tx) => (
                                     <tr key={tx.id}>
-                                        <td className="transaction-description" data-label="Description">{tx.description}</td>
+                                        <td className="transaction-description" data-label="Description">
+                                            {tx.description}
+                                            {tx.merchant_name && <small>{tx.merchant_name}</small>}
+                                        </td>
                                         <td data-label="Type">
                                             <span className={`type-pill type-pill-${tx.type}`}>
                                                 {tx.type}
@@ -527,7 +599,15 @@ function Transaction() {
                                         </td>
                                         <td data-label="Category">{tx.category}</td>
                                         <td data-label="Date">{dateFormatter.format(new Date(tx.date))}</td>
-                                        <td data-label="Payment">{tx.payment_method}</td>
+                                        <td data-label="Payment">
+                                            {tx.payment_method}
+                                            {tx.provider_fee != null && (
+                                                <small className={tx.provider_fee_source === "estimated_tariff" ? "fee-estimated" : "fee-confirmed"}>
+                                                    Fee {formatCurrency(Number(tx.provider_fee))}
+                                                    {tx.provider_fee_source === "estimated_tariff" ? " estimate" : ""}
+                                                </small>
+                                            )}
+                                        </td>
                                         <td className={`amount-cell amount-${tx.type}`} data-label="Amount">
                                             {tx.type === 'expense' ? '-' : '+'}
                                             {formatCurrency(Number(tx.amount || 0))}

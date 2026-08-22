@@ -5,12 +5,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "../services/api";
 import Analytics from "./Analytics";
 
+const router = vi.hoisted(() => ({ navigate: vi.fn() }));
+
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => router.navigate,
+}));
+
 vi.mock("../services/api", () => ({
-  default: { get: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }));
 
 vi.mock("../hooks/useAdjustedCurrency", () => ({
   useAdjustedCurrency: () => ({
+    currencyCode: "KES",
+    rates: { KES: 1 },
     formatCurrency: (value) => `KES ${Number(value).toFixed(2)}`,
   }),
 }));
@@ -45,8 +53,12 @@ const summary = {
   },
   cashFlow: {
     income: "100000.00",
+    recordedExpenses: "69500.00",
     expenses: "70000.00",
-    transactionFees: null,
+    transactionFees: "500.00",
+    confirmedTransactionFees: "400.00",
+    estimatedTransactionFees: "100.00",
+    financingCharges: "20.00",
     net: "30000.00",
     savingsRate: "30.00",
   },
@@ -81,7 +93,7 @@ const summary = {
   monthlyTrend: [
     { month: "2026-08", income: "100000.00", expenses: "70000.00", net: "30000.00" },
   ],
-  expenseCategories: [{ category: "Housing", amount: "40000.00" }],
+  expenseCategories: [{ category: "Housing", amount: "40000.00", transactionCount: 8 }],
   dailyActivity: [
     { date: "2026-08-18", income: "100000.00", expenses: "70000.00", transactionCount: 3 },
   ],
@@ -99,6 +111,7 @@ const summary = {
 beforeEach(() => {
   vi.clearAllMocks();
   api.get.mockResolvedValue({ data: summary });
+  api.post.mockResolvedValue({ data: {} });
 });
 
 describe("Analytics", () => {
@@ -106,10 +119,17 @@ describe("Analytics", () => {
     render(<Analytics />);
 
     expect(await screen.findByRole("heading", { name: "Analytics" })).toBeInTheDocument();
-    expect(screen.getByText("KES 30000.00")).toBeInTheDocument();
+    expect(screen.getAllByText("KES 30000.00")).toHaveLength(2);
     expect(screen.getByText("30.00%")).toBeInTheDocument();
     expect(screen.getByText("KES 32500.00")).toBeInTheDocument();
-    expect(screen.getByText("Review Housing spending")).toBeInTheDocument();
+    expect(screen.getByText("Housing is your largest spending area")).toBeInTheDocument();
+    expect(screen.getByText("58%")).toBeInTheDocument();
+    expect(screen.getByText("KES 40000.00 across 8 transactions")).toBeInTheDocument();
+    expect(screen.getAllByText("3 transactions reviewed").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Calculated from your records/i)).toBeInTheDocument();
+    const insights = screen.getByRole("heading", { name: "What deserves attention" }).closest("section");
+    const assistant = screen.getByRole("heading", { name: "Ask about your finances" }).closest("section");
+    expect(insights.compareDocumentPosition(assistant) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("img", { name: /monthly income, expenses and net/i })).toBeInTheDocument();
     const calendar = screen.getByRole("img", { name: /daily income and expense calendar for 2026-08/i });
     expect(calendar).toHaveAttribute("data-calendar-days", "31");
@@ -149,11 +169,122 @@ describe("Analytics", () => {
     expect(screen.getByRole("img", { name: /what-if scenario monthly flexibility/i })).toBeInTheDocument();
   });
 
+  it("searches any description or merchant and lets the user switch metric", async () => {
+    const user = userEvent.setup();
+    api.get.mockImplementation((url) => {
+      if (url === "/analytics/description-trend") {
+        return Promise.resolve({
+          data: {
+            query: "airtime",
+            totalCount: 2,
+            totalAmount: "350.00",
+            series: [{ bucket: "2026-08-18", count: 2, amount: "350.00" }],
+          },
+        });
+      }
+      return Promise.resolve({ data: summary });
+    });
+    render(<Analytics />);
+    await screen.findByRole("heading", { name: "Analytics" });
+
+    await user.type(screen.getByPlaceholderText(/Try airtime/i), "airtime");
+    await user.click(screen.getByRole("button", { name: "Analyse" }));
+
+    expect(await screen.findByText("“airtime”")).toBeInTheDocument();
+    expect(screen.getByText("2 matches · KES 350.00")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /spending trend for airtime/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Frequency" }));
+    expect(api.get).toHaveBeenCalledWith(
+      "/analytics/description-trend",
+      { params: { query: "airtime", period: "month" } },
+    );
+  });
+
+  it("asks the bounded assistant and previews an opt-in weekly review", async () => {
+    const user = userEvent.setup();
+    api.post
+      .mockResolvedValueOnce({
+        data: {
+          answer: "You recorded airtime twice this month.",
+          evidence: ["2 matches totalling KES 350.00"],
+          caveats: ["Only recorded transactions are included."],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          narrative: {
+            headline: "A quieter spending week",
+            summary: "Recorded outflow decreased.",
+            observations: ["Food spending fell."],
+            options: ["Review recurring fees."],
+            caveats: [],
+          },
+        },
+      });
+    render(<Analytics />);
+    await screen.findByRole("heading", { name: "Analytics" });
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Question about your finances" }),
+      "How often did I buy airtime this month?",
+    );
+    await user.click(screen.getByRole("button", { name: "Ask securely" }));
+    expect(await screen.findByText("You recorded airtime twice this month.")).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith(
+      "/ai/analytics/questions",
+      { question: "How often did I buy airtime this month?" },
+    );
+
+    await user.click(screen.getByRole("button", { name: "Preview weekly review" }));
+    expect(await screen.findByText("A quieter spending week")).toBeInTheDocument();
+    expect(screen.getByText("Preview only. Nothing is sent automatically.")).toBeInTheDocument();
+  });
+
+  it("turns an insight into an editable assistant question without submitting it", async () => {
+    const user = userEvent.setup();
+    render(<Analytics />);
+    await screen.findByRole("heading", { name: "What deserves attention" });
+
+    await user.click(screen.getAllByRole("button", { name: "Explain with AI" })[0]);
+
+    expect(screen.getByRole("textbox", { name: "Question about your finances" })).toHaveValue(
+      "How much did I spend on Housing in this period, and where could I adjust?",
+    );
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("drills into matching records and lets the user hide and restore an insight", async () => {
+    const user = userEvent.setup();
+    render(<Analytics />);
+    await screen.findByRole("heading", { name: "What deserves attention" });
+
+    await user.click(screen.getAllByRole("button", { name: "See transactions" })[0]);
+    expect(router.navigate).toHaveBeenCalledWith(
+      "/transactions?category=Housing&from=2025-08-19&to=2026-08-18",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Hide Housing is your largest spending area" }));
+    expect(screen.queryByText("Housing is your largest spending area")).not.toBeInTheDocument();
+    expect(screen.getByText(/Your financial records were not changed/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByText("Housing is your largest spending area")).toBeInTheDocument();
+  });
+
   it("explains an empty transaction period without hiding commitments", async () => {
     api.get.mockResolvedValue({
       data: {
         ...summary,
-        cashFlow: { income: "0.00", expenses: "0.00", transactionFees: null, net: "0.00", savingsRate: null },
+        cashFlow: {
+          income: "0.00",
+          recordedExpenses: "0.00",
+          expenses: "0.00",
+          transactionFees: "0.00",
+          confirmedTransactionFees: "0.00",
+          estimatedTransactionFees: "0.00",
+          net: "0.00",
+          savingsRate: null,
+        },
         monthlyTrend: [],
         expenseCategories: [],
         dailyActivity: [],

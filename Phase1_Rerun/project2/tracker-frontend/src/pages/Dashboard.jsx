@@ -9,13 +9,18 @@ import { useMemo, useCallback } from "react";
 import ChartsSection, { MonthlyTrendChart } from "../components/ui/ChartsSection";
 
 import SummaryCards from "../components/ui/SummaryCard";
-import { chamaGroups, feeEvents, getChamaProgress, getFeeSummary } from "../data/mockFinanceFeatures";
+import { chamaGroups, getChamaProgress } from "../data/mockFinanceFeatures";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 import { TelegramIcon } from "../components/ui/TelegramLinkPanel";
 import SubscriptionIcon from "../components/ui/SubscriptionIcon";
 import ProfileMenu from "../components/ui/ProfileMenu";
 
 const TELEGRAM_BOT_LINK = "https://t.me/pesatiq_bot";
+const FEE_PROVIDER_STYLE = {
+    mpesa: { name: "M-PESA", tone: "#2f8f5b" },
+    airtel_money: { name: "Airtel Money", tone: "#dc3d4b" },
+    fuliza_mpesa: { name: "Fuliza", tone: "#8b5cf6" },
+};
 
 // Skeleton row for the div-based recent transactions list.
 function RecentTransactionSkeleton() {
@@ -59,6 +64,7 @@ function Dashboard() {
     const [debts, setDebts] = useState([]);
     const [goals, setGoals] = useState([]);
     const [commitments, setCommitments] = useState([]);
+    const [feeSummary, setFeeSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [showAddMenu, setShowAddMenu] = useState(false);
@@ -86,7 +92,6 @@ function Dashboard() {
         .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
         .slice(0, 5);
     const chamaPreview = chamaGroups[0];
-    const feeSummary = getFeeSummary(feeEvents);
 
     //Date Formatter
     const dateFormatter = new Intl.DateTimeFormat('en-KE', {
@@ -116,10 +121,11 @@ function Dashboard() {
     }, [fetchTransactions])
 
     const fetchFinancialPlans = useCallback(async () => {
-        const [debtResult, goalResult, commitmentResult] = await Promise.allSettled([
+        const [debtResult, goalResult, commitmentResult, feeResult] = await Promise.allSettled([
             api.get('/debts'),
             api.get('/goals'),
             api.get('/commitments'),
+            api.get('/fees/summary'),
         ]);
         setDebts(
             debtResult.status === "fulfilled" && Array.isArray(debtResult.value.data)
@@ -135,6 +141,11 @@ function Dashboard() {
             commitmentResult.status === "fulfilled" && Array.isArray(commitmentResult.value.data)
                 ? commitmentResult.value.data
                 : [],
+        );
+        setFeeSummary(
+            feeResult.status === "fulfilled" && feeResult.value.data
+                ? feeResult.value.data
+                : null,
         );
     }, []);
 
@@ -339,7 +350,7 @@ function Dashboard() {
                             <div className="section-heading">
                                 <div>
                                     <h2>{sidePreview === "bills" ? "Bill & Subscription" : sidePreview === "debts" ? "Debt Preview" : sidePreview === "chamas" ? "Chama Cycle" : "Fees Watch"}</h2>
-                                    <p>{sidePreview === "bills" ? "Upcoming recurring payments" : sidePreview === "debts" ? "Top balances from debt tracker" : sidePreview === "chamas" ? "Merry-go-round status mock" : "Estimated cost of moving money"}</p>
+                                    <p>{sidePreview === "bills" ? "Upcoming recurring payments" : sidePreview === "debts" ? "Top balances from debt tracker" : sidePreview === "chamas" ? "Merry-go-round status mock" : "Recorded and estimated cost of moving money"}</p>
                                 </div>
                                 <div className="preview-switcher" aria-label="Switch dashboard preview">
                                     <button
@@ -446,24 +457,29 @@ function Dashboard() {
                                             <BadgePercent size={22} />
                                         </div>
                                         <div>
-                                            <strong>{currencyFormatter.format(feeSummary.totalMonth)}</strong>
-                                            <small>This month · highest: {feeSummary.highestProvider.name}</small>
+                                            <strong>{currencyFormatter.format(feeSummary?.totalMonth || 0)}</strong>
+                                            <small>
+                                                This month · {feeSummary?.providerTotals?.[0]
+                                                    ? `highest: ${FEE_PROVIDER_STYLE[feeSummary.providerTotals[0].provider]?.name || feeSummary.providerTotals[0].provider}`
+                                                    : "no fee records yet"}
+                                            </small>
                                         </div>
                                     </div>
                                     <div className="fees-dashboard-bars" aria-hidden="true">
-                                        {feeSummary.providerTotals.slice(0, 4).map((provider) => (
+                                        {(feeSummary?.providerTotals || []).slice(0, 4).map((provider) => (
                                             <span
-                                                key={provider.id}
+                                                key={provider.provider}
+                                                title={`${FEE_PROVIDER_STYLE[provider.provider]?.name || provider.provider}: ${currencyFormatter.format(provider.total)}`}
                                                 style={{
-                                                    height: `${Math.max(18, Math.round((provider.total / Math.max(feeSummary.highestProvider.total, 1)) * 72))}px`,
-                                                    backgroundColor: provider.tone,
+                                                    height: `${Math.max(18, Math.round((Number(provider.total) / Math.max(Number(feeSummary?.providerTotals?.[0]?.total || 0), 1)) * 72))}px`,
+                                                    backgroundColor: FEE_PROVIDER_STYLE[provider.provider]?.tone || "#69746b",
                                                 }}
                                             />
                                         ))}
                                     </div>
                                     <div className="chama-dashboard-meta">
-                                        <span>{currencyFormatter.format(feeSummary.totalWeek)} this week</span>
-                                        <span>Mock</span>
+                                        <span>{currencyFormatter.format(feeSummary?.totalWeek || 0)} this week</span>
+                                        <span>{!feeSummary ? "Fee data unavailable" : Number(feeSummary.estimatedMonth || 0) > 0 ? `${currencyFormatter.format(feeSummary.estimatedMonth)} estimated` : "No tariff estimates"}</span>
                                     </div>
                                     <button type="button" className="preview-link-button" onClick={() => navigate("/fees")}>
                                         View fee tracker

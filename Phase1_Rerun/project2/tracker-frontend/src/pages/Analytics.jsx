@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarDays, CircleAlert, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CircleAlert,
+  MessageCircle,
+  MoveRight,
+  RefreshCw,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import EChart from "../components/analytics/EChart";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
@@ -19,6 +31,12 @@ const CHART_COLORS = {
   muted: "#69746b",
   grid: "#e3e8df",
 };
+
+const SEARCH_PERIODS = [
+  ["week", "Week"],
+  ["month", "Month"],
+  ["year", "Year"],
+];
 
 function useCompactCalendar() {
   const [compact, setCompact] = useState(() => window.innerWidth <= 760);
@@ -41,6 +59,18 @@ function shiftCalendar(anchor, amount) {
   const nextYear = shifted.getFullYear();
   const nextMonth = String(shifted.getMonth() + 1).padStart(2, "0");
   return `${nextYear}-${nextMonth}`;
+}
+
+function readablePeriod(period) {
+  const format = (value) => new Intl.DateTimeFormat("en-KE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
+
+  if (!period?.end) return "Selected period";
+  if (!period.start) return `All records through ${format(period.end)}`;
+  return `${format(period.start)} – ${format(period.end)}`;
 }
 
 function compactCurrency(amount, currencyCode, rates) {
@@ -86,6 +116,7 @@ function calendarMonthDays(monthKey, activity) {
 }
 
 function Analytics() {
+  const navigate = useNavigate();
   const { currencyCode, formatCurrency, rates } = useAdjustedCurrency();
   const compactCalendar = useCompactCalendar();
   const [period, setPeriod] = useState("12-months");
@@ -100,6 +131,20 @@ function Analytics() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [trendQuery, setTrendQuery] = useState("");
+  const [trendPeriod, setTrendPeriod] = useState("month");
+  const [trendMetric, setTrendMetric] = useState("amount");
+  const [trend, setTrend] = useState(null);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState("");
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiResult, setAiResult] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [weeklySummary, setWeeklySummary] = useState(null);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [dismissedInsights, setDismissedInsights] = useState(() => new Set());
+  const [lastDismissedInsight, setLastDismissedInsight] = useState(null);
 
   const loadSummary = useCallback(async () => {
     setLoading(true);
@@ -118,6 +163,11 @@ function Analytics() {
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  useEffect(() => {
+    setDismissedInsights(new Set());
+    setLastDismissedInsight(null);
+  }, [period]);
 
   useEffect(() => {
     if (!summary?.period?.end) return;
@@ -437,6 +487,108 @@ function Analytics() {
     };
   }, [calendarRange, compactCalendar, currencyCode, formatCurrency, rates, summary?.dailyActivity]);
 
+  const trendOption = useMemo(() => {
+    const rows = trend?.series || [];
+    const metricLabel = trendMetric === "count" ? "Times" : "Amount";
+    return {
+      aria: {
+        enabled: true,
+        description: `${metricLabel} matching ${trend?.query || "the search"} across the selected period`,
+      },
+      color: [CHART_COLORS.expenses],
+      tooltip: {
+        trigger: "axis",
+        valueFormatter: (value) => trendMetric === "count" ? `${value} transactions` : formatCurrency(value),
+      },
+      grid: { left: 12, right: 20, top: 18, bottom: 42, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: rows.map((row) => row.bucket),
+        axisLabel: { color: CHART_COLORS.muted, hideOverlap: true },
+        axisLine: { lineStyle: { color: CHART_COLORS.grid } },
+      },
+      yAxis: {
+        type: "value",
+        minInterval: trendMetric === "count" ? 1 : 0,
+        axisLabel: {
+          formatter: (value) => trendMetric === "count"
+            ? value
+            : Intl.NumberFormat("en", { notation: "compact" }).format(value),
+        },
+        splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+      },
+      series: [{
+        name: metricLabel,
+        type: "bar",
+        data: rows.map((row) => trendMetric === "count" ? row.count : Number(row.amount)),
+        barMaxWidth: 34,
+        itemStyle: { borderRadius: [6, 6, 0, 0] },
+      }],
+    };
+  }, [formatCurrency, trend, trendMetric]);
+
+  const searchTrend = async (event) => {
+    event.preventDefault();
+    const query = trendQuery.trim();
+    if (query.length < 2) {
+      setTrendError("Enter at least two characters.");
+      return;
+    }
+    setTrendLoading(true);
+    setTrendError("");
+    try {
+      const response = await api.get("/analytics/description-trend", {
+        params: { query, period: trendPeriod },
+      });
+      setTrend(response.data);
+    } catch (requestError) {
+      setTrendError(
+        requestError.response?.data?.message
+          || requestError.message
+          || "That spending trend could not be loaded."
+      );
+    } finally {
+      setTrendLoading(false);
+    }
+  };
+
+  const askFinanceAssistant = async (event) => {
+    event.preventDefault();
+    const question = aiQuestion.trim();
+    if (!question) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const response = await api.post("/ai/analytics/questions", { question });
+      setAiResult(response.data);
+    } catch (requestError) {
+      setAiError(
+        requestError.response?.data?.message
+          || requestError.message
+          || "The finance assistant is unavailable."
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const loadWeeklySummary = async () => {
+    setWeeklyLoading(true);
+    setAiError("");
+    try {
+      const response = await api.post("/ai/analytics/weekly-summary");
+      setWeeklySummary(response.data.narrative);
+    } catch (requestError) {
+      setAiError(
+        requestError.response?.data?.message
+          || requestError.message
+          || "The weekly review is unavailable."
+      );
+    } finally {
+      setWeeklyLoading(false);
+    }
+  };
+
   if (loading && !summary) {
     return <div className="analytics-state">Loading your financial picture…</div>;
   }
@@ -488,6 +640,168 @@ function Analytics() {
         : `${commitments.committedIncomePercentage}% of average monthly income is assigned to bills, subscriptions, debts and goals.`,
     },
   ];
+  const leadingCategory = summary?.expenseCategories?.[0];
+  const insightPeriod = readablePeriod(summary?.period);
+  const periodTransactionCount = (summary?.dailyActivity || []).reduce(
+    (total, day) => total + Number(day.transactionCount || 0),
+    0,
+  );
+  const hasCommitmentWarning = insightItems.some(
+    (item) => item.type === "commitment_pressure",
+  );
+  const insightCards = insightItems
+    .filter((item) => item.type !== "commitment_snapshot" || !hasCommitmentWarning)
+    .map((item) => {
+      if (item.type === "category_concentration") {
+        const recordedExpenses = Number(cashFlow.recordedExpenses || 0);
+        const categoryAmount = Number(leadingCategory?.amount || 0);
+        const share = recordedExpenses > 0
+          ? categoryAmount / recordedExpenses * 100
+          : 0;
+        return {
+          ...item,
+          title: `${leadingCategory?.category || "Your top category"} is your largest spending area`,
+          label: "Data insight",
+          metric: `${share.toFixed(0)}%`,
+          supporting: `${formatCurrency(categoryAmount)} across ${leadingCategory?.transactionCount || 0} transaction${leadingCategory?.transactionCount === 1 ? "" : "s"}`,
+          comparison: "Share of all recorded spending in this period",
+          caveat: "Only transactions saved in Moneytiqx are included.",
+          actionLabel: "See transactions",
+          review: {
+            category: leadingCategory?.category,
+            from: summary?.period?.start,
+            to: summary?.period?.end,
+          },
+          question: `How much did I spend on ${leadingCategory?.category || "my top category"} in this period, and where could I adjust?`,
+        };
+      }
+      if (item.type === "debt_fees") {
+        return {
+          ...item,
+          title: "Debt fees added to your repayments",
+          label: "Data insight",
+          metric: formatCurrency(summary?.debts?.periodFees || 0),
+          supporting: "Recorded debt fees in the selected period",
+          comparison: Number(summary?.debts?.periodRepayments || 0) > 0
+            ? `${(Number(summary.debts.periodFees || 0) / Number(summary.debts.periodRepayments) * 100).toFixed(1)}% of recorded repayments`
+            : "No repayment comparison is available yet",
+          caveat: "This includes recorded debt fees, not unrecorded lender charges.",
+          actionLabel: "Review debts",
+          reviewPath: "/debts",
+          question: "How much did debt fees cost me in this period?",
+        };
+      }
+      if (item.type === "commitment_pressure" || item.type === "commitment_snapshot") {
+        const percentage = commitments.committedIncomePercentage;
+        return {
+          ...item,
+          title: percentage == null
+            ? "Add income to measure monthly pressure"
+            : Number(percentage) >= 60
+              ? "Most monthly income is already spoken for"
+              : "Part of your monthly income is already planned",
+          label: "Data insight",
+          metric: percentage == null ? "—" : `${percentage}%`,
+          supporting: `${formatCurrency(commitments.totalMonthlyCommitted || 0)} planned each month`,
+          comparison: "Compared with average monthly recorded income",
+          caveat: "Planned amounts can differ from what is eventually paid.",
+          actionLabel: "View breakdown",
+          actionTarget: "analytics-commitments",
+          question: "How much of my income is committed each month, and what contributes most?",
+        };
+      }
+      if (item.type === "net_snapshot") {
+        return {
+          ...item,
+          title: netCashFlow < 0
+            ? "Spending ran ahead of income"
+            : netCashFlow > 0
+              ? "Income stayed ahead of spending"
+              : "Income and spending balanced",
+          label: "Data insight",
+          metric: formatCurrency(Math.abs(netCashFlow)),
+          supporting: `${periodTransactionCount} recorded transaction${periodTransactionCount === 1 ? "" : "s"} produced this result`,
+          comparison: cashFlow.savingsRate == null
+            ? "Add income to calculate the share that remained"
+            : `${cashFlow.savingsRate}% of recorded income remained`,
+          caveat: "This view cannot include cash activity you have not recorded.",
+          actionLabel: "See transactions",
+          review: {
+            from: summary?.period?.start,
+            to: summary?.period?.end,
+          },
+          question: "Explain my net cash flow for this period and show the main drivers.",
+        };
+      }
+      return {
+        ...item,
+        label: "Data insight",
+        metric: "Review",
+        supporting: item.explanation,
+        comparison: "A new signal was found in the selected period",
+        caveat: "Check the underlying records before acting on this finding.",
+        actionLabel: "See transactions",
+        review: {
+          from: summary?.period?.start,
+          to: summary?.period?.end,
+        },
+        question: `Explain this finding: ${item.title}`,
+      };
+    });
+  const visibleInsightCards = insightCards.filter(
+    (card) => !dismissedInsights.has(card.type),
+  );
+
+  function reviewInsight(card) {
+    if (card.reviewPath) {
+      navigate(card.reviewPath);
+      return;
+    }
+    if (card.review) {
+      const params = new URLSearchParams();
+      if (card.review.category) params.set("category", card.review.category);
+      if (card.review.from) params.set("from", card.review.from);
+      if (card.review.to) params.set("to", card.review.to);
+      navigate(`/transactions?${params.toString()}`);
+      return;
+    }
+    moveToInsightTarget(card);
+  }
+
+  function dismissInsight(card) {
+    setDismissedInsights((current) => new Set(current).add(card.type));
+    setLastDismissedInsight(card);
+  }
+
+  function undoDismissInsight() {
+    if (!lastDismissedInsight) return;
+    setDismissedInsights((current) => {
+      const next = new Set(current);
+      next.delete(lastDismissedInsight.type);
+      return next;
+    });
+    setLastDismissedInsight(null);
+  }
+
+  function moveToInsightTarget(card) {
+    if (card.type === "category_concentration" && leadingCategory?.category) {
+      setScenarioCategory(leadingCategory.category);
+    }
+    document.getElementById(card.actionTarget)?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+
+  function askAboutInsight(card) {
+    setAiQuestion(card.question);
+    setAiResult(null);
+    setAiError("");
+    document.getElementById("analytics-assistant")?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
 
   return (
     <div className="feature-page analytics-page">
@@ -520,8 +834,84 @@ function Analytics() {
         </div>
       )}
 
+      <section className="analytics-kpi-grid" aria-label="Cash flow and fee totals">
+        <article><span>Income</span><strong>{formatCurrency(cashFlow.income || 0)}</strong><small>Recorded inflows</small></article>
+        <article><span>Recorded spending</span><strong>{formatCurrency(cashFlow.recordedExpenses || 0)}</strong><small>Before provider fees</small></article>
+        <article><span>Confirmed fees</span><strong>{formatCurrency(cashFlow.confirmedTransactionFees || 0)}</strong><small>Provider-reported or user-confirmed</small></article>
+        <article><span>Estimated fees</span><strong>{formatCurrency(cashFlow.estimatedTransactionFees || 0)}</strong><small>Versioned estimates—review before relying on them</small></article>
+      </section>
+
+      <section className="analytics-insights" aria-labelledby="analytics-insights-title">
+        <header className="analytics-insights-header">
+          <div>
+            <span>Moneytiqx insights</span>
+            <h2 id="analytics-insights-title">What deserves attention</h2>
+            <p>Specific signals from your records, with the calculation window and a useful next step.</p>
+          </div>
+          <div className="analytics-insights-meta">
+            <span><i aria-hidden="true" /> Calculated from your records</span>
+            <button type="button" onClick={loadSummary} disabled={loading}>
+              <RefreshCw size={14} className={loading ? "is-spinning" : ""} />
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        <div className="analytics-insight-grid">
+          {visibleInsightCards.map((card) => (
+            <article className={`analytics-insight-card severity-${card.severity}`} key={`${card.type}-${card.title}`}>
+              <div className="analytics-insight-card-topline">
+                <span>{card.label}</span>
+                <div>
+                  <strong>{card.metric}</strong>
+                  <button type="button" onClick={() => dismissInsight(card)} aria-label={`Hide ${card.title}`} title="Hide this insight">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+              <h3>{card.title}</h3>
+              <p>{card.supporting}</p>
+              <div className="analytics-insight-context">
+                <span>{insightPeriod}</span>
+                <span>{periodTransactionCount} transaction{periodTransactionCount === 1 ? "" : "s"} reviewed</span>
+                <span>{card.comparison}</span>
+              </div>
+              <small>{card.caveat}</small>
+              <button type="button" className="analytics-insight-correction" onClick={() => reviewInsight(card)}>
+                Something looks wrong? Check the records
+              </button>
+              <footer>
+                <button type="button" onClick={() => reviewInsight(card)}>
+                  {card.actionLabel} <MoveRight size={14} />
+                </button>
+                <button type="button" className="ask" onClick={() => askAboutInsight(card)}>
+                  <MessageCircle size={14} /> Explain with AI
+                </button>
+              </footer>
+            </article>
+          ))}
+          {visibleInsightCards.length === 0 && (
+            <div className="analytics-insights-empty">
+              <strong>No insights showing</strong>
+              <span>You hid every insight for this visit. Undo below or change the period to bring them back.</span>
+            </div>
+          )}
+        </div>
+        {lastDismissedInsight && (
+          <div className="analytics-insight-feedback" role="status">
+            <span>Hidden for this visit. Your financial records were not changed.</span>
+            <button type="button" onClick={undoDismissInsight}>Undo</button>
+          </div>
+        )}
+        {lastUpdated && (
+          <small className="analytics-insights-updated">
+            Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </small>
+        )}
+      </section>
+
       <section className="analytics-visual-grid">
-        <article className="analytics-panel analytics-lead-chart">
+        <article className="analytics-panel analytics-lead-chart" id="analytics-cash-flow">
           <header>
             <div><span>Money movement</span><h2>Cash-flow rhythm</h2><p>Monthly inflows and outflows; the line shows what remained.</p></div>
             <div className="analytics-chart-summary" aria-label="Cash-flow values">
@@ -534,24 +924,74 @@ function Analytics() {
             : <div className="analytics-chart-empty"><CalendarDays size={22} /><span>No transaction movement in this period.</span></div>}
         </article>
 
-        <article className="analytics-panel analytics-insight-panel">
+        <section className="analytics-panel analytics-search-panel">
           <header>
-            <div><span>Fresh signals</span><h2>What deserves attention</h2><p>Recalculated for the selected period.</p></div>
-            <button type="button" className="analytics-refresh-button" onClick={loadSummary} disabled={loading}>
-              <RefreshCw size={15} className={loading ? "is-spinning" : ""} />
-              Refresh
-            </button>
+            <div><span>Your wording, measured</span><h2>Find a spending habit</h2><p>Search any description or merchant, then compare frequency or value.</p></div>
           </header>
-          <div className="analytics-opportunity-list">
-            {insightItems.map((item) => (
-              <div key={`${item.type}-${item.title}`} className={`severity-${item.severity}`}>
-                <strong>{item.title}</strong>
-                <p>{item.explanation}</p>
+          <form className="analytics-search-form" onSubmit={searchTrend}>
+            <label className="analytics-search-input">
+              <span className="sr-only">Description or merchant</span>
+              <Search size={17} aria-hidden="true" />
+              <input value={trendQuery} onChange={(event) => setTrendQuery(event.target.value)} placeholder="Try airtime, sugarcane, supermarket…" maxLength={100} />
+            </label>
+            <select aria-label="Search period" value={trendPeriod} onChange={(event) => setTrendPeriod(event.target.value)}>
+              {SEARCH_PERIODS.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+            </select>
+            <button type="submit" className="analytics-refresh-button" disabled={trendLoading}>
+              {trendLoading ? <RefreshCw size={15} className="is-spinning" /> : <Search size={15} />}
+              Analyse
+            </button>
+          </form>
+          {trendError && <p className="analytics-form-error" role="alert">{trendError}</p>}
+          {trend && (
+            <>
+              <div className="analytics-search-result-head">
+                <div><strong>“{trend.query}”</strong><small>{trend.totalCount} matches · {formatCurrency(trend.totalAmount)}</small></div>
+                <div className="analytics-metric-toggle" aria-label="Trend metric">
+                  <button type="button" className={trendMetric === "amount" ? "active" : ""} onClick={() => setTrendMetric("amount")}>Amount</button>
+                  <button type="button" className={trendMetric === "count" ? "active" : ""} onClick={() => setTrendMetric("count")}>Frequency</button>
+                </div>
               </div>
-            ))}
-          </div>
-          {lastUpdated && <small className="analytics-refresh-time">Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>}
-        </article>
+              {trend.totalCount > 0
+                ? <EChart option={trendOption} ariaLabel={`Spending trend for ${trend.query}`} />
+                : <div className="analytics-chart-empty"><span>No owned transactions matched that description or merchant.</span></div>}
+            </>
+          )}
+        </section>
+
+        <section className="analytics-panel analytics-ai-panel" id="analytics-assistant">
+          <header>
+            <div><span>Grounded assistant</span><h2>Ask about your finances</h2><p>The AI chooses one approved calculation; your database—not the model—produces the figures.</p><small className="analytics-assistant-boundary">Answers only · Nothing changes without your approval</small></div>
+            <Sparkles aria-hidden="true" />
+          </header>
+          <form className="analytics-ai-form" onSubmit={askFinanceAssistant}>
+            <textarea value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} maxLength={500} placeholder="How many times did I buy airtime this month? Where could I adjust spending?" aria-label="Question about your finances" />
+            <div>
+              <button type="submit" className="feature-primary-button" disabled={aiLoading || !aiQuestion.trim()}>{aiLoading ? "Checking your data…" : "Ask securely"}</button>
+              <button type="button" className="scenario-reset" onClick={loadWeeklySummary} disabled={weeklyLoading}>{weeklyLoading ? "Preparing…" : "Preview weekly review"}</button>
+            </div>
+          </form>
+          {aiError && <p className="analytics-form-error" role="alert">{aiError}</p>}
+          {aiResult && (
+            <div className="analytics-ai-answer">
+              <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted explanation</span>
+              <strong>{aiResult.answer}</strong>
+              {(aiResult.evidence || []).map((item) => <p key={item}>{item}</p>)}
+              {(aiResult.caveats || []).map((item) => <small key={item}>{item}</small>)}
+            </div>
+          )}
+          {weeklySummary && (
+            <div className="analytics-ai-answer weekly">
+              <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted weekly review</span>
+              <strong>{weeklySummary.headline}</strong>
+              <p>{weeklySummary.summary}</p>
+              {(weeklySummary.observations || []).map((item) => <p key={item}>• {item}</p>)}
+              {(weeklySummary.options || []).map((item) => <small key={item}>Option: {item}</small>)}
+              <small>Preview only. Nothing is sent automatically.</small>
+            </div>
+          )}
+        </section>
+
         <section className="analytics-panel analytics-calendar-panel">
             <header>
               <div><span>Daily rhythm</span><h2>Spending calendar</h2><p>Intensity shows which days carried the most expense activity.</p></div>
@@ -575,7 +1015,7 @@ function Analytics() {
             : <div className="analytics-chart-empty"><span>No category spending to compare.</span></div>}
         </article>
 
-        <article className="analytics-panel">
+        <article className="analytics-panel" id="analytics-commitments">
           <header><div><span>Fixed pressure</span><h2>Monthly commitments</h2><p>Bills, subscriptions, debt schedules and goal requirements.</p></div><strong className="analytics-panel-total">{formatCurrency(commitments.totalMonthlyCommitted || 0)}</strong></header>
           <EChart option={commitmentOption} ariaLabel="Horizontal bar chart of estimated monthly commitments" />
         </article>
@@ -585,12 +1025,12 @@ function Analytics() {
           <EChart option={progressOption} ariaLabel="Budget use and savings goal progress chart" />
         </article>
 
-        <article className="analytics-panel">
+        <article className="analytics-panel" id="analytics-debt-position">
           <header><div><span>Liabilities</span><h2>Debt position</h2><p>Current balance compared with activity in the selected period.</p></div></header>
           <EChart option={debtOption} ariaLabel="Debt balance, repayments and recorded fees chart" />
         </article>
 
-        <section className="analytics-panel analytics-scenario-panel">
+        <section className="analytics-panel analytics-scenario-panel" id="analytics-adjustment-lab">
           <header>
             <div><span>What-if lab</span><h2>Explore your own adjustment</h2><p>Change assumptions to see an illustration. Nothing here is saved or applied to your finances.</p></div>
             <div className="scenario-result"><small>Potential monthly flexibility</small><strong>{formatCurrency(scenario.total)}</strong></div>
@@ -626,7 +1066,7 @@ function Analytics() {
 
       <section className="analytics-method-note">
         <strong>How these figures are calculated</strong>
-        <p>Actual cash flow comes from your non-deleted transactions. Commitments are monthly estimates from active bills, subscriptions, debt schedules and goal gaps. Recorded debt fees are shown separately and transaction fees remain unavailable until transactions store them explicitly. No AI generates these totals.</p>
+        <p>Cash flow comes from your non-deleted transactions. Confirmed provider fees and clearly labelled tariff estimates are added separately; unsupported fees stay unknown rather than becoming invented numbers. Commitments are monthly estimates from active bills, subscriptions, debt schedules and goal gaps. AI may explain an approved calculation, but it never creates these totals or receives database access.</p>
       </section>
     </div>
   );
