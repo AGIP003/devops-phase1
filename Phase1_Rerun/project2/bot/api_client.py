@@ -85,6 +85,27 @@ def create_transaction(
     raise RuntimeError(_error_message(response, "Failed to create transaction"))
 
 
+def preview_receipt(token, image_data, media_type):
+    response = requests.post(
+        f"{API_BASE}/ai/receipts/preview",
+        files={
+            "image": (
+                "receipt",
+                image_data,
+                media_type,
+            )
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 200:
+        return response.json()
+
+    raise RuntimeError(
+        _error_message(response, "Unable to read that receipt")
+    )
+
+
 def preview_transaction_import(token, message):
     response = requests.post(
         f"{API_BASE}/transaction-imports/preview",

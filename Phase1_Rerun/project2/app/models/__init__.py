@@ -8,6 +8,7 @@ from app.models.payment_method import PaymentMethod, PaymentMethodGroup
 from app.models.telegram_link import TelegramLink
 from app.models.telegram_preferences import TelegramUserPreferences
 from app.models.auth_identity import AuthIdentity
+from app.models.ai_daily_usage import AIDailyUsage
 from app.models.forex_rate import ForexRate
 from app.models.debt import Debt, DebtEntry, DebtFeeTerm, DebtSchedule
 from app.models.savings_goal import SavingsGoal, SavingsGoalEntry
@@ -30,6 +31,7 @@ __all__ = [
     "TelegramLink",
     "TelegramUserPreferences",
     "AuthIdentity",
+    "AIDailyUsage",
     "ForexRate",
     "Debt",
     "DebtEntry",

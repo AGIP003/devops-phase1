@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.user import User
 
 DATABASE_TABLES = (
+    "ai_daily_usage",
     "commitment_occurrences",
     "recurring_commitments",
     "savings_goal_entries",
@@ -52,7 +53,12 @@ def app():
 
 
 @pytest.fixture(autouse=True)
-def clean_database(app):
+def clean_database(request):
+    if request.node.get_closest_marker("no_database"):
+        yield
+        return
+
+    app = request.getfixturevalue("app")
     with app.app_context():
         assert_safe_test_database()
         table_names = ", ".join(DATABASE_TABLES)

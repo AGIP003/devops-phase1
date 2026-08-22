@@ -5,6 +5,7 @@ from flask_cors import CORS
 from app.extensions import bcrypt, mail, limiter, migrate, db
 from app.auth_routes import auth_bp
 from app.telegram_routes import telegram_bp
+from app.ai_routes import ai_bp
 from flask_talisman import Talisman
 from app.docs import api 
 from config import get_config, get_test_database_url, validate_environment
@@ -74,7 +75,7 @@ def create_app(config_name=None):
         from app.models import (
             User, Category, Transaction, TransactionImport, Budget, BudgetItem,
             PaymentMethod, PaymentMethodGroup, TelegramLink,
-            TelegramUserPreferences, AuthIdentity,
+            TelegramUserPreferences, AuthIdentity, AIDailyUsage,
             ForexRate,
             Debt, DebtEntry, DebtFeeTerm, DebtSchedule,
             SavingsGoal, SavingsGoalEntry,
@@ -93,6 +94,8 @@ def create_app(config_name=None):
         app.logger.info("✓ Auth blueprint registered successfully")
         app.register_blueprint(telegram_bp)
         app.logger.info("✓ Telegram blueprint registered successfully")
+        app.register_blueprint(ai_bp)
+        app.logger.info("✓ AI blueprint registered successfully")
     except Exception as e:
         app.logger.error("✗ Failed to register auth blueprint: %s", e)
         import traceback

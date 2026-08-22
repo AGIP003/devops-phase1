@@ -1,4 +1,7 @@
+from __future__ import annotations
 import os
+
+from decimal import Decimal, InvalidOperation
 
 REQUIRED_VARS = [
     "DATABASE_URL",
@@ -45,3 +48,16 @@ def get_env_list(name, default=None, separator=","):
     if raw is None or raw.strip() == "":
         return list(default or [])
     return [item.strip() for item in raw.split(separator) if item.strip()]
+
+def get_env_decimal(name: str, default: str) -> Decimal:
+    try:
+        value = Decimal(os.getenv(name, default))
+    except InvalidOperation as exc:
+        raise RuntimeError(f"{name} must be a decimal number") from exc
+
+    if not value.is_finite() or value < 0:
+        raise RuntimeError(
+            f"{name} must be a finite, non-negative decimal number"
+        )
+
+    return value

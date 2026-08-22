@@ -1,8 +1,7 @@
 import os
 
-from .validators import get_env_bool, get_env_int, get_env_list
+from .validators import get_env_bool, get_env_int, get_env_list, get_env_decimal
 from sqlalchemy.engine import make_url
-
 
 def normalize_database_url(url):
     """Railway gives postgres://, SQLAlchemy needs postgresql://"""
@@ -104,6 +103,24 @@ class BaseConfig:
     SQLALCHEMY_DATABASE_URI = get_database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO") == "true"
+
+    #OPENAI
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OPENAI_TRANSACTION_MODEL = os.getenv("OPENAI_TRANSACTION_MODEL", "gpt-5.6-luna")
+    AI_FALLBACK_ENABLED = get_env_bool("AI_FALLBACK_ENABLED", True)
+    AI_DAILY_BUDGET_USD = get_env_decimal("AI_DAILY_BUDGET_USD", "0.25")
+    AI_TRANSACTION_RESERVATION_USD = get_env_decimal(
+        "AI_TRANSACTION_RESERVATION_USD",
+        "0.005",
+    )
+    AI_RECEIPT_RESERVATION_USD = get_env_decimal(
+        "AI_RECEIPT_RESERVATION_USD",
+        "0.05",
+    )
+    AI_REQUEST_TIMEOUT_SECONDS = float(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "12"))
+    AI_TRANSACTION_MAX_OUTPUT_TOKENS = get_env_int("AI_TRANSACTION_MAX_OUTPUT_TOKENS", 500)
+    AI_RECEIPT_MAX_OUTPUT_TOKENS = get_env_int("AI_RECEIPT_MAX_OUTPUT_TOKENS", 1600)
+    AI_REASONING_EFFORT = os.getenv("AI_REASONING_EFFORT", "low")
 
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 

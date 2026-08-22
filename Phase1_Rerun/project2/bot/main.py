@@ -36,6 +36,21 @@ from bot.handlers.import_message import (
     import_message_handler,
     import_save_callback,
 )
+from bot.handlers.receipts import (
+    RECEIPT_CATEGORY,
+    RECEIPT_CONFIRM,
+    RECEIPT_DATE,
+    RECEIPT_DESCRIPTION,
+    RECEIPT_PAYMENT,
+    cancel_receipt_callback,
+    cancel_receipt_command,
+    handle_receipt_photo,
+    receipt_category_callback,
+    receipt_date_handler,
+    receipt_description_handler,
+    receipt_payment_callback,
+    receipt_save_callback,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -79,6 +94,60 @@ def main():
     app.add_handler(CommandHandler('link', link_handler))
     app.add_handler(CommandHandler('balance', balance_handler))
     app.add_handler(CommandHandler('help', help_handler))
+    app.add_handler(
+        ConversationHandler(
+            entry_points=[
+                MessageHandler(filters.PHOTO, handle_receipt_photo),
+            ],
+            states={
+                RECEIPT_DESCRIPTION: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        receipt_description_handler,
+                    )
+                ],
+                RECEIPT_DATE: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        receipt_date_handler,
+                    )
+                ],
+                RECEIPT_CATEGORY: [
+                    CallbackQueryHandler(
+                        receipt_category_callback,
+                        pattern=r"^receiptcat\|",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_receipt_callback,
+                        pattern=r"^receiptcancel$",
+                    ),
+                ],
+                RECEIPT_PAYMENT: [
+                    CallbackQueryHandler(
+                        receipt_payment_callback,
+                        pattern=r"^receiptpm\|",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_receipt_callback,
+                        pattern=r"^receiptcancel$",
+                    ),
+                ],
+                RECEIPT_CONFIRM: [
+                    CallbackQueryHandler(
+                        receipt_save_callback,
+                        pattern=r"^receiptsave$",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_receipt_callback,
+                        pattern=r"^receiptcancel$",
+                    ),
+                ],
+            },
+            fallbacks=[
+                CommandHandler("cancel", cancel_receipt_command),
+            ],
+        )
+    )
     app.add_handler(
         ConversationHandler(
             entry_points=[
