@@ -53,13 +53,18 @@ def test_plain_provider_message_starts_import_without_command(monkeypatch):
     assert captured["fallback_to_welcome"] is True
 
 
-def test_ordinary_text_continues_to_welcome_handler(monkeypatch):
-    welcomed = []
+def test_ordinary_text_continues_to_ai_assistant(monkeypatch):
+    assisted = []
 
-    async def fake_welcome(update, context):
-        welcomed.append(update.message.text)
+    async def fake_assistant(update, context):
+        assisted.append(update.message.text)
+        return ConversationHandler.END
 
-    monkeypatch.setattr(import_message, "welcome_handler", fake_welcome)
+    monkeypatch.setattr(
+        import_message,
+        "assistant_message_handler",
+        fake_assistant,
+    )
     message = FakeMessage("hello there")
 
     state = asyncio.run(
@@ -70,7 +75,7 @@ def test_ordinary_text_continues_to_welcome_handler(monkeypatch):
     )
 
     assert state == ConversationHandler.END
-    assert welcomed == ["hello there"]
+    assert assisted == ["hello there"]
 
 
 def test_provider_like_text_that_fails_full_parse_returns_to_welcome(monkeypatch):
@@ -305,5 +310,89 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     assert captured_import["description"] == "Weekly data bundle"
     assert captured_import["category"] == "airtime"
     assert captured_import["remember_alias"] == "weekly data bundle"
+    assert "pending_import" not in context.user_data
+    assert "import_access_token" not in context.user_data
+
+
+def test_fuliza_uses_separate_confirmation_and_never_requests_category(monkeypatch):
+    captured = {}
+
+    async def run_immediately(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(import_message.asyncio, "to_thread", run_immediately)
+    monkeypatch.setattr(
+        import_message,
+        "get_telegram_session",
+        lambda telegram_id: {"linked": True, "token": "temporary-token"},
+    )
+    monkeypatch.setattr(
+        import_message,
+        "get_telegram_preferences",
+        lambda token: {"category_aliases": {}},
+    )
+    monkeypatch.setattr(
+        import_message,
+        "preview_transaction_import",
+        lambda token, message: {
+            "kind": "fuliza_notice",
+            "importable": True,
+            "provider": "fuliza_mpesa",
+            "noticeType": "draw",
+            "amount": "1010.00",
+            "currency": "KES",
+            "financingFee": "10.10",
+            "dailyMaintenanceFee": None,
+        },
+    )
+
+    def fake_record(token, message, recorded_on=None):
+        captured.update({"token": token, "message": message})
+        return {
+            "data": {
+                "eventType": "draw",
+                "principalAmount": "1010.00",
+                "financingFee": "10.10",
+                "dailyMaintenanceFee": None,
+            }
+        }
+
+    monkeypatch.setattr(import_message, "record_financing_event", fake_record)
+    raw_message = "UAAIU33DWG Confirmed. Fuliza M-PESA amount is Ksh 1010.00."
+    context = SimpleNamespace(args=raw_message.split(), user_data={})
+    message = FakeMessage()
+    update = SimpleNamespace(
+        message=message,
+        effective_user=SimpleNamespace(id=123),
+    )
+
+    state = asyncio.run(import_message.import_message_handler(update, context))
+
+    assert state == import_message.IMPORT_DATE
+    assert "What date" in message.replies[-1][0]
+
+    date_message = FakeMessage("2026-08-20")
+    state = asyncio.run(
+        import_message.import_date_handler(
+            SimpleNamespace(message=date_message),
+            context,
+        )
+    )
+    assert state == import_message.IMPORT_CONFIRM
+    assert "Principal stays separate from spending" in date_message.replies[-1][0]
+    keyboard = date_message.replies[-1][1]["reply_markup"]
+    assert keyboard.inline_keyboard[0][0].text == "Save financing record"
+
+    save_query = FakeCallbackQuery("importfinance|save")
+    state = asyncio.run(
+        import_message.import_financing_callback(
+            SimpleNamespace(callback_query=save_query),
+            context,
+        )
+    )
+
+    assert state == ConversationHandler.END
+    assert captured["message"] == raw_message
+    assert "Financing record saved" in save_query.edits[-1][0]
     assert "pending_import" not in context.user_data
     assert "import_access_token" not in context.user_data

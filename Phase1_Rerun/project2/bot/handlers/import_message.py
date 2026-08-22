@@ -13,8 +13,10 @@ from bot.api_client import (
     get_telegram_session,
     import_transaction_message,
     preview_transaction_import,
+    record_financing_event,
 )
 from bot.transaction_parser import CATEGORIES, category_candidates
+from bot.handlers.assistant import assistant_message_handler
 from bot.handlers.welcome import welcome_handler
 
 
@@ -76,6 +78,39 @@ def _confirmation_keyboard(can_remember: bool):
     return InlineKeyboardMarkup(rows)
 
 
+def _financing_confirmation_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            "Save financing record",
+            callback_data="importfinance|save",
+        )],
+        [InlineKeyboardButton("Cancel", callback_data="importcancel")],
+    ])
+
+
+async def _request_financing_confirmation(message, pending):
+    preview = pending["preview"]
+    financing_fee = preview.get("financingFee")
+    daily_fee = preview.get("dailyMaintenanceFee")
+    fee_lines = []
+    if financing_fee is not None:
+        fee_lines.append(f"Access fee: KES {financing_fee}")
+    if daily_fee is not None:
+        fee_lines.append(f"Daily fee: KES {daily_fee}")
+    fee_text = "\n".join(fee_lines) or "No explicit fee in this notice"
+    await message.reply_text(
+        "Review financing record\n\n"
+        f"Type: {preview.get('noticeType', 'notice').title()}\n"
+        f"Principal: KES {preview['amount']}\n"
+        f"Date: {pending['transaction_date']}\n"
+        f"{fee_text}\n\n"
+        "Principal stays separate from spending; only explicit fees affect "
+        "expense analytics.",
+        reply_markup=_financing_confirmation_keyboard(),
+    )
+    return IMPORT_CONFIRM
+
+
 def _provider_label(provider: str) -> str:
     return {
         "mpesa": "M-Pesa",
@@ -106,14 +141,13 @@ async def automatic_import_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    """Route provider-looking text to imports and ordinary text to welcome."""
+    """Route provider text to imports and ordinary text to the assistant."""
 
     raw_message = " ".join(update.message.text.strip().split())
     if FAILED_TRANSACTION_NOTICE.fullmatch(raw_message):
         return ConversationHandler.END
     if not PROVIDER_MESSAGE_PREFIX.match(raw_message):
-        await welcome_handler(update, context)
-        return ConversationHandler.END
+        return await assistant_message_handler(update, context)
 
     return await _start_import(
         update,
@@ -163,21 +197,25 @@ async def _start_import(
         await update.message.reply_text(f"Could not read that message: {error}")
         return ConversationHandler.END
 
+    if preview.get("kind") == "fuliza_notice":
+        context.user_data["import_access_token"] = token
+        context.user_data["pending_import"] = {
+            "raw_message": raw_message,
+            "preview": preview,
+            "started_at": time.monotonic(),
+        }
+        await update.message.reply_text(
+            "ℹ️ Fuliza notice recognized\n\n"
+            f"Type: {preview.get('noticeType', 'notice').title()}\n"
+            f"Principal: KES {preview['amount']}\n"
+            "What date was this notice for? Use YYYY-MM-DD."
+        )
+        return IMPORT_DATE
+
     if not preview.get("importable"):
-        if preview.get("kind") == "fuliza_notice":
-            fee = preview.get("financingFee")
-            fee_line = f"\nFinancing fee: KES {fee}" if fee is not None else ""
-            await update.message.reply_text(
-                "ℹ️ Fuliza notice recognized\n\n"
-                f"Type: {preview.get('noticeType', 'notice').title()}\n"
-                f"Amount: KES {preview['amount']}"
-                f"{fee_line}\n\n"
-                f"{preview['message']}"
-            )
-        else:
-            await update.message.reply_text(
-                f"ℹ️ Message recognized, but not saved.\n\n{preview['message']}"
-            )
+        await update.message.reply_text(
+            f"ℹ️ Message recognized, but not saved.\n\n{preview['message']}"
+        )
         return ConversationHandler.END
 
     context.user_data["import_access_token"] = token
@@ -262,6 +300,8 @@ async def import_date_handler(
         return IMPORT_DATE
 
     pending["transaction_date"] = transaction_date.isoformat()
+    if pending["preview"].get("kind") == "fuliza_notice":
+        return await _request_financing_confirmation(update.message, pending)
     return await _request_import_category(update.message, pending)
 
 
@@ -394,6 +434,51 @@ async def import_save_callback(
         f"Category: {saved['category']}\n"
         f"Payment: {saved['payment_method']}"
         f"{remembered_line}"
+    )
+    _clear_pending_import(context)
+    return ConversationHandler.END
+
+
+async def import_financing_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
+    pending = _pending_import(context)
+    token = context.user_data.get("import_access_token")
+    if pending is None or not token:
+        await query.edit_message_text(
+            "This financing preview expired. Paste the notice again."
+        )
+        return ConversationHandler.END
+
+    try:
+        result = await asyncio.to_thread(
+            record_financing_event,
+            token,
+            pending["raw_message"],
+            pending["transaction_date"],
+        )
+    except requests.RequestException:
+        await query.edit_message_text(
+            "I can’t reach Finance Tracker. The financing notice was not saved."
+        )
+        _clear_pending_import(context)
+        return ConversationHandler.END
+    except RuntimeError as error:
+        await query.edit_message_text(f"Could not save financing notice: {error}")
+        _clear_pending_import(context)
+        return ConversationHandler.END
+
+    saved = result["data"]
+    fee = saved.get("financingFee") or saved.get("dailyMaintenanceFee")
+    fee_line = f"\nRecorded fee: KES {fee}" if fee is not None else ""
+    await query.edit_message_text(
+        "✅ Financing record saved\n\n"
+        f"Type: {saved['eventType'].title()}\n"
+        f"Principal: KES {saved['principalAmount']}"
+        f"{fee_line}"
     )
     _clear_pending_import(context)
     return ConversationHandler.END

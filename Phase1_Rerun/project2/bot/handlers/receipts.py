@@ -346,6 +346,7 @@ async def receipt_save_callback(
             "expense",
             transaction_date,
             pending["payment_method"],
+            receipt.get("merchant"),
         )
     except requests.RequestException:
         await query.edit_message_text(

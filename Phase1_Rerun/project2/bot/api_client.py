@@ -65,17 +65,22 @@ def create_transaction(
     transaction_type,
     date,
     payment_method,
+    merchant_name=None,
 ):
+    payload = {
+        "description": description,
+        "amount": amount,
+        "category": category,
+        "type": transaction_type,
+        "date": date,
+        "payment_method": payment_method,
+    }
+    if merchant_name:
+        payload["merchant_name"] = merchant_name
+
     response = requests.post(
         f"{API_BASE}/transactions",
-        json={
-            "description": description,
-            "amount": amount,
-            "category": category,
-            "type": transaction_type,
-            "date": date,
-            "payment_method": payment_method,
-        },
+        json=payload,
         headers={"Authorization": f"Bearer {token}"},
         timeout=REQUEST_TIMEOUT,
     )
@@ -103,6 +108,23 @@ def preview_receipt(token, image_data, media_type):
 
     raise RuntimeError(
         _error_message(response, "Unable to read that receipt")
+    )
+
+
+def request_telegram_assistant(token, text):
+    """Ask the backend to route one ordinary Telegram message safely."""
+
+    response = requests.post(
+        f"{API_BASE}/ai/telegram/respond",
+        json={"text": text},
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 200:
+        return response.json()
+
+    raise RuntimeError(
+        _error_message(response, "AI assistance is currently unavailable")
     )
 
 
@@ -158,6 +180,29 @@ def import_transaction_message(
 
     raise RuntimeError(
         _error_message(response, "Failed to import transaction")
+    )
+
+
+def record_financing_event(token, message, recorded_on=None):
+    """Save a parsed financing notice without turning principal into spending."""
+
+    payload = {"message": message}
+    if recorded_on:
+        payload["date"] = recorded_on
+    response = requests.post(
+        f"{API_BASE}/provider-financing-events",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 201:
+        return response.json()
+    if response.status_code == 409:
+        raise RuntimeError(
+            _error_message(response, "That financing notice was already saved")
+        )
+    raise RuntimeError(
+        _error_message(response, "Failed to save financing notice")
     )
 
 

@@ -22,6 +22,7 @@ from bot.handlers.add import (
 from bot.handlers.link import link_handler
 from bot.handlers.balance import balance_handler
 from bot.handlers.help import help_handler
+from bot.handlers.assistant import assistant_transaction_callback
 from bot.handlers.import_message import (
     IMPORT_CATEGORY,
     IMPORT_CONFIRM,
@@ -32,6 +33,7 @@ from bot.handlers.import_message import (
     automatic_import_handler,
     import_category_callback,
     import_description_handler,
+    import_financing_callback,
     import_date_handler,
     import_message_handler,
     import_save_callback,
@@ -182,6 +184,10 @@ def main():
                 ],
                 IMPORT_CONFIRM: [
                     CallbackQueryHandler(
+                        import_financing_callback,
+                        pattern=r"^importfinance\|save$",
+                    ),
+                    CallbackQueryHandler(
                         import_save_callback,
                         pattern=r"^importsave\|(?:once|remember)$",
                     ),
@@ -198,6 +204,12 @@ def main():
     app.add_handler(CallbackQueryHandler(category_menu_callback, pattern=r"^addmore\|"))
     app.add_handler(CallbackQueryHandler(payment_callback, pattern=r"^addpm\|"))
     app.add_handler(CallbackQueryHandler(cancel_add_callback, pattern=r"^addcancel$"))
+    app.add_handler(
+        CallbackQueryHandler(
+            assistant_transaction_callback,
+            pattern=r"^aitxn\|",
+        )
+    )
     app.add_error_handler(error_handler)
 
     print('Bot is running...')
