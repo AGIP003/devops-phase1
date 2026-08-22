@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -23,6 +24,11 @@ class TransactionImport(TimeStampMixin, Base):
 
     __tablename__ = "transaction_imports"
     __table_args__ = (
+        CheckConstraint(
+            "fee_source IN ('unknown', 'provider_reported', "
+            "'estimated_tariff', 'user_confirmed')",
+            name="ck_transaction_imports_fee_source",
+        ),
         UniqueConstraint(
             "transaction_id",
             name="uq_transaction_imports_transaction_id",
@@ -64,5 +70,19 @@ class TransactionImport(TimeStampMixin, Base):
     )
     currency_code: Mapped[str] = mapped_column(String(3), nullable=False)
     fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    fee_source: Mapped[str] = mapped_column(
+        String(24),
+        nullable=False,
+        default="unknown",
+        server_default="unknown",
+    )
+    original_estimated_fee: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2),
+        nullable=True,
+    )
+    fee_tariff_version: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
 
     transaction = relationship("Transaction", back_populates="import_record")

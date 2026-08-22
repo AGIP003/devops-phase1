@@ -117,9 +117,18 @@ class BaseConfig:
         "AI_RECEIPT_RESERVATION_USD",
         "0.05",
     )
+    AI_ASSISTANT_RESERVATION_USD = get_env_decimal(
+        "AI_ASSISTANT_RESERVATION_USD",
+        "0.002",
+    )
+    AI_FINANCE_RESERVATION_USD = get_env_decimal(
+        "AI_FINANCE_RESERVATION_USD",
+        "0.004",
+    )
     AI_REQUEST_TIMEOUT_SECONDS = float(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "12"))
     AI_TRANSACTION_MAX_OUTPUT_TOKENS = get_env_int("AI_TRANSACTION_MAX_OUTPUT_TOKENS", 500)
     AI_RECEIPT_MAX_OUTPUT_TOKENS = get_env_int("AI_RECEIPT_MAX_OUTPUT_TOKENS", 1600)
+    AI_ASSISTANT_MAX_OUTPUT_TOKENS = get_env_int("AI_ASSISTANT_MAX_OUTPUT_TOKENS", 450)
     AI_REASONING_EFFORT = os.getenv("AI_REASONING_EFFORT", "low")
 
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")

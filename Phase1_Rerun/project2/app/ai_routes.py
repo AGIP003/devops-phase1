@@ -4,10 +4,14 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from app.extensions import limiter
 from app.middleware import login_required
+from app.schemas import TelegramAssistantIntent
 from app.services.ai_budget_service import (
     AIBudgetExceededError,
     run_receipt_ai,
+    run_finance_question_ai,
+    run_telegram_assistant_ai,
     run_transaction_ai,
+    run_weekly_summary_ai,
 )
 from app.services.ai_support import (
     AIConfigurationError,
@@ -137,3 +141,129 @@ def preview_ai_receipt():
         return _ai_error_response(error)
 
     return _private_json(result.extraction.model_dump(mode="json"))
+
+
+@ai_bp.post("/telegram/respond")
+@login_required
+@limiter.limit("20 per hour", key_func=_authenticated_user_limit_key)
+def respond_to_telegram():
+    """Route one linked user's message through the bounded bot assistant."""
+
+    if not current_app.config["AI_FALLBACK_ENABLED"]:
+        return _private_json(
+            {
+                "error": "AI assistance disabled",
+                "message": "AI assistance is currently unavailable",
+            },
+            503,
+        )
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _private_json(
+            {"error": "Invalid request", "message": "Payload must be an object"},
+            400,
+        )
+
+    try:
+        result = run_telegram_assistant_ai(
+            data.get("text"),
+            user_id=g.current_user["user_id"],
+        )
+        if result.response.intent == TelegramAssistantIntent.ANALYTICS:
+            finance_result = run_finance_question_ai(
+                data.get("text"),
+                user_id=g.current_user["user_id"],
+            )
+            return _private_json({
+                "intent": "analytics",
+                "reply": finance_result.answer.answer,
+                "transaction": None,
+                "evidence": finance_result.answer.evidence,
+                "caveats": finance_result.answer.caveats,
+            })
+    except ValueError as error:
+        return _private_json(
+            {"error": "Invalid request", "message": str(error)},
+            400,
+        )
+    except (
+        AIBudgetExceededError,
+        AIConfigurationError,
+        AIServiceUnavailableError,
+        AIInvalidResponseError,
+    ) as error:
+        return _ai_error_response(error)
+
+    return _private_json(result.response.model_dump(mode="json"))
+
+
+@ai_bp.post("/analytics/questions")
+@login_required
+@limiter.limit("15 per hour", key_func=_authenticated_user_limit_key)
+def answer_analytics_question():
+    """Answer from a bounded, read-only analytics operation."""
+    if not current_app.config["AI_FALLBACK_ENABLED"]:
+        return _private_json(
+            {"error": "AI assistance disabled", "message": "AI assistance is currently unavailable"},
+            503,
+        )
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _private_json(
+            {"error": "Invalid request", "message": "Payload must be an object"},
+            400,
+        )
+    try:
+        result = run_finance_question_ai(
+            data.get("question"),
+            user_id=g.current_user["user_id"],
+        )
+    except ValueError as error:
+        return _private_json(
+            {"error": "Invalid request", "message": str(error)},
+            400,
+        )
+    except (
+        AIBudgetExceededError,
+        AIConfigurationError,
+        AIServiceUnavailableError,
+        AIInvalidResponseError,
+    ) as error:
+        return _ai_error_response(error)
+
+    return _private_json({
+        "answer": result.answer.answer,
+        "evidence": result.answer.evidence,
+        "caveats": result.answer.caveats,
+        "operation": result.plan.tool.value,
+        "period": result.plan.period,
+        "data": result.tool_result,
+    })
+
+
+@ai_bp.post("/analytics/weekly-summary")
+@login_required
+@limiter.limit("3 per day", key_func=_authenticated_user_limit_key)
+def create_weekly_analytics_summary():
+    """Generate an on-demand preview; delivery scheduling remains opt-in work."""
+    if not current_app.config["AI_FALLBACK_ENABLED"]:
+        return _private_json(
+            {"error": "AI assistance disabled", "message": "AI assistance is currently unavailable"},
+            503,
+        )
+    try:
+        result = run_weekly_summary_ai(user_id=g.current_user["user_id"])
+    except (
+        AIBudgetExceededError,
+        AIConfigurationError,
+        AIServiceUnavailableError,
+        AIInvalidResponseError,
+    ) as error:
+        return _ai_error_response(error)
+    return _private_json({
+        "narrative": result.narrative.model_dump(mode="json"),
+        "period": result.snapshot["currentWeek"]["period"],
+        "data": result.snapshot,
+        "delivery": "preview_only",
+    })

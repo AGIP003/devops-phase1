@@ -73,7 +73,8 @@ def create_app(config_name=None):
 
     with app.app_context():
         from app.models import (
-            User, Category, Transaction, TransactionImport, Budget, BudgetItem,
+            User, Category, Transaction, TransactionImport,
+            ProviderFinancingEvent, Budget, BudgetItem,
             PaymentMethod, PaymentMethodGroup, TelegramLink,
             TelegramUserPreferences, AuthIdentity, AIDailyUsage,
             ForexRate,

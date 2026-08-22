@@ -158,6 +158,7 @@ def test_import_saves_original_date_fee_and_explicit_alias_atomically(
 
         assert import_record is not None
         assert import_record.transaction_id == payload["data"]["id"]
+        assert import_record.fee_source == "provider_reported"
         assert len(import_record.message_fingerprint) == 64
         assert not hasattr(import_record, "raw_message")
         assert preferences.category_aliases["weekly data bundle"] == "airtime"
@@ -227,7 +228,7 @@ def test_same_message_is_scoped_to_each_user(
     assert second.status_code == 201
 
 
-def test_fuliza_notice_is_previewed_but_not_saved(
+def test_fuliza_notice_is_previewed_and_saved_without_counting_principal_as_spending(
     client,
     register_user,
 ):
@@ -247,4 +248,38 @@ def test_fuliza_notice_is_previewed_but_not_saved(
 
     assert response.status_code == 200
     assert response.get_json()["kind"] == "fuliza_notice"
-    assert response.get_json()["importable"] is False
+    assert response.get_json()["importable"] is True
+    assert response.get_json()["requiresDate"] is True
+
+    missing_date = client.post(
+        "/api/provider-financing-events",
+        headers=authorization(owner["token"]),
+        json={"message": message},
+    )
+    assert missing_date.status_code == 400
+
+    saved = client.post(
+        "/api/provider-financing-events",
+        headers=authorization(owner["token"]),
+        json={"message": message, "date": "2026-08-23"},
+    )
+    assert saved.status_code == 201, saved.get_json()
+    assert saved.get_json()["data"]["principalAmount"] == "1010.00"
+    assert saved.get_json()["data"]["financingFee"] == "10.10"
+
+    duplicate = client.post(
+        "/api/provider-financing-events",
+        headers=authorization(owner["token"]),
+        json={"message": message, "date": "2026-08-23"},
+    )
+    assert duplicate.status_code == 409
+
+    summary = client.get(
+        "/api/analytics/summary?period=30-days",
+        headers=authorization(owner["token"]),
+    )
+    assert summary.status_code == 200
+    cash_flow = summary.get_json()["cashFlow"]
+    assert cash_flow["recordedExpenses"] == "0.00"
+    assert cash_flow["financingCharges"] == "10.10"
+    assert cash_flow["expenses"] == "10.10"

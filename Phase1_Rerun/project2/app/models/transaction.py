@@ -1,6 +1,6 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, Text
+from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from app.models.base import Base, TimeStampMixin, SoftDeleteMixin
 
@@ -27,6 +27,10 @@ class Transaction(TimeStampMixin, SoftDeleteMixin, Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
+    merchant_name: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True,
+    )
     payment_method_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("payment_methods.id"), nullable=True
     )

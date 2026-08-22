@@ -24,16 +24,31 @@ def authenticated_user_to_dict(user: User) -> dict[str, object]:
 def transaction_to_dict(transaction: Transaction) -> dict[str, object]:
     category = transaction.category
     payment_method = transaction.payment_method
+    import_record = transaction.import_record
 
     return {
         "id": transaction.id,
         "user_id": transaction.user_id,
         "date": transaction.date.isoformat(),
         "description": transaction.description,
+        "merchant_name": transaction.merchant_name,
         "type": category.type if category else None,
         "category": category.name if category else None,
         "amount": str(transaction.amount),
         "payment_method": payment_method.name if payment_method else None,
+        "provider_fee": (
+            str(import_record.fee)
+            if import_record and import_record.fee is not None
+            else None
+        ),
+        "provider_fee_source": (
+            import_record.fee_source if import_record else None
+        ),
+        "provider_fee_original_estimate": (
+            str(import_record.original_estimated_fee)
+            if import_record and import_record.original_estimated_fee is not None
+            else None
+        ),
     }
 
 

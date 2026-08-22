@@ -3,6 +3,7 @@ from app.models.user import User
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.transaction_import import TransactionImport
+from app.models.provider_financing_event import ProviderFinancingEvent
 from app.models.budget import Budget, BudgetItem
 from app.models.payment_method import PaymentMethod, PaymentMethodGroup
 from app.models.telegram_link import TelegramLink
@@ -24,6 +25,7 @@ __all__ = [
     "Category",
     "Transaction",
     "TransactionImport",
+    "ProviderFinancingEvent",
     "Budget",
     "BudgetItem",
     "PaymentMethod",

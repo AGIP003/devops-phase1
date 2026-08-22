@@ -58,11 +58,7 @@ def _message_fingerprint(provider: str, message: str) -> str:
     return hmac.new(fingerprint_key, fingerprint_input, hashlib.sha256).hexdigest()
 
 
-def _find_existing_import(
-    user_id: int,
-    parsed: ParsedTransactionMessage,
-    fingerprint: str,
-) -> TransactionImport | None:
+def _find_existing_import(user_id: int, parsed: ParsedTransactionMessage, fingerprint: str) -> TransactionImport | None:
     return db.session.scalar(
         select(TransactionImport).where(
             TransactionImport.user_id == user_id,
@@ -110,6 +106,7 @@ def import_transaction_message_for_user(
             amount=parsed.amount,
             transaction_date=transaction_date,
             description=description,
+            merchant_name=parsed.counterparty,
         )
         db.session.flush()
 
@@ -123,6 +120,11 @@ def import_transaction_message_for_user(
             provider_transaction_type=parsed.provider_transaction_type or "unknown",
             currency_code=parsed.currency,
             fee=parsed.fee,
+            fee_source=(
+                "provider_reported"
+                if parsed.fee is not None
+                else "unknown"
+            ),
         )
         db.session.add(import_record)
 

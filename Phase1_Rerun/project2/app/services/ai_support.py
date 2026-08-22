@@ -145,3 +145,22 @@ def build_usage_metadata(
             output_tokens=output_tokens,
         ),
     )
+
+
+def combine_usage_metadata(*items: AIUsageMetadata) -> AIUsageMetadata:
+    if not items:
+        raise ValueError("At least one usage item is required")
+    models = {item.model for item in items}
+    if len(models) != 1:
+        raise ValueError("Cannot combine usage from different models")
+    return AIUsageMetadata(
+        model=items[0].model,
+        latency_ms=sum(item.latency_ms for item in items),
+        input_tokens=sum(item.input_tokens for item in items),
+        cached_input_tokens=sum(item.cached_input_tokens for item in items),
+        output_tokens=sum(item.output_tokens for item in items),
+        estimated_cost_usd=sum(
+            (item.estimated_cost_usd for item in items),
+            Decimal("0"),
+        ),
+    )

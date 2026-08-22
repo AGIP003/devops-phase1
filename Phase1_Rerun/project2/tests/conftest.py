@@ -18,6 +18,7 @@ DATABASE_TABLES = (
     "forex_rates",
     "budget_items",
     "budgets",
+    "provider_financing_events",
     "transaction_imports",
     "transactions",
     "categories",

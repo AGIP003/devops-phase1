@@ -1,4 +1,5 @@
 import os
+from datetime import date
 
 from flask import request, jsonify, abort, g
 from werkzeug.exceptions import HTTPException
@@ -44,7 +45,23 @@ from app.services.user_service import delete_user as delete_user_record, get_use
 from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
 from app.services.analytics_service import (
     AnalyticsPeriodError,
+    AnalyticsSearchError,
     build_analytics_summary,
+    build_description_trend,
+)
+from app.services.provider_fee_service import (
+    ProviderFeeError,
+    update_provider_fee_for_user,
+)
+from app.services.provider_financing_service import (
+    DuplicateFinancingEventError,
+    record_financing_notice_for_user,
+)
+from app.services.fee_dashboard_service import (
+    FeeEstimateError,
+    build_fee_dashboard,
+    estimate_public_tariff,
+    get_fee_tariff_catalog,
 )
 from app.debt_validation import parse_debt_create_payload, parse_debt_entry_payload
 from app.services.debt_service import (
@@ -119,6 +136,62 @@ def register_routes(app):
             abort(400, description=str(error))
 
         response = jsonify(summary)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/analytics/description-trend", methods=["GET"])
+    @login_required
+    def get_description_trend():
+        """Return a calendar-aligned trend for an owned expense search."""
+        query = request.args.get("query", "")
+        period = request.args.get("period", "month")
+        anchor_text = request.args.get("anchor")
+        try:
+            anchor = date.fromisoformat(anchor_text) if anchor_text else None
+            result = build_description_trend(
+                g.current_user["user_id"],
+                query,
+                period,
+                anchor=anchor,
+            )
+        except (AnalyticsPeriodError, AnalyticsSearchError) as error:
+            abort(400, description=str(error))
+        except (TypeError, ValueError) as error:
+            abort(400, description=f"Invalid analytics anchor date: {error}")
+
+        response = jsonify(result)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/fees/summary", methods=["GET"])
+    @login_required
+    def get_fee_summary():
+        response = jsonify(build_fee_dashboard(g.current_user["user_id"]))
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/fees/tariffs", methods=["GET"])
+    @login_required
+    def get_fee_tariffs():
+        response = jsonify(get_fee_tariff_catalog())
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
+
+    @app.route("/api/fees/estimate", methods=["POST"])
+    @login_required
+    def estimate_fee():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Payload must be an object")
+        try:
+            estimate = estimate_public_tariff(
+                data.get("provider"),
+                data.get("service"),
+                data.get("amount"),
+            )
+        except FeeEstimateError as error:
+            abort(400, description=str(error))
+        response = jsonify(estimate)
         response.headers["Cache-Control"] = "private, no-store"
         return response, 200
 
@@ -550,11 +623,21 @@ def register_routes(app):
             amount = validate_amount(data.get("amount"))
             transaction_date = validate_date(data.get("date"))
             description = validate_description(data.get("description", ""))
+            merchant_name = data.get("merchant_name")
             payment_method_name = validate_payment_method(data.get("payment_method"))
             
             try:
                 user_id = g.current_user["user_id"]
-                saved_transaction = create_transaction_for_user(user_id, category_name, transaction_type, payment_method_name, amount, transaction_date, description)
+                saved_transaction = create_transaction_for_user(
+                    user_id,
+                    category_name,
+                    transaction_type,
+                    payment_method_name,
+                    amount,
+                    transaction_date,
+                    description,
+                    merchant_name,
+                )
             except ValueError as e:
                 abort(400, description=str(e))
 
@@ -588,7 +671,7 @@ def register_routes(app):
         if isinstance(parsed, ParsedFulizaNotice):
             response = jsonify({
                 "kind": "fuliza_notice",
-                "importable": False,
+                "importable": True,
                 "provider": parsed.provider,
                 "noticeType": parsed.notice_type.value,
                 "amount": str(parsed.amount),
@@ -613,9 +696,10 @@ def register_routes(app):
                     if parsed.due_date is not None
                     else None
                 ),
+                "requiresDate": True,
                 "message": (
-                    "Fuliza financing is recognized but is not recorded as "
-                    "a separate transaction or debt."
+                    "The financing event can be recorded. Principal is kept "
+                    "separate from spending; only explicit fees affect expenses."
                 ),
             })
             response.headers["Cache-Control"] = "private, no-store"
@@ -751,6 +835,67 @@ def register_routes(app):
             },
             "status": "success",
             "rememberedAlias": remember_alias,
+        })
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 201
+
+    @app.route("/api/provider-financing-events", methods=["POST"])
+    @login_required
+    def create_provider_financing_event():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400, description="Payload must be an object")
+        raw_message = data.get("message")
+        if not isinstance(raw_message, str) or not raw_message.strip():
+            abort(400, description="A financing provider message is required")
+        if len(raw_message) > 4000:
+            abort(400, description="Provider message is too long")
+
+        try:
+            parsed = parse_financial_message(raw_message)
+            if not isinstance(parsed, ParsedFulizaNotice):
+                abort(400, description="Message is not a supported financing notice")
+            if not data.get("date"):
+                abort(400, description="Financing notice date is required")
+            recorded_on = validate_date(data["date"])
+            event = record_financing_notice_for_user(
+                g.current_user["user_id"],
+                raw_message,
+                parsed,
+                recorded_on=recorded_on,
+            )
+        except UnsupportedFinancialMessageError as error:
+            abort(400, description=str(error))
+        except DuplicateFinancingEventError as error:
+            return jsonify({
+                "error": "Duplicate financing event",
+                "message": str(error),
+                "eventId": error.event_id,
+            }), 409
+        except ValidationError as error:
+            abort(400, description=str(error))
+        except HTTPException:
+            raise
+
+        response = jsonify({
+            "data": {
+                "id": event.id,
+                "provider": event.provider,
+                "eventType": event.event_type,
+                "principalAmount": str(event.principal_amount),
+                "financingFee": (
+                    str(event.financing_fee)
+                    if event.financing_fee is not None
+                    else None
+                ),
+                "dailyMaintenanceFee": (
+                    str(event.daily_maintenance_fee)
+                    if event.daily_maintenance_fee is not None
+                    else None
+                ),
+                "recordedOn": event.recorded_on.isoformat(),
+            },
+            "status": "success",
         })
         response.headers["Cache-Control"] = "private, no-store"
         return response, 201
@@ -943,6 +1088,8 @@ def register_routes(app):
             transaction_type = None
             category_name = None
             payment_method_name = None
+            merchant_name = None
+            merchant_supplied = "merchant_name" in data
             
             # Validate each field if present
             if "amount" in data:
@@ -967,6 +1114,9 @@ def register_routes(app):
             if "payment_method" in data:
                 payment_method_name = validate_payment_method(data["payment_method"])
 
+            if merchant_supplied:
+                merchant_name = data.get("merchant_name")
+
 
             transaction = update_transaction_for_user(
                 user_id=user_id,
@@ -977,6 +1127,8 @@ def register_routes(app):
                 category_name=category_name,
                 transaction_type=transaction_type,
                 payment_method_name=payment_method_name,
+                merchant_name=merchant_name,
+                merchant_supplied=merchant_supplied,
             )
 
             if transaction is None:
@@ -992,6 +1144,42 @@ def register_routes(app):
             raise
         except Exception as e:
             abort(500, description=f"Server error: {str(e)}")
+
+    @app.route(
+        "/api/transactions/<int:transaction_id>/provider-fee",
+        methods=["PATCH"],
+    )
+    @login_required
+    def update_provider_fee(transaction_id):
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or "fee" not in data:
+            abort(400, description="Payload must contain fee")
+        try:
+            import_record = update_provider_fee_for_user(
+                g.current_user["user_id"],
+                transaction_id,
+                data["fee"],
+            )
+        except ProviderFeeError as error:
+            abort(400, description=str(error))
+        if import_record is None:
+            abort(404, description="Imported transaction not found")
+
+        response = jsonify({
+            "data": {
+                "transactionId": import_record.transaction_id,
+                "fee": str(import_record.fee),
+                "feeSource": import_record.fee_source,
+                "originalEstimatedFee": (
+                    str(import_record.original_estimated_fee)
+                    if import_record.original_estimated_fee is not None
+                    else None
+                ),
+            },
+            "status": "success",
+        })
+        response.headers["Cache-Control"] = "private, no-store"
+        return response, 200
       
     @app.route("/admin/transactions", methods=["GET"])
     @login_required

@@ -14,7 +14,22 @@ def _transaction_select():
     return select(Transaction).options(
         selectinload(Transaction.category),
         selectinload(Transaction.payment_method),
+        selectinload(Transaction.import_record),
     )
+
+
+def normalize_merchant_name(value: str | None) -> str | None:
+    """Normalize an optional merchant without inventing one from description."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("Merchant name must be text")
+    clean = " ".join(value.strip().split())
+    if not clean:
+        return None
+    if len(clean) > 150:
+        raise ValueError("Merchant name cannot exceed 150 characters")
+    return clean
 
 def list_transactions_for_user(user_id: int, query: str | None = None) -> list[Transaction]:
     statement = (
@@ -64,6 +79,7 @@ def build_transaction_for_user(
     amount: Decimal,
     transaction_date: date,
     description: str,
+    merchant_name: str | None = None,
 ) -> Transaction:
     """Build a transaction without committing so a caller can compose one ACID unit."""
     payment_method = _get_payment_method_by_name(payment_method_name)
@@ -86,6 +102,7 @@ def build_transaction_for_user(
         amount=amount,
         date=transaction_date,
         description=description,
+        merchant_name=normalize_merchant_name(merchant_name),
     )
     db.session.add(transaction)
     return transaction
@@ -98,6 +115,7 @@ def create_transaction_for_user(
     amount: Decimal,
     transaction_date: date,
     description: str,
+    merchant_name: str | None = None,
 ) -> Transaction:
     try:
         transaction = build_transaction_for_user(
@@ -108,6 +126,7 @@ def create_transaction_for_user(
             amount=amount,
             transaction_date=transaction_date,
             description=description,
+            merchant_name=merchant_name,
         )
         db.session.commit()
 
@@ -128,9 +147,11 @@ def update_transaction_for_user(
     category_name: str | None = None,
     transaction_type: str | None = None,
     payment_method_name: str | None = None,
+    merchant_name: str | None = None,
+    merchant_supplied: bool = False,
 ) -> Transaction | None:
     try:
-        if all(
+        if not merchant_supplied and all(
             value is None
             for value in (
                 amount,
@@ -138,6 +159,7 @@ def update_transaction_for_user(
                 description,
                 category_name,
                 payment_method_name,
+                merchant_name,
             )
         ):
             raise ValueError("No fields to update")
@@ -154,6 +176,9 @@ def update_transaction_for_user(
 
         if description is not None:
             transaction.description = description
+
+        if merchant_supplied:
+            transaction.merchant_name = normalize_merchant_name(merchant_name)
 
         if category_name is not None:
             if transaction_type is None:

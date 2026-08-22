@@ -100,3 +100,34 @@ def test_failed_request_is_counted_conservatively(app, monkeypatch):
         assert usage.reserved_cost_usd == Decimal("0E-8")
         assert usage.estimated_cost_usd == Decimal("0.05000000")
         assert usage.failed_requests == 1
+
+
+def test_assistant_uses_its_smaller_reservation(app, monkeypatch):
+    monkeypatch.setitem(
+        app.config,
+        "AI_DAILY_BUDGET_USD",
+        Decimal("0.01"),
+    )
+    monkeypatch.setitem(
+        app.config,
+        "AI_ASSISTANT_RESERVATION_USD",
+        Decimal("0.002"),
+    )
+
+    with app.app_context():
+        reservation = reserve_daily_budget("assistant")
+
+        assert reservation.amount_usd == Decimal("0.002")
+
+
+def test_finance_question_reserves_for_its_two_model_calls(app, monkeypatch):
+    monkeypatch.setitem(
+        app.config,
+        "AI_FINANCE_RESERVATION_USD",
+        Decimal("0.004"),
+    )
+
+    with app.app_context():
+        reservation = reserve_daily_budget("finance")
+
+        assert reservation.amount_usd == Decimal("0.004")

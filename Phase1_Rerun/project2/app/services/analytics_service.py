@@ -11,7 +11,7 @@ from calendar import monthrange
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 
 from app.extensions import db
 from app.models.budget import Budget, BudgetItem
@@ -20,15 +20,22 @@ from app.models.debt import Debt, DebtEntry, DebtSchedule
 from app.models.recurring_commitment import RecurringCommitment
 from app.models.savings_goal import SavingsGoal, SavingsGoalEntry
 from app.models.transaction import Transaction
+from app.models.transaction_import import TransactionImport
+from app.models.provider_financing_event import ProviderFinancingEvent
 
 
 ZERO = Decimal("0")
 MONEY = Decimal("0.01")
 SUPPORTED_PERIODS = {"30-days", "90-days", "6-months", "12-months", "all"}
+SUPPORTED_TREND_PERIODS = {"week", "month", "year"}
 
 
 class AnalyticsPeriodError(ValueError):
     """Raised when an unsupported analytics period is requested."""
+
+
+class AnalyticsSearchError(ValueError):
+    """Raised when an analytics lookup cannot be safely executed."""
 
 
 def _money(value: Decimal | int | None) -> str:
@@ -121,6 +128,7 @@ def _transaction_aggregates(user_id: int, start: date | None, end: date):
         select(
             func.coalesce(Category.name, "Uncategorized"),
             func.coalesce(func.sum(Transaction.amount), ZERO),
+            func.count(Transaction.id),
         )
         .select_from(Transaction)
         .outerjoin(Category, Transaction.category_id == Category.id)
@@ -130,8 +138,12 @@ def _transaction_aggregates(user_id: int, start: date | None, end: date):
     )
     category_statement = _dated(category_statement, Transaction.date, start, end)
     categories = [
-        {"category": name, "amount": _money(total)}
-        for name, total in db.session.execute(category_statement)
+        {
+            "category": name,
+            "amount": _money(total),
+            "transactionCount": count,
+        }
+        for name, total, count in db.session.execute(category_statement)
     ]
 
     daily_statement = (
@@ -165,6 +177,306 @@ def _transaction_aggregates(user_id: int, start: date | None, end: date):
     ]
 
     return totals_by_type, monthly, categories, daily
+
+
+def resolve_trend_period(
+    period: str,
+    *,
+    anchor: date | None = None,
+) -> tuple[date, date, str]:
+    """Resolve a calendar-aligned week, month or year and chart grain."""
+    if period not in SUPPORTED_TREND_PERIODS:
+        raise AnalyticsPeriodError(
+            "Unsupported trend period. Choose one of: month, week, year"
+        )
+
+    current = anchor or date.today()
+    if period == "week":
+        start = current - timedelta(days=current.weekday())
+        return start, start + timedelta(days=6), "day"
+    if period == "month":
+        start = current.replace(day=1)
+        return start, date(
+            current.year,
+            current.month,
+            monthrange(current.year, current.month)[1],
+        ), "day"
+    return date(current.year, 1, 1), date(current.year, 12, 31), "month"
+
+
+def _clean_search_query(query: str) -> str:
+    if not isinstance(query, str):
+        raise AnalyticsSearchError("Search query must be text")
+    clean = " ".join(query.strip().split())
+    if len(clean) < 2:
+        raise AnalyticsSearchError("Search query must contain at least 2 characters")
+    if len(clean) > 100:
+        raise AnalyticsSearchError("Search query cannot exceed 100 characters")
+    return clean
+
+
+def _month_keys(start: date, end: date):
+    current = start.replace(day=1)
+    while current <= end:
+        yield current
+        current = (
+            date(current.year + 1, 1, 1)
+            if current.month == 12
+            else date(current.year, current.month + 1, 1)
+        )
+
+
+def build_description_trend(
+    user_id: int,
+    query: str,
+    period: str,
+    *,
+    anchor: date | None = None,
+):
+    """Aggregate owned expense matches without exposing raw transaction rows."""
+    clean_query = _clean_search_query(query)
+    start, end, grain = resolve_trend_period(period, anchor=anchor)
+    search_pattern = f"%{clean_query}%"
+    bucket = (
+        func.date_trunc("month", Transaction.date)
+        if grain == "month"
+        else Transaction.date
+    )
+    statement = (
+        select(
+            bucket.label("bucket"),
+            func.count(Transaction.id),
+            func.coalesce(func.sum(Transaction.amount), ZERO),
+        )
+        .select_from(Transaction)
+        .join(Category, Transaction.category_id == Category.id)
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.deleted_at.is_(None),
+            Category.type == "expense",
+            Transaction.date.between(start, end),
+            or_(
+                func.coalesce(Transaction.description, "").ilike(search_pattern),
+                func.coalesce(Transaction.merchant_name, "").ilike(search_pattern),
+            ),
+        )
+        .group_by(bucket)
+        .order_by(bucket)
+    )
+
+    rows = {}
+    total_count = 0
+    total_amount = ZERO
+    for bucket_value, count, amount in db.session.execute(statement):
+        bucket_date = (
+            bucket_value.date()
+            if hasattr(bucket_value, "date")
+            else bucket_value
+        )
+        rows[bucket_date] = (int(count), Decimal(amount))
+        total_count += int(count)
+        total_amount += Decimal(amount)
+
+    keys = (
+        _month_keys(start, end)
+        if grain == "month"
+        else (start + timedelta(days=offset) for offset in range((end - start).days + 1))
+    )
+    series = []
+    for key in keys:
+        count, amount = rows.get(key, (0, ZERO))
+        series.append({
+            "bucket": key.isoformat()[:7] if grain == "month" else key.isoformat(),
+            "count": count,
+            "amount": _money(amount),
+        })
+
+    return {
+        "query": clean_query,
+        "period": {
+            "key": period,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "grain": grain,
+            "currency": "KES",
+        },
+        "totalCount": total_count,
+        "totalAmount": _money(total_amount),
+        "series": series,
+    }
+
+
+def _provider_fee_summary(user_id: int, start: date | None, end: date):
+    transaction_statement = (
+        select(
+            TransactionImport.fee_source,
+            func.coalesce(func.sum(TransactionImport.fee), ZERO),
+        )
+        .select_from(TransactionImport)
+        .join(Transaction, TransactionImport.transaction_id == Transaction.id)
+        .where(
+            Transaction.user_id == user_id,
+            Transaction.deleted_at.is_(None),
+            TransactionImport.fee.is_not(None),
+        )
+        .group_by(TransactionImport.fee_source)
+    )
+    transaction_statement = _dated(
+        transaction_statement,
+        Transaction.date,
+        start,
+        end,
+    )
+    by_source = {
+        source: Decimal(amount)
+        for source, amount in db.session.execute(transaction_statement)
+    }
+
+    financing_fee = func.coalesce(ProviderFinancingEvent.financing_fee, ZERO)
+    maintenance_fee = func.coalesce(
+        ProviderFinancingEvent.daily_maintenance_fee,
+        ZERO,
+    )
+    financing_statement = select(
+        func.coalesce(func.sum(financing_fee + maintenance_fee), ZERO)
+    ).where(
+        ProviderFinancingEvent.user_id == user_id,
+        ProviderFinancingEvent.currency_code == "KES",
+    )
+    financing_statement = _dated(
+        financing_statement,
+        ProviderFinancingEvent.recorded_on,
+        start,
+        end,
+    )
+    financing_total = Decimal(db.session.scalar(financing_statement) or ZERO)
+
+    provider_reported = by_source.get("provider_reported", ZERO)
+    user_confirmed = by_source.get("user_confirmed", ZERO)
+    estimated = by_source.get("estimated_tariff", ZERO)
+    confirmed = provider_reported + user_confirmed + financing_total
+    return {
+        "providerReported": provider_reported,
+        "userConfirmed": user_confirmed,
+        "estimated": estimated,
+        "financingCharges": financing_total,
+        "confirmed": confirmed,
+        "total": confirmed + estimated,
+    }
+
+
+def _provider_fee_timeline(user_id: int, start: date | None, end: date):
+    """Return fee totals by month and day for reconciled charts."""
+    monthly: dict[str, Decimal] = {}
+    daily: dict[str, Decimal] = {}
+
+    for grain, target in (("month", monthly), ("day", daily)):
+        bucket = (
+            func.date_trunc("month", Transaction.date)
+            if grain == "month"
+            else Transaction.date
+        )
+        statement = (
+            select(
+                bucket,
+                func.coalesce(func.sum(TransactionImport.fee), ZERO),
+            )
+            .select_from(TransactionImport)
+            .join(Transaction, TransactionImport.transaction_id == Transaction.id)
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+                TransactionImport.fee.is_not(None),
+            )
+            .group_by(bucket)
+        )
+        statement = _dated(statement, Transaction.date, start, end)
+        for bucket_value, amount in db.session.execute(statement):
+            bucket_date = (
+                bucket_value.date()
+                if hasattr(bucket_value, "date")
+                else bucket_value
+            )
+            key = (
+                bucket_date.isoformat()[:7]
+                if grain == "month"
+                else bucket_date.isoformat()
+            )
+            target[key] = target.get(key, ZERO) + Decimal(amount)
+
+        financing_bucket = (
+            func.date_trunc("month", ProviderFinancingEvent.recorded_on)
+            if grain == "month"
+            else ProviderFinancingEvent.recorded_on
+        )
+        financing_amount = (
+            func.coalesce(ProviderFinancingEvent.financing_fee, ZERO)
+            + func.coalesce(
+                ProviderFinancingEvent.daily_maintenance_fee,
+                ZERO,
+            )
+        )
+        financing_statement = (
+            select(
+                financing_bucket,
+                func.coalesce(func.sum(financing_amount), ZERO),
+            )
+            .where(
+                ProviderFinancingEvent.user_id == user_id,
+                ProviderFinancingEvent.currency_code == "KES",
+            )
+            .group_by(financing_bucket)
+        )
+        financing_statement = _dated(
+            financing_statement,
+            ProviderFinancingEvent.recorded_on,
+            start,
+            end,
+        )
+        for bucket_value, amount in db.session.execute(financing_statement):
+            bucket_date = (
+                bucket_value.date()
+                if hasattr(bucket_value, "date")
+                else bucket_value
+            )
+            key = (
+                bucket_date.isoformat()[:7]
+                if grain == "month"
+                else bucket_date.isoformat()
+            )
+            target[key] = target.get(key, ZERO) + Decimal(amount)
+
+    return monthly, daily
+
+
+def build_calendar_cashflow(
+    user_id: int,
+    period: str,
+    *,
+    anchor: date | None = None,
+):
+    """Build a compact calendar-aligned cash-flow snapshot for AI tools."""
+    start, end, _ = resolve_trend_period(period, anchor=anchor)
+    totals, _, categories, _ = _transaction_aggregates(user_id, start, end)
+    income = totals.get("income", ZERO)
+    spending = totals.get("expense", ZERO)
+    fees = _provider_fee_summary(user_id, start, end)
+    expenses = spending + fees["total"]
+    return {
+        "period": {
+            "key": period,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "currency": "KES",
+        },
+        "income": _money(income),
+        "recordedExpenses": _money(spending),
+        "confirmedFees": _money(fees["confirmed"]),
+        "estimatedFees": _money(fees["estimated"]),
+        "totalExpenses": _money(expenses),
+        "net": _money(income - expenses),
+        "topExpenseCategories": categories[:5],
+    }
 
 
 def _monthly_equivalent(amount: Decimal, frequency: str, custom_days: int | None) -> Decimal:
@@ -395,10 +707,30 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
     start, end = resolve_period(period, today=current_date)
     totals, monthly, categories, daily = _transaction_aggregates(user_id, start, end)
     income = totals.get("income", ZERO)
-    expenses = totals.get("expense", ZERO)
+    recorded_expenses = totals.get("expense", ZERO)
+    fees = _provider_fee_summary(user_id, start, end)
+    monthly_fees, daily_fees = _provider_fee_timeline(user_id, start, end)
+    transaction_fees = fees["total"]
+    expenses = recorded_expenses + transaction_fees
     debt = _debt_summary(user_id, start, end)
     debt_fees = Decimal(debt["periodFees"])
     net = income - expenses
+
+    for month, amount in monthly_fees.items():
+        values = monthly.setdefault(
+            month,
+            {"income": ZERO, "expense": ZERO},
+        )
+        values["fees"] = amount
+    for values in monthly.values():
+        values.setdefault("fees", ZERO)
+
+    for item in daily:
+        fee_amount = daily_fees.get(item["date"], ZERO)
+        item["fees"] = _money(fee_amount)
+        item["expenses"] = _money(
+            Decimal(item["expenses"]) + fee_amount
+        )
 
     commitments, commitment_currencies = _commitment_summary(user_id)
     goals, goal_currencies = _goal_summary(user_id, current_date)
@@ -419,15 +751,15 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
     monthly_income = income * Decimal("30.4375") / Decimal(period_days)
 
     opportunities = []
-    if categories and expenses > ZERO:
+    if categories and recorded_expenses > ZERO:
         leading = categories[0]
-        share = Decimal(leading["amount"]) / expenses
+        share = Decimal(leading["amount"]) / recorded_expenses
         if share >= Decimal("0.30"):
             opportunities.append({
                 "type": "category_concentration",
                 "severity": "medium",
                 "title": f"Review {leading['category']} spending",
-                "explanation": f"It represents {_percentage(Decimal(leading['amount']), expenses)}% of expenses in this period.",
+                "explanation": f"It represents {_percentage(Decimal(leading['amount']), recorded_expenses)}% of recorded purchases in this period.",
                 "potentialMonthlyAdjustment": None,
             })
     if debt_fees > ZERO:
@@ -455,6 +787,12 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
             "Commitments or goals in unsupported currencies were excluded: "
             + ", ".join(unsupported)
         )
+    if fees["estimated"] > ZERO:
+        warnings.append(
+            "Total expenses include KES "
+            f"{_money(fees['estimated'])} in clearly labelled estimated "
+            "provider fees. Review or confirm them before relying on the total."
+        )
 
     return {
         "period": {
@@ -465,8 +803,12 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
         },
         "cashFlow": {
             "income": _money(income),
+            "recordedExpenses": _money(recorded_expenses),
             "expenses": _money(expenses),
-            "transactionFees": None,
+            "transactionFees": _money(transaction_fees),
+            "confirmedTransactionFees": _money(fees["confirmed"]),
+            "estimatedTransactionFees": _money(fees["estimated"]),
+            "financingCharges": _money(fees["financingCharges"]),
             "net": _money(net),
             "savingsRate": _percentage(net, income),
         },
@@ -485,10 +827,14 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
             {
                 "month": month,
                 "income": _money(values["income"]),
-                "expenses": _money(values["expense"]),
-                "net": _money(values["income"] - values["expense"]),
+                "recordedExpenses": _money(values["expense"]),
+                "fees": _money(values["fees"]),
+                "expenses": _money(values["expense"] + values["fees"]),
+                "net": _money(
+                    values["income"] - values["expense"] - values["fees"]
+                ),
             }
-            for month, values in monthly.items()
+            for month, values in sorted(monthly.items())
         ],
         "expenseCategories": categories,
         "dailyActivity": daily,
@@ -501,7 +847,7 @@ def build_analytics_summary(user_id: int, period: str, *, today: date | None = N
             "debts": True,
             "bills": True,
             "subscriptions": True,
-            "transactionFees": False,
+            "transactionFees": True,
             "debtFees": True,
         },
         "warnings": warnings,

@@ -4,8 +4,20 @@ from types import SimpleNamespace
 import pytest
 from flask import Flask
 
-from app.schemas import ReceiptParseResult, TransactionParseResult
-from app.services import ai_budget_service, ai_parser, receipt_parser
+from app.schemas import (
+    AnalyticsAnswer,
+    AnalyticsQuestionPlan,
+    ReceiptParseResult,
+    TelegramAssistantResponse,
+    TransactionParseResult,
+)
+from app.services import (
+    ai_budget_service,
+    ai_parser,
+    receipt_parser,
+    telegram_assistant,
+    finance_assistant,
+)
 from app.services.ai_support import (
     AIInvalidResponseError,
     estimate_luna_cost,
@@ -31,6 +43,21 @@ class FakeClient:
         self.responses = FakeResponses(response)
 
 
+class SequenceResponses:
+    def __init__(self, responses):
+        self._responses = iter(responses)
+        self.requests = []
+
+    def parse(self, **kwargs):
+        self.requests.append(kwargs)
+        return next(self._responses)
+
+
+class SequenceClient:
+    def __init__(self, responses):
+        self.responses = SequenceResponses(responses)
+
+
 def response_with(extraction, *, status="completed"):
     return SimpleNamespace(
         status=status,
@@ -50,6 +77,8 @@ def ai_app():
         AI_REASONING_EFFORT="low",
         AI_TRANSACTION_MAX_OUTPUT_TOKENS=500,
         AI_RECEIPT_MAX_OUTPUT_TOKENS=1600,
+        AI_ASSISTANT_MAX_OUTPUT_TOKENS=450,
+        SECRET_KEY="test-secret-for-opaque-safety-identifiers",
     )
     return app
 
@@ -231,3 +260,119 @@ def test_unvalidated_receipt_spends_no_budget(monkeypatch):
 
     with pytest.raises(TypeError, match="must be validated"):
         ai_budget_service.run_receipt_ai(b"raw-user-input")
+
+
+def test_telegram_assistant_returns_validated_transaction(
+    ai_app,
+    monkeypatch,
+):
+    parsed = TelegramAssistantResponse.model_validate({
+        "intent": "transaction",
+        "reply": "I found a possible transaction.",
+        "transaction": {
+            "kind": "expense",
+            "amount": "300.00",
+            "category": "food",
+            "description": "lunch",
+            "currency": "KES",
+            "confidence": 0.92,
+            "needs_review": False,
+        },
+    })
+    fake_client = FakeClient(response_with(parsed))
+    monkeypatch.setattr(
+        telegram_assistant,
+        "create_openai_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        telegram_assistant,
+        "get_ai_model",
+        lambda: "gpt-5.6-luna",
+    )
+
+    with ai_app.app_context():
+        result = telegram_assistant.respond_to_telegram_message(
+            "I spent 300 on lunch",
+            user_id=42,
+        )
+
+    request = fake_client.responses.request
+    assert result.response.transaction.category == "food"
+    assert request["store"] is False
+    assert request["safety_identifier"] != "42"
+    assert len(request["safety_identifier"]) == 64
+    assert request["max_output_tokens"] == 450
+
+
+def test_invalid_assistant_input_spends_no_budget(monkeypatch):
+    def forbidden_reservation(purpose):
+        raise AssertionError("Invalid input must not reserve AI budget")
+
+    monkeypatch.setattr(
+        ai_budget_service,
+        "reserve_daily_budget",
+        forbidden_reservation,
+    )
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        ai_budget_service.run_telegram_assistant_ai("  ", user_id=1)
+
+
+def test_finance_assistant_uses_one_allowlisted_owned_tool(ai_app, monkeypatch):
+    plan = AnalyticsQuestionPlan.model_validate({
+        "tool": "search_spending",
+        "period": "month",
+        "query": "airtime",
+        "reduction_percent": None,
+    })
+    answer = AnalyticsAnswer.model_validate({
+        "answer": "You recorded airtime twice this month.",
+        "evidence": ["2 matches totalling KES 350.00"],
+        "caveats": ["Only recorded transactions are included."],
+    })
+    fake_client = SequenceClient([
+        response_with(plan),
+        response_with(answer),
+    ])
+    captured = {}
+    monkeypatch.setattr(
+        finance_assistant,
+        "create_openai_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        finance_assistant,
+        "get_ai_model",
+        lambda: "gpt-5.6-luna",
+    )
+
+    def fake_execute(user_id, selected_plan, *, today=None):
+        captured.update({"user_id": user_id, "plan": selected_plan})
+        return {
+            "query": "airtime",
+            "period": {"start": "2026-08-01", "end": "2026-08-31"},
+            "totalCount": 2,
+            "totalAmount": "350.00",
+            "series": [],
+        }
+
+    monkeypatch.setattr(
+        finance_assistant,
+        "execute_analytics_tool",
+        fake_execute,
+    )
+
+    with ai_app.app_context():
+        result = finance_assistant.answer_finance_question(
+            "How often did I buy airtime this month?",
+            user_id=42,
+        )
+
+    assert captured["user_id"] == 42
+    assert captured["plan"].tool.value == "search_spending"
+    assert result.answer.answer.startswith("You recorded airtime")
+    assert result.usage.input_tokens == 200
+    assert len(fake_client.responses.requests) == 2
+    assert all(request["store"] is False for request in fake_client.responses.requests)
+    assert "42" not in fake_client.responses.requests[0]["input"]

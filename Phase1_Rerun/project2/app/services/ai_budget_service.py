@@ -25,6 +25,18 @@ from app.services.receipt_parser import (
     AIReceiptParseResult,
     parse_receipt_image,
 )
+from app.services.telegram_assistant import (
+    AITelegramAssistantResult,
+    normalize_assistant_input,
+    respond_to_telegram_message,
+)
+from app.services.finance_assistant import (
+    AIFinanceAnswerResult,
+    AIWeeklySummaryResult,
+    answer_finance_question,
+    build_weekly_finance_summary,
+    normalize_finance_question,
+)
 
 
 class AIBudgetExceededError(RuntimeError):
@@ -41,6 +53,8 @@ def _reservation_amount(purpose: str) -> Decimal:
     config_names = {
         "transaction": "AI_TRANSACTION_RESERVATION_USD",
         "receipt": "AI_RECEIPT_RESERVATION_USD",
+        "assistant": "AI_ASSISTANT_RESERVATION_USD",
+        "finance": "AI_FINANCE_RESERVATION_USD",
     }
     try:
         return current_app.config[config_names[purpose]]
@@ -69,6 +83,10 @@ def reserve_daily_budget(purpose: str) -> AIBudgetReservation:
             select(AIDailyUsage)
             .where(AIDailyUsage.usage_date == usage_date)
             .with_for_update()
+            # Flask-SQLAlchemy keeps objects after commit. Refresh the locked
+            # row so repeated reservations cannot reuse a stale identity-map
+            # value and accidentally exceed the configured budget.
+            .execution_options(populate_existing=True)
         )
         if usage is None:
             raise RuntimeError("AI daily usage row could not be created")
@@ -104,6 +122,7 @@ def complete_reservation(
             select(AIDailyUsage)
             .where(AIDailyUsage.usage_date == reservation.usage_date)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if usage is None:
             raise RuntimeError("AI budget reservation no longer exists")
@@ -131,6 +150,7 @@ def fail_reservation(reservation: AIBudgetReservation) -> None:
             select(AIDailyUsage)
             .where(AIDailyUsage.usage_date == reservation.usage_date)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         if usage is None:
             raise RuntimeError("AI budget reservation no longer exists")
@@ -189,5 +209,73 @@ def run_receipt_ai(image: ValidatedImage) -> AIReceiptParseResult:
             )
         raise
 
+    complete_reservation(reservation, result.usage)
+    return result
+
+
+def run_telegram_assistant_ai(
+    text: str,
+    *,
+    user_id: int,
+) -> AITelegramAssistantResult:
+    clean_text = normalize_assistant_input(text)
+    get_ai_model()
+    get_openai_api_key()
+    reservation = reserve_daily_budget("assistant")
+    try:
+        result = respond_to_telegram_message(
+            clean_text,
+            user_id=user_id,
+        )
+    except Exception:
+        try:
+            fail_reservation(reservation)
+        except Exception:
+            current_app.logger.exception(
+                "AI Telegram budget reconciliation failed"
+            )
+        raise
+
+    complete_reservation(reservation, result.usage)
+    return result
+
+
+def run_finance_question_ai(
+    question: str,
+    *,
+    user_id: int,
+) -> AIFinanceAnswerResult:
+    clean = normalize_finance_question(question)
+    get_ai_model()
+    get_openai_api_key()
+    reservation = reserve_daily_budget("finance")
+    try:
+        result = answer_finance_question(clean, user_id=user_id)
+    except Exception:
+        try:
+            fail_reservation(reservation)
+        except Exception:
+            current_app.logger.exception(
+                "AI finance-question budget reconciliation failed"
+            )
+        raise
+    complete_reservation(reservation, result.usage)
+    return result
+
+
+def run_weekly_summary_ai(*, user_id: int) -> AIWeeklySummaryResult:
+    get_ai_model()
+    get_openai_api_key()
+    reservation = reserve_daily_budget("assistant")
+    try:
+        result = build_weekly_finance_summary(user_id=user_id)
+    except Exception:
+        try:
+            fail_reservation(reservation)
+        except Exception:
+            current_app.logger.exception(
+                "AI weekly-summary budget reconciliation failed"
+            )
+        raise
     complete_reservation(reservation, result.usage)
     return result
