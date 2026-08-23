@@ -32,6 +32,7 @@ from bot.handlers.import_message import (
     cancel_import_command,
     automatic_import_handler,
     import_category_callback,
+    import_change_category_callback,
     import_description_handler,
     import_financing_callback,
     import_date_handler,
@@ -190,6 +191,10 @@ def main():
                     CallbackQueryHandler(
                         import_save_callback,
                         pattern=r"^importsave\|(?:once|remember)$",
+                    ),
+                    CallbackQueryHandler(
+                        import_change_category_callback,
+                        pattern=r"^importedit\|category$",
                     ),
                     CallbackQueryHandler(
                         cancel_import_callback,

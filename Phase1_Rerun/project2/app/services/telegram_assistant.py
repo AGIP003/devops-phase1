@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import re
 from dataclasses import dataclass
 from hashlib import sha256
 from time import perf_counter
@@ -15,7 +16,7 @@ from openai import (
 )
 from pydantic import ValidationError
 
-from app.schemas import TelegramAssistantResponse
+from app.schemas import TelegramAssistantIntent, TelegramAssistantResponse
 from app.services.ai_support import (
     AIInvalidResponseError,
     AIServiceUnavailableError,
@@ -34,6 +35,95 @@ from finance_tracker.utils.validations import (
 logger = logging.getLogger(__name__)
 
 MAX_ASSISTANT_TEXT_CHARACTERS = 500
+
+OUT_OF_SCOPE_REPLY = (
+    "I can only help with Pesatiq and personal-finance tasks: recording "
+    "transactions, importing receipts or mobile-money messages, and reviewing "
+    "balances, budgets, goals, debts, bills, subscriptions, fees or analytics. "
+    "Use /help to see what I can do."
+)
+
+_GREETING_PATTERN = re.compile(
+    r"^(?:hi|hello|hey|good\s+(?:morning|afternoon|evening))"
+    r"(?:\s+(?:there|pesatiq))?[!.?]*$",
+    re.IGNORECASE,
+)
+_TRANSACTION_LANGUAGE_PATTERN = re.compile(
+    r"\b(?:spent|paid|bought|received|earned|sent|withdrew|deposited)\b"
+    r".*\b(?:kes|ksh|usd|eur|gbp)?\s*\d[\d,]*(?:\.\d{1,2})?\b"
+    r"|\b(?:kes|ksh|usd|eur|gbp)\s*\d[\d,]*(?:\.\d{1,2})?\b",
+    re.IGNORECASE,
+)
+_APP_SCOPE_TERMS = frozenset({
+    "account",
+    "accounts",
+    "afford",
+    "airtel",
+    "airtime",
+    "alias",
+    "analytics",
+    "balance",
+    "balances",
+    "bill",
+    "bills",
+    "budget",
+    "budgets",
+    "cash flow",
+    "category",
+    "categories",
+    "commitment",
+    "commitments",
+    "currency",
+    "debt",
+    "debts",
+    "emergency fund",
+    "emergency funds",
+    "earn",
+    "earned",
+    "exchange rate",
+    "expense",
+    "expenses",
+    "fee",
+    "fees",
+    "finance",
+    "financial",
+    "forex",
+    "fuliza",
+    "goal",
+    "goals",
+    "import",
+    "income",
+    "interest",
+    "loan",
+    "loans",
+    "merchant",
+    "merchants",
+    "money",
+    "moneytiq",
+    "m-pesa",
+    "mpesa",
+    "payment",
+    "payments",
+    "pesatiq",
+    "receipt",
+    "receipts",
+    "report",
+    "reports",
+    "save",
+    "saving",
+    "savings",
+    "spend",
+    "spent",
+    "spending",
+    "subscription",
+    "subscriptions",
+    "transaction",
+    "transactions",
+})
+
+
+class AssistantOutOfScopeError(ValueError):
+    """Raised before any paid AI call for an unrelated Telegram message."""
 
 INCOME_CATEGORIES = ", ".join(
     ALLOWED_TRANSACTION_CATEGORIES["income"]
@@ -71,9 +161,21 @@ Routing rules:
   fees, changes between periods, commitments, goals, debts or what-if scenarios.
   A separate ownership-filtered analytics service will obtain the facts.
 - Use help for greetings and questions about using the bot.
-- Use finance_education for short general personal-finance explanations.
+- Use finance_education only for short personal-finance explanations that are
+  relevant to money management or features supported by this application.
 - Use unsupported for unrelated requests, requests for current market facts,
   or requests requiring data the bot does not have.
+
+Scope boundary:
+- This is not a general-purpose assistant. Do not answer questions about
+  software, programming, celebrities, politics, entertainment, general news,
+  trivia or unrelated people and organizations.
+- "What is Docker?", "Who is Edgar Obare?" and "Write Python code" must use
+  unsupported. Do not answer the underlying question.
+- "What is an emergency fund?" uses finance_education.
+- "How much did I spend on airtime?" uses analytics.
+- When uncertain whether a request belongs to Pesatiq or personal finance, use
+  unsupported.
 
 Safety and response rules:
 - Never claim that anything was saved, changed or deleted.
@@ -109,6 +211,34 @@ def normalize_assistant_input(text: str) -> str:
             f"{MAX_ASSISTANT_TEXT_CHARACTERS} characters"
         )
     return clean_text
+
+
+def _contains_scope_term(text: str, term: str) -> bool:
+    return re.search(
+        rf"(?<!\w){re.escape(term)}(?!\w)",
+        text,
+        re.IGNORECASE,
+    ) is not None
+
+
+def is_message_in_scope(text: str) -> bool:
+    """Apply a conservative, deterministic gate before spending AI budget.
+
+    False negatives are safer than turning the product bot into a general
+    chatbot. New product domains must be deliberately added to this allowlist.
+    """
+
+    clean_text = normalize_assistant_input(text)
+    if clean_text.startswith("/"):
+        return True
+    if _GREETING_PATTERN.fullmatch(clean_text):
+        return True
+    if _TRANSACTION_LANGUAGE_PATTERN.search(clean_text):
+        return True
+    return any(
+        _contains_scope_term(clean_text, term)
+        for term in _APP_SCOPE_TERMS
+    )
 
 
 def _safety_identifier(user_id: int) -> str:
@@ -202,6 +332,9 @@ def respond_to_telegram_message(
         raise AIInvalidResponseError(
             "AI Telegram response contained no parsed output"
         )
+
+    if parsed.intent == TelegramAssistantIntent.UNSUPPORTED:
+        parsed = parsed.model_copy(update={"reply": OUT_OF_SCOPE_REPLY})
 
     if parsed.transaction is not None:
         allowed_categories = ALLOWED_TRANSACTION_CATEGORIES[

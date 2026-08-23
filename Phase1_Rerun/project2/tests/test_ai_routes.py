@@ -60,6 +60,42 @@ def test_telegram_assistant_returns_only_validated_output(
     assert response.headers["Cache-Control"] == "private, no-store"
 
 
+def test_telegram_assistant_returns_fixed_reply_for_unrelated_topic(
+    client,
+    register_user,
+    monkeypatch,
+):
+    from app import ai_routes
+    from app.services.telegram_assistant import (
+        AssistantOutOfScopeError,
+        OUT_OF_SCOPE_REPLY,
+    )
+
+    owner = register_user("scope-owner", "scope-owner@example.com")
+
+    def reject_unrelated(*args, **kwargs):
+        raise AssistantOutOfScopeError("Outside application scope")
+
+    monkeypatch.setattr(
+        ai_routes,
+        "run_telegram_assistant_ai",
+        reject_unrelated,
+    )
+
+    response = client.post(
+        "/api/ai/telegram/respond",
+        headers=authorization(owner["token"]),
+        json={"text": "What is Docker?"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "intent": "unsupported",
+        "reply": OUT_OF_SCOPE_REPLY,
+        "transaction": None,
+    }
+
+
 def test_disabled_ai_returns_service_unavailable(
     app,
     client,

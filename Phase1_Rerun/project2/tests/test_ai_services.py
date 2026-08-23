@@ -344,6 +344,79 @@ def test_telegram_assistant_returns_validated_transaction(
     assert request["max_output_tokens"] == 450
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "What is Docker?",
+        "Who is Edgar Obare?",
+        "Write Python code for me",
+    ],
+)
+def test_telegram_assistant_marks_unrelated_topics_out_of_scope(text):
+    assert telegram_assistant.is_message_in_scope(text) is False
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hey",
+        "How do I add a transaction?",
+        "What is an emergency fund?",
+        "How much did I spend on airtime this month?",
+        "Show my budgets and goals",
+        "How much have I spent this month?",
+        "I paid KES 300 for lunch",
+        "Show my subscription fees",
+    ],
+)
+def test_telegram_assistant_accepts_app_and_finance_topics(text):
+    assert telegram_assistant.is_message_in_scope(text) is True
+
+
+def test_unrelated_telegram_message_spends_no_ai_budget(monkeypatch):
+    def forbidden_reservation(purpose):
+        raise AssertionError("Unrelated text must not reserve AI budget")
+
+    monkeypatch.setattr(
+        ai_budget_service,
+        "reserve_daily_budget",
+        forbidden_reservation,
+    )
+
+    with pytest.raises(telegram_assistant.AssistantOutOfScopeError):
+        ai_budget_service.run_telegram_assistant_ai(
+            "What is Docker?",
+            user_id=1,
+        )
+
+
+def test_unsupported_ai_wording_is_replaced(ai_app, monkeypatch):
+    parsed = TelegramAssistantResponse.model_validate({
+        "intent": "unsupported",
+        "reply": "Docker packages applications into containers.",
+        "transaction": None,
+    })
+    fake_client = FakeClient(response_with(parsed))
+    monkeypatch.setattr(
+        telegram_assistant,
+        "create_openai_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        telegram_assistant,
+        "get_ai_model",
+        lambda: "gpt-5.6-luna",
+    )
+
+    with ai_app.app_context():
+        result = telegram_assistant.respond_to_telegram_message(
+            "Is a software subscription a recurring expense?",
+            user_id=42,
+        )
+
+    assert result.response.reply == telegram_assistant.OUT_OF_SCOPE_REPLY
+
+
 def test_invalid_assistant_input_spends_no_budget(monkeypatch):
     def forbidden_reservation(purpose):
         raise AssertionError("Invalid input must not reserve AI budget")

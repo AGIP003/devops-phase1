@@ -18,6 +18,10 @@ from app.services.ai_support import (
     AIInvalidResponseError,
     AIServiceUnavailableError,
 )
+from app.services.telegram_assistant import (
+    AssistantOutOfScopeError,
+    OUT_OF_SCOPE_REPLY,
+)
 from app.services.image_validation import validate_receipt_image
 
 
@@ -216,6 +220,12 @@ def respond_to_telegram():
                 "evidence": finance_result.answer.evidence,
                 "caveats": finance_result.answer.caveats,
             })
+    except AssistantOutOfScopeError:
+        return _private_json({
+            "intent": TelegramAssistantIntent.UNSUPPORTED.value,
+            "reply": OUT_OF_SCOPE_REPLY,
+            "transaction": None,
+        })
     except ValueError as error:
         return _private_json(
             {"error": "Invalid request", "message": str(error)},

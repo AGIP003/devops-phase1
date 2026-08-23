@@ -28,6 +28,8 @@ from app.services.receipt_parser import (
 )
 from app.services.telegram_assistant import (
     AITelegramAssistantResult,
+    AssistantOutOfScopeError,
+    is_message_in_scope,
     normalize_assistant_input,
     respond_to_telegram_message,
 )
@@ -267,6 +269,10 @@ def run_telegram_assistant_ai(
     user_id: int,
 ) -> AITelegramAssistantResult:
     clean_text = normalize_assistant_input(text)
+    if not is_message_in_scope(clean_text):
+        raise AssistantOutOfScopeError(
+            "Message is outside the Pesatiq assistant scope"
+        )
     get_ai_model()
     get_openai_api_key()
     reservation = reserve_daily_budget("assistant")

@@ -66,7 +66,8 @@ def _categories_keyboard(transaction_type: str, suggestions: list[str]):
 
 
 def _confirmation_keyboard(can_remember: bool):
-    rows = [[InlineKeyboardButton("Save once", callback_data="importsave|once")]]
+    save_label = "Save once" if can_remember else "Save"
+    rows = [[InlineKeyboardButton(save_label, callback_data="importsave|once")]]
     if can_remember:
         rows[0].append(
             InlineKeyboardButton(
@@ -74,6 +75,12 @@ def _confirmation_keyboard(can_remember: bool):
                 callback_data="importsave|remember",
             )
         )
+    rows.append([
+        InlineKeyboardButton(
+            "Choose a different category",
+            callback_data="importedit|category",
+        )
+    ])
     rows.append([InlineKeyboardButton("Cancel", callback_data="importcancel")])
     return InlineKeyboardMarkup(rows)
 
@@ -308,6 +315,31 @@ async def import_date_handler(
 async def _request_import_category(message, pending):
     preview = pending["preview"]
     description = pending["description"]
+    normalized_description = " ".join(description.casefold().split())
+    remembered_category = pending["aliases"].get(normalized_description)
+
+    if remembered_category in CATEGORIES[preview["direction"]]:
+        pending["category"] = remembered_category
+        pending["remember_alias"] = None
+        text, keyboard = _import_confirmation_view(
+            pending,
+            remembered_alias=normalized_description,
+        )
+        await message.reply_text(text, reply_markup=keyboard)
+        return IMPORT_CONFIRM
+
+    suggestions = _import_category_suggestions(pending)
+
+    await message.reply_text(
+        "Choose the category. Suggestions appear first, but you have the final say:",
+        reply_markup=_categories_keyboard(preview["direction"], suggestions),
+    )
+    return IMPORT_CATEGORY
+
+
+def _import_category_suggestions(pending):
+    preview = pending["preview"]
+    description = pending["description"]
     search_text = " ".join(
         value
         for value in (
@@ -326,12 +358,52 @@ async def _request_import_category(message, pending):
     provider_suggestion = preview.get("suggestedCategory")
     if provider_suggestion:
         suggestions.insert(0, provider_suggestion)
+    return suggestions
 
-    await message.reply_text(
-        "Choose the category. Suggestions appear first, but you have the final say:",
-        reply_markup=_categories_keyboard(preview["direction"], suggestions),
+
+def _import_confirmation_view(pending, *, remembered_alias=None):
+    preview = pending["preview"]
+    description = pending["description"]
+    category = pending["category"]
+    fee = preview.get("fee")
+    fee_line = f"\nProvider fee: KES {fee}" if fee is not None else ""
+
+    if remembered_alias:
+        category_note = (
+            f"\nRemembered category: {category.title()} "
+            f"for “{remembered_alias}”."
+        )
+        remember_line = ""
+        can_remember = False
+    else:
+        category_note = ""
+        alias = (
+            " ".join(description.casefold().split())
+            if len(description) <= 100
+            else None
+        )
+        pending["remember_alias"] = alias
+        remember_line = (
+            f"\n\nSave & remember will map “{alias}” to {category}."
+            if alias
+            else ""
+        )
+        can_remember = alias is not None
+
+    transaction_date = (
+        pending.get("transaction_date")
+        or preview["occurredAt"][:10]
     )
-    return IMPORT_CATEGORY
+    text = (
+        "Review before saving\n\n"
+        f"Amount: {preview['currency']} {preview['amount']}\n"
+        f"Date: {transaction_date}\n"
+        f"Description: {description}\n"
+        f"Category: {category.title()}\n"
+        f"Payment: {preview['paymentMethod']}"
+        f"{fee_line}{category_note}{remember_line}"
+    )
+    return text, _confirmation_keyboard(can_remember)
 
 
 async def import_category_callback(
@@ -354,29 +426,34 @@ async def import_category_callback(
         return ConversationHandler.END
 
     pending["category"] = category
-    description = pending["description"]
-    alias = description.casefold() if len(description) <= 100 else None
-    pending["remember_alias"] = alias
-
-    preview = pending["preview"]
-    fee = preview.get("fee")
-    fee_line = f"\nProvider fee: KES {fee}" if fee is not None else ""
-    remember_line = (
-        f"\n\nSave & remember will map “{alias}” to {category}."
-        if alias
-        else ""
-    )
+    text, keyboard = _import_confirmation_view(pending)
     await query.edit_message_text(
-        "Review before saving\n\n"
-        f"Amount: {preview['currency']} {preview['amount']}\n"
-        f"Date: {pending.get('transaction_date') or preview['occurredAt'][:10]}\n"
-        f"Description: {description}\n"
-        f"Category: {category.title()}\n"
-        f"Payment: {preview['paymentMethod']}"
-        f"{fee_line}{remember_line}",
-        reply_markup=_confirmation_keyboard(alias is not None),
+        text,
+        reply_markup=keyboard,
     )
     return IMPORT_CONFIRM
+
+
+async def import_change_category_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
+    pending = _pending_import(context)
+    if pending is None:
+        await query.edit_message_text(
+            "This import expired. Send /import with the SMS again."
+        )
+        return ConversationHandler.END
+
+    preview = pending["preview"]
+    suggestions = _import_category_suggestions(pending)
+    await query.edit_message_text(
+        "Choose a different category:",
+        reply_markup=_categories_keyboard(preview["direction"], suggestions),
+    )
+    return IMPORT_CATEGORY
 
 
 async def import_save_callback(

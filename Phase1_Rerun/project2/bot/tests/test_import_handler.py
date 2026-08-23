@@ -314,6 +314,79 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     assert "import_access_token" not in context.user_data
 
 
+def test_remembered_sms_description_skips_repeated_category_question():
+    message = FakeMessage("airtime")
+    context = SimpleNamespace(
+        user_data={
+            "pending_import": {
+                "started_at": import_message.time.monotonic(),
+                "preview": {
+                    "requiresDate": False,
+                    "direction": "expense",
+                    "amount": "50.00",
+                    "currency": "KES",
+                    "occurredAt": "2026-08-20T12:00:00+03:00",
+                    "counterparty": "Safaricom",
+                    "providerTransactionType": "airtime",
+                    "paymentMethod": "m-pesa",
+                    "fee": "0.00",
+                    "suggestedCategory": "airtime",
+                },
+                "aliases": {"airtime": "airtime"},
+            }
+        }
+    )
+
+    state = asyncio.run(
+        import_message.import_description_handler(
+            SimpleNamespace(message=message),
+            context,
+        )
+    )
+
+    assert state == import_message.IMPORT_CONFIRM
+    assert context.user_data["pending_import"]["category"] == "airtime"
+    assert "Remembered category: Airtime" in message.replies[-1][0]
+    buttons = {
+        button.text
+        for row in message.replies[-1][1]["reply_markup"].inline_keyboard
+        for button in row
+    }
+    assert "Save" in buttons
+    assert "Save & remember" not in buttons
+    assert "Choose a different category" in buttons
+
+
+def test_remembered_sms_category_can_be_corrected():
+    query = FakeCallbackQuery("importedit|category")
+    context = SimpleNamespace(
+        user_data={
+            "pending_import": {
+                "started_at": import_message.time.monotonic(),
+                "description": "airtime",
+                "preview": {
+                    "direction": "expense",
+                    "counterparty": "Safaricom",
+                    "providerTransactionType": "airtime",
+                    "suggestedCategory": "airtime",
+                },
+                "aliases": {"airtime": "airtime"},
+            }
+        }
+    )
+
+    state = asyncio.run(
+        import_message.import_change_category_callback(
+            SimpleNamespace(callback_query=query),
+            context,
+        )
+    )
+
+    assert state == import_message.IMPORT_CATEGORY
+    assert "Choose a different category" in query.edits[-1][0]
+    assert query.edits[-1][1]["reply_markup"].inline_keyboard
+
+
 def test_fuliza_uses_separate_confirmation_and_never_requests_category(monkeypatch):
     captured = {}
 
