@@ -14,6 +14,7 @@ import logging
 import os
 import sys
 import time
+from uuid import uuid4
 
 
 def create_app(config_name=None):
@@ -53,13 +54,14 @@ def create_app(config_name=None):
                 "origins": allowed_origins,
                 "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
-                "expose_headers": ["Content-Type", "Authorization"],
+                "expose_headers": ["Content-Type", "Authorization", "X-Request-ID"],
                 "supports_credentials": True,
                 "max_age": 3600,
             }
         },
     )
     configure_logging(app)
+    log_ai_configuration(app)
     register_request_logging(app)
     register_routes(app)
     register_error_handlers(app)
@@ -123,19 +125,36 @@ def configure_logging(app):
     app.logger.info("Application started")
 
 
+def log_ai_configuration(app):
+    """Log operability facts without ever exposing the provider credential."""
+
+    app.logger.info(
+        "ai_configuration enabled=%s key_configured=%s model=%s "
+        "daily_budget_usd=%s timeout_seconds=%s",
+        bool(app.config.get("AI_FALLBACK_ENABLED")),
+        bool(str(app.config.get("OPENAI_API_KEY") or "").strip()),
+        app.config.get("OPENAI_TRANSACTION_MODEL"),
+        app.config.get("AI_DAILY_BUDGET_USD"),
+        app.config.get("AI_REQUEST_TIMEOUT_SECONDS"),
+    )
+
+
 def register_request_logging(app):
     slow_request_ms = int(os.getenv("SLOW_REQUEST_MS", "1000"))
 
     @app.before_request
     def start_request_timer():
         g.request_started_at = time.perf_counter()
+        g.request_id = uuid4().hex
 
     @app.after_request
     def log_request(response):
         duration_ms = (time.perf_counter() - g.request_started_at) * 1000
         log_method = app.logger.warning if duration_ms >= slow_request_ms else app.logger.info
+        response.headers["X-Request-ID"] = g.request_id
         log_method(
-            "request method=%s path=%s status=%s duration_ms=%.1f",
+            "request request_id=%s method=%s path=%s status=%s duration_ms=%.1f",
+            g.request_id,
             request.method,
             request.path,
             response.status_code,

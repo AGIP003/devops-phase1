@@ -25,6 +25,8 @@ from app.services.ai_support import (
     combine_usage_metadata,
     create_openai_client,
     get_ai_model,
+    log_ai_invalid_response,
+    log_ai_provider_failure,
 )
 from app.services.analytics_service import build_calendar_cashflow
 from app.services.analytics_tools import execute_analytics_tool
@@ -134,6 +136,16 @@ def _parse_response(
         store=False,
     )
     if response.status != "completed" or response.output_parsed is None:
+        log_ai_invalid_response(
+            logger,
+            operation="finance_assistant",
+            reason=(
+                f"status_{response.status}"
+                if response.status != "completed"
+                else "missing_parsed_output"
+            ),
+            provider_request_id=getattr(response, "_request_id", None),
+        )
         raise AIInvalidResponseError("AI finance response was incomplete")
     return response.output_parsed, build_usage_metadata(
         response,
@@ -178,14 +190,20 @@ def answer_finance_question(
             user_id=user_id,
         )
     except (APIConnectionError, APITimeoutError, RateLimitError, APIStatusError) as error:
-        logger.warning(
-            "AI finance assistant unavailable",
-            extra={"error_type": type(error).__name__},
+        log_ai_provider_failure(
+            logger,
+            operation="finance_question",
+            error=error,
         )
         raise AIServiceUnavailableError(
             "AI financial analysis is temporarily unavailable"
         ) from error
     except (ValidationError, ValueError) as error:
+        log_ai_invalid_response(
+            logger,
+            operation="finance_question",
+            reason=type(error).__name__,
+        )
         raise AIInvalidResponseError(
             "AI returned an invalid finance operation"
         ) from error
@@ -224,10 +242,20 @@ def build_weekly_finance_summary(
             user_id=user_id,
         )
     except (APIConnectionError, APITimeoutError, RateLimitError, APIStatusError) as error:
+        log_ai_provider_failure(
+            logger,
+            operation="weekly_summary",
+            error=error,
+        )
         raise AIServiceUnavailableError(
             "AI weekly summary is temporarily unavailable"
         ) from error
     except (ValidationError, ValueError) as error:
+        log_ai_invalid_response(
+            logger,
+            operation="weekly_summary",
+            reason=type(error).__name__,
+        )
         raise AIInvalidResponseError(
             "AI returned an invalid weekly summary"
         ) from error

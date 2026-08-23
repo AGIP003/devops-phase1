@@ -23,6 +23,8 @@ from app.services.ai_support import (
     build_usage_metadata,
     create_openai_client,
     get_ai_model,
+    log_ai_invalid_response,
+    log_ai_provider_failure,
 )
 from finance_tracker.utils.validations import (
     ALLOWED_TRANSACTION_CATEGORIES,
@@ -150,34 +152,40 @@ def respond_to_telegram_message(
         APITimeoutError,
         RateLimitError,
     ) as error:
-        logger.warning(
-            "AI Telegram assistant unavailable",
-            extra={"error_type": type(error).__name__},
+        log_ai_provider_failure(
+            logger,
+            operation="telegram_assistant",
+            error=error,
         )
         raise AIServiceUnavailableError(
             "AI assistance is temporarily unavailable"
         ) from error
     except APIStatusError as error:
-        logger.warning(
-            "AI Telegram assistant provider returned an error",
-            extra={
-                "status_code": error.status_code,
-                "error_type": type(error).__name__,
-            },
+        log_ai_provider_failure(
+            logger,
+            operation="telegram_assistant",
+            error=error,
         )
         raise AIServiceUnavailableError(
             "AI assistance is temporarily unavailable"
         ) from error
     except (ValidationError, ValueError) as error:
-        logger.warning(
-            "AI Telegram assistant response failed validation",
-            extra={"error_type": type(error).__name__},
+        log_ai_invalid_response(
+            logger,
+            operation="telegram_assistant",
+            reason=type(error).__name__,
         )
         raise AIInvalidResponseError(
             "AI returned an invalid Telegram response"
         ) from error
 
     if provider_response.status != "completed":
+        log_ai_invalid_response(
+            logger,
+            operation="telegram_assistant",
+            reason=f"status_{provider_response.status}",
+            provider_request_id=getattr(provider_response, "_request_id", None),
+        )
         raise AIInvalidResponseError(
             "AI Telegram response ended with status "
             f"{provider_response.status!r}"
@@ -185,6 +193,12 @@ def respond_to_telegram_message(
 
     parsed = provider_response.output_parsed
     if parsed is None:
+        log_ai_invalid_response(
+            logger,
+            operation="telegram_assistant",
+            reason="missing_parsed_output",
+            provider_request_id=getattr(provider_response, "_request_id", None),
+        )
         raise AIInvalidResponseError(
             "AI Telegram response contained no parsed output"
         )
@@ -194,6 +208,12 @@ def respond_to_telegram_message(
             parsed.transaction.kind.value
         ]
         if parsed.transaction.category not in allowed_categories:
+            log_ai_invalid_response(
+                logger,
+                operation="telegram_assistant",
+                reason="unsupported_category",
+                provider_request_id=getattr(provider_response, "_request_id", None),
+            )
             raise AIInvalidResponseError(
                 "AI returned an unsupported transaction category"
             )

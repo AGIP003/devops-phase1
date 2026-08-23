@@ -22,6 +22,8 @@ from app.services.ai_support import (
     build_usage_metadata,
     create_openai_client,
     get_ai_model,
+    log_ai_invalid_response,
+    log_ai_provider_failure,
 )
 from app.services.image_validation import ValidatedImage
 from finance_tracker.utils.validations import (
@@ -118,34 +120,40 @@ def parse_receipt_image(
         APITimeoutError,
         RateLimitError,
     ) as error:
-        logger.warning(
-            "AI receipt service unavailable",
-            extra={"error_type": type(error).__name__},
+        log_ai_provider_failure(
+            logger,
+            operation="receipt_parse",
+            error=error,
         )
         raise AIServiceUnavailableError(
             "AI receipt parsing is temporarily unavailable"
         ) from error
     except APIStatusError as error:
-        logger.warning(
-            "AI receipt provider returned an error",
-            extra={
-                "status_code": error.status_code,
-                "error_type": type(error).__name__,
-            },
+        log_ai_provider_failure(
+            logger,
+            operation="receipt_parse",
+            error=error,
         )
         raise AIServiceUnavailableError(
             "AI receipt parsing is temporarily unavailable"
         ) from error
     except (ValidationError, ValueError) as error:
-        logger.warning(
-            "AI receipt response failed validation",
-            extra={"error_type": type(error).__name__},
+        log_ai_invalid_response(
+            logger,
+            operation="receipt_parse",
+            reason=type(error).__name__,
         )
         raise AIInvalidResponseError(
             "AI returned an invalid receipt response"
         ) from error
 
     if response.status != "completed":
+        log_ai_invalid_response(
+            logger,
+            operation="receipt_parse",
+            reason=f"status_{response.status}",
+            provider_request_id=getattr(response, "_request_id", None),
+        )
         raise AIInvalidResponseError(
             f"AI receipt response ended with status "
             f"{response.status!r}"
@@ -154,6 +162,12 @@ def parse_receipt_image(
     extraction = response.output_parsed
 
     if extraction is None:
+        log_ai_invalid_response(
+            logger,
+            operation="receipt_parse",
+            reason="missing_parsed_output",
+            provider_request_id=getattr(response, "_request_id", None),
+        )
         raise AIInvalidResponseError(
             "AI receipt response contained no parsed output"
         )
@@ -164,6 +178,12 @@ def parse_receipt_image(
         and extraction.receipt.suggested_category
         not in ALLOWED_TRANSACTION_CATEGORIES["expense"]
     ):
+        log_ai_invalid_response(
+            logger,
+            operation="receipt_parse",
+            reason="unsupported_category",
+            provider_request_id=getattr(response, "_request_id", None),
+        )
         raise AIInvalidResponseError(
             "AI returned an unsupported receipt category"
         )

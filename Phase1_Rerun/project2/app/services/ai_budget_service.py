@@ -17,6 +17,7 @@ from app.services.ai_parser import (
 )
 from app.services.ai_support import (
     AIUsageMetadata,
+    current_request_id,
     get_ai_model,
     get_openai_api_key,
 )
@@ -47,6 +48,32 @@ class AIBudgetExceededError(RuntimeError):
 class AIBudgetReservation:
     usage_date: date
     amount_usd: Decimal
+
+
+def _log_ai_completion(purpose: str, usage: AIUsageMetadata) -> None:
+    current_app.logger.info(
+        "ai_request_completed request_id=%s purpose=%s model=%s "
+        "provider_request_ids=%s latency_ms=%s input_tokens=%s "
+        "cached_input_tokens=%s output_tokens=%s estimated_cost_usd=%s",
+        current_request_id(),
+        purpose,
+        usage.model,
+        ",".join(usage.provider_request_ids) or "unavailable",
+        usage.latency_ms,
+        usage.input_tokens,
+        usage.cached_input_tokens,
+        usage.output_tokens,
+        usage.estimated_cost_usd,
+    )
+
+
+def _log_ai_failure(purpose: str, error: Exception) -> None:
+    current_app.logger.warning(
+        "ai_request_failed request_id=%s purpose=%s error_type=%s",
+        current_request_id(),
+        purpose,
+        type(error).__name__,
+    )
 
 
 def _reservation_amount(purpose: str) -> Decimal:
@@ -96,6 +123,16 @@ def reserve_daily_budget(purpose: str) -> AIBudgetReservation:
         )
         if committed_and_reserved + reservation_amount > daily_budget:
             db.session.rollback()
+            current_app.logger.warning(
+                "ai_budget_rejected request_id=%s purpose=%s "
+                "committed_and_reserved_usd=%s requested_usd=%s "
+                "daily_budget_usd=%s",
+                current_request_id(),
+                purpose,
+                committed_and_reserved,
+                reservation_amount,
+                daily_budget,
+            )
             raise AIBudgetExceededError(
                 "The application AI budget has been reached for today"
             )
@@ -108,8 +145,15 @@ def reserve_daily_budget(purpose: str) -> AIBudgetReservation:
         )
     except AIBudgetExceededError:
         raise
-    except Exception:
+    except Exception as error:
         db.session.rollback()
+        current_app.logger.error(
+            "ai_budget_reservation_failed request_id=%s purpose=%s "
+            "error_type=%s",
+            current_request_id(),
+            purpose,
+            type(error).__name__,
+        )
         raise
 
 
@@ -174,7 +218,8 @@ def run_transaction_ai(text: str) -> AITransactionParseResult:
     reservation = reserve_daily_budget("transaction")
     try:
         result = parse_with_ai(clean_text)
-    except Exception:
+    except Exception as error:
+        _log_ai_failure("transaction", error)
         try:
             fail_reservation(reservation)
         except Exception:
@@ -184,6 +229,7 @@ def run_transaction_ai(text: str) -> AITransactionParseResult:
         raise
 
     complete_reservation(reservation, result.usage)
+    _log_ai_completion("transaction", result.usage)
     return result
 
 
@@ -200,7 +246,8 @@ def run_receipt_ai(image: ValidatedImage) -> AIReceiptParseResult:
     reservation = reserve_daily_budget("receipt")
     try:
         result = parse_receipt_image(image)
-    except Exception:
+    except Exception as error:
+        _log_ai_failure("receipt", error)
         try:
             fail_reservation(reservation)
         except Exception:
@@ -210,6 +257,7 @@ def run_receipt_ai(image: ValidatedImage) -> AIReceiptParseResult:
         raise
 
     complete_reservation(reservation, result.usage)
+    _log_ai_completion("receipt", result.usage)
     return result
 
 
@@ -227,7 +275,8 @@ def run_telegram_assistant_ai(
             clean_text,
             user_id=user_id,
         )
-    except Exception:
+    except Exception as error:
+        _log_ai_failure("telegram_assistant", error)
         try:
             fail_reservation(reservation)
         except Exception:
@@ -237,6 +286,7 @@ def run_telegram_assistant_ai(
         raise
 
     complete_reservation(reservation, result.usage)
+    _log_ai_completion("telegram_assistant", result.usage)
     return result
 
 
@@ -251,7 +301,8 @@ def run_finance_question_ai(
     reservation = reserve_daily_budget("finance")
     try:
         result = answer_finance_question(clean, user_id=user_id)
-    except Exception:
+    except Exception as error:
+        _log_ai_failure("finance_question", error)
         try:
             fail_reservation(reservation)
         except Exception:
@@ -260,6 +311,7 @@ def run_finance_question_ai(
             )
         raise
     complete_reservation(reservation, result.usage)
+    _log_ai_completion("finance_question", result.usage)
     return result
 
 
@@ -269,7 +321,8 @@ def run_weekly_summary_ai(*, user_id: int) -> AIWeeklySummaryResult:
     reservation = reserve_daily_budget("assistant")
     try:
         result = build_weekly_finance_summary(user_id=user_id)
-    except Exception:
+    except Exception as error:
+        _log_ai_failure("weekly_summary", error)
         try:
             fail_reservation(reservation)
         except Exception:
@@ -278,4 +331,5 @@ def run_weekly_summary_ai(*, user_id: int) -> AIWeeklySummaryResult:
             )
         raise
     complete_reservation(reservation, result.usage)
+    _log_ai_completion("weekly_summary", result.usage)
     return result

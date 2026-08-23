@@ -1,4 +1,5 @@
 from decimal import Decimal
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -21,6 +22,7 @@ from app.services import (
 from app.services.ai_support import (
     AIInvalidResponseError,
     estimate_luna_cost,
+    log_ai_provider_failure,
 )
 from app.services.image_validation import ValidatedImage
 
@@ -60,6 +62,7 @@ class SequenceClient:
 
 def response_with(extraction, *, status="completed"):
     return SimpleNamespace(
+        _request_id="req_test_provider_123",
         status=status,
         output_parsed=extraction,
         usage=SimpleNamespace(
@@ -91,6 +94,41 @@ def test_luna_cost_separates_cached_input_tokens():
     )
 
     assert cost == Decimal("0.00003950")
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [TransactionParseResult, ReceiptParseResult, TelegramAssistantResponse],
+)
+def test_ai_json_schemas_do_not_emit_unsupported_regex_lookarounds(schema):
+    encoded_schema = json.dumps(schema.model_json_schema())
+
+    assert "(?" not in encoded_schema
+
+
+def test_provider_failure_logging_exposes_diagnostics_not_sensitive_data(caplog):
+    class ProviderError(Exception):
+        status_code = 401
+        request_id = "req_provider_failure_123"
+        body = {
+            "error": {
+                "code": "invalid_api_key",
+                "message": "Never log this provider message or sk-secret-value",
+            }
+        }
+
+    with caplog.at_level("WARNING"):
+        log_ai_provider_failure(
+            ai_parser.logger,
+            operation="transaction_parse",
+            error=ProviderError(),
+        )
+
+    log_text = caplog.text
+    assert "status_code=401" in log_text
+    assert "provider_request_id=req_provider_failure_123" in log_text
+    assert "error_code=invalid_api_key" in log_text
+    assert "sk-secret-value" not in log_text
 
 
 def test_transaction_parser_returns_validated_output(
@@ -127,6 +165,7 @@ def test_transaction_parser_returns_validated_output(
 
     assert result.extraction.transaction.category == "transport"
     assert result.usage.input_tokens == 100
+    assert result.usage.provider_request_ids == ("req_test_provider_123",)
     assert fake_client.responses.request["store"] is False
     assert (
         fake_client.responses.request["max_output_tokens"]

@@ -1,5 +1,5 @@
 """HTTP-specific error handles for Flask routes"""
-from flask import jsonify
+from flask import g, jsonify
 from werkzeug.exceptions import HTTPException
 
 def register_error_handlers(app):
@@ -52,8 +52,16 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def internal_server_error(error):
         """Handle server errors"""
-        app.logger.exception("Internal server error occurred")
-        return jsonify({"error": "server error", "message": "An internal error ocurred"}), 500
+        app.logger.exception(
+            "internal_server_error request_id=%s error_type=%s",
+            getattr(g, "request_id", "unavailable"),
+            type(error).__name__,
+        )
+        return jsonify({
+            "error": "server error",
+            "message": "An internal error occurred",
+            "requestId": getattr(g, "request_id", None),
+        }), 500
 
     @app.errorhandler(503)
     def service_unavailable(error):
@@ -70,5 +78,13 @@ def register_error_handlers(app):
         # Don't catch HTTP exceptions - they have their own handlers
         if isinstance(error, HTTPException):
             raise
-        app.logger.exception(f"Unexpected error occurred: {type(error).__name__} - {str(error)}")
-        return jsonify({"error": "server error", "message": "Unexpected error occurred"}), 500
+        app.logger.exception(
+            "unexpected_error request_id=%s error_type=%s",
+            getattr(g, "request_id", "unavailable"),
+            type(error).__name__,
+        )
+        return jsonify({
+            "error": "server error",
+            "message": "Unexpected error occurred",
+            "requestId": getattr(g, "request_id", None),
+        }), 500

@@ -5,6 +5,7 @@ from app.schemas import (
     AnalyticsQuestionPlan,
     TelegramAssistantResponse,
 )
+from app.services.ai_support import AIServiceUnavailableError
 
 
 def authorization(token: str) -> dict[str, str]:
@@ -76,6 +77,31 @@ def test_disabled_ai_returns_service_unavailable(
 
     assert response.status_code == 503
     assert response.get_json()["error"] == "AI assistance disabled"
+
+
+def test_ai_provider_error_returns_correlated_safe_request_id(
+    client,
+    register_user,
+    monkeypatch,
+):
+    from app import ai_routes
+
+    owner = register_user("provider-error", "provider-error@example.com")
+
+    def unavailable(*args, **kwargs):
+        raise AIServiceUnavailableError("AI assistance is temporarily unavailable")
+
+    monkeypatch.setattr(ai_routes, "run_telegram_assistant_ai", unavailable)
+    response = client.post(
+        "/api/ai/telegram/respond",
+        headers=authorization(owner["token"]),
+        json={"text": "hello"},
+    )
+
+    payload = response.get_json()
+    assert response.status_code == 503
+    assert payload["requestId"] == response.headers["X-Request-ID"]
+    assert "provider" not in payload.get("message", "").lower()
 
 
 def test_analytics_question_returns_only_bounded_tool_evidence(

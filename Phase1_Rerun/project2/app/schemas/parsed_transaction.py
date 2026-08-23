@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from enum import StrEnum
 from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.schemas.money import AIMoney
 
 
 class TransactionKind(StrEnum):
@@ -13,7 +14,7 @@ class TransactionKind(StrEnum):
 
 class TransactionSuggestion(BaseModel):
     kind: TransactionKind
-    amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    amount: AIMoney = Field(gt=0, max_digits=12, decimal_places=2)
     category: str = Field(min_length=2, max_length=40)
     description: str = Field(min_length=1, max_length=200)
     currency: str = Field(

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+import logging
 from time import perf_counter
 from typing import Any
 
-from flask import current_app
+from flask import current_app, g, has_request_context
 from openai import OpenAI
 
 
@@ -37,6 +38,63 @@ class AIUsageMetadata:
     cached_input_tokens: int
     output_tokens: int
     estimated_cost_usd: Decimal
+    provider_request_ids: tuple[str, ...] = ()
+
+
+def current_request_id() -> str:
+    if has_request_context():
+        return str(getattr(g, "request_id", "unavailable"))
+    return "outside-request"
+
+
+def _provider_error_code(error: Exception) -> str | None:
+    code = getattr(error, "code", None)
+    if code:
+        return str(code)
+    body = getattr(error, "body", None)
+    if not isinstance(body, dict):
+        return None
+    details = body.get("error", body)
+    if isinstance(details, dict) and details.get("code"):
+        return str(details["code"])
+    return None
+
+
+def log_ai_provider_failure(
+    logger: logging.Logger,
+    *,
+    operation: str,
+    error: Exception,
+) -> None:
+    """Record provider diagnostics without prompts, credentials, or finance data."""
+
+    logger.warning(
+        "ai_provider_failure request_id=%s operation=%s error_type=%s "
+        "status_code=%s provider_request_id=%s error_code=%s",
+        current_request_id(),
+        operation,
+        type(error).__name__,
+        getattr(error, "status_code", None),
+        getattr(error, "request_id", None),
+        _provider_error_code(error),
+    )
+
+
+def log_ai_invalid_response(
+    logger: logging.Logger,
+    *,
+    operation: str,
+    reason: str,
+    provider_request_id: str | None = None,
+) -> None:
+    logger.warning(
+        "ai_invalid_response request_id=%s operation=%s reason=%s "
+        "provider_request_id=%s",
+        current_request_id(),
+        operation,
+        reason,
+        provider_request_id,
+    )
 
 
 def get_ai_model() -> str:
@@ -144,6 +202,11 @@ def build_usage_metadata(
             cached_input_tokens=cached_input_tokens,
             output_tokens=output_tokens,
         ),
+        provider_request_ids=(
+            (str(response._request_id),)
+            if getattr(response, "_request_id", None)
+            else ()
+        ),
     )
 
 
@@ -162,5 +225,10 @@ def combine_usage_metadata(*items: AIUsageMetadata) -> AIUsageMetadata:
         estimated_cost_usd=sum(
             (item.estimated_cost_usd for item in items),
             Decimal("0"),
+        ),
+        provider_request_ids=tuple(
+            request_id
+            for item in items
+            for request_id in item.provider_request_ids
         ),
     )

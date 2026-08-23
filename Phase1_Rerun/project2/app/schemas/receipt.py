@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from app.schemas.money import AIMoney
 
 
 class ReceiptLineItem(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    quantity: Decimal | None 
-    total: Decimal | None 
+    quantity: AIMoney | None
+    total: AIMoney | None
 
     @field_validator("name", mode="before")
     @classmethod
@@ -18,7 +19,7 @@ class ReceiptLineItem(BaseModel):
 
 class ReceiptSuggestion(BaseModel):
     merchant: str = Field(min_length=1, max_length=120)
-    total: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    total: AIMoney = Field(gt=0, max_digits=12, decimal_places=2)
     transaction_date: date | None
     currency: str = Field(
         min_length=3,

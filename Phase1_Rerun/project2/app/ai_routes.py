@@ -35,27 +35,61 @@ def _private_json(payload: dict, status_code: int = 200):
 
 
 def _ai_error_response(error: Exception):
+    request_id = str(getattr(g, "request_id", "unavailable"))
     if isinstance(error, AIBudgetExceededError):
+        current_app.logger.warning(
+            "ai_http_error request_id=%s status=429 error_type=%s",
+            request_id,
+            type(error).__name__,
+        )
         return _private_json(
-            {"error": "AI daily budget reached", "message": str(error)},
+            {
+                "error": "AI daily budget reached",
+                "message": str(error),
+                "requestId": request_id,
+            },
             429,
         )
     if isinstance(error, AIConfigurationError):
+        current_app.logger.error(
+            "ai_http_error request_id=%s status=503 error_type=%s",
+            request_id,
+            type(error).__name__,
+        )
         return _private_json(
             {
                 "error": "AI is not configured",
                 "message": "AI assistance is currently unavailable",
+                "requestId": request_id,
             },
             503,
         )
     if isinstance(error, AIServiceUnavailableError):
+        current_app.logger.warning(
+            "ai_http_error request_id=%s status=503 error_type=%s",
+            request_id,
+            type(error).__name__,
+        )
         return _private_json(
-            {"error": "AI provider unavailable", "message": str(error)},
+            {
+                "error": "AI provider unavailable",
+                "message": str(error),
+                "requestId": request_id,
+            },
             503,
         )
     if isinstance(error, AIInvalidResponseError):
+        current_app.logger.warning(
+            "ai_http_error request_id=%s status=502 error_type=%s",
+            request_id,
+            type(error).__name__,
+        )
         return _private_json(
-            {"error": "Invalid AI response", "message": str(error)},
+            {
+                "error": "Invalid AI response",
+                "message": str(error),
+                "requestId": request_id,
+            },
             502,
         )
     raise error
