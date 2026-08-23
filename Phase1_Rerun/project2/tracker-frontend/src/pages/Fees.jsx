@@ -77,9 +77,20 @@ function Fees() {
     const [provider, service] = serviceKey.split(":");
     return { provider, service };
   }, [serviceKey]);
+  const estimableServices = (catalog?.services || []).filter(
+    (service) => service.estimationAvailable !== false,
+  );
+  const monitoredServices = (catalog?.services || []).filter(
+    (service) => service.estimationAvailable === false,
+  );
+  const selectedServiceDefinition = (catalog?.services || []).find(
+    (service) => `${service.provider}:${service.service}` === serviceKey,
+  );
+  const estimationAvailable = selectedServiceDefinition?.estimationAvailable !== false;
 
   async function calculateEstimate(event) {
     event.preventDefault();
+    if (!estimationAvailable) return;
     setEstimating(true);
     setEstimateError("");
     setEstimate(null);
@@ -117,7 +128,7 @@ function Fees() {
         <div>
           <span className="coming-soon-pill">Live fee evidence</span>
           <h1>Transaction Fees</h1>
-          <p>See confirmed charges, review estimates, and compare published ways of moving money.</p>
+          <p>Track M-PESA, Airtel Money, Fuliza and bank charges without mixing confirmed fees with estimates.</p>
         </div>
         <button type="button" className="analytics-refresh-button" onClick={loadFees} disabled={loading}>
           <RefreshCw size={16} className={loading ? "is-spinning" : ""} />
@@ -188,13 +199,36 @@ function Fees() {
 
         <aside className="fees-side-stack">
           <section className="fees-calculator-card">
-            <div className="fees-card-heading"><Calculator size={19} /><div><h2>Tariff calculator</h2><p>Explore a published band before transacting.</p></div></div>
+            <div className="fees-card-heading"><Calculator size={19} /><div><h2>Fee lookup</h2><p>Calculate a reviewed tariff or see how another charge is monitored.</p></div></div>
             <form className="fees-calculator-form" onSubmit={calculateEstimate}>
-              <label><span>Service</span><select value={serviceKey} onChange={(event) => { setServiceKey(event.target.value); setEstimate(null); }}>
-                {(catalog?.services || []).map((service) => <option key={`${service.provider}:${service.service}`} value={`${service.provider}:${service.service}`}>{service.name}</option>)}
+              <label><span>Fee type</span><select value={serviceKey} onChange={(event) => { setServiceKey(event.target.value); setEstimate(null); setEstimateError(""); }}>
+                <optgroup label="Published estimates">
+                  {estimableServices.map((service) => <option key={`${service.provider}:${service.service}`} value={`${service.provider}:${service.service}`}>{service.name}</option>)}
+                </optgroup>
+                <optgroup label="Track from your records">
+                  {monitoredServices.map((service) => <option key={`${service.provider}:${service.service}`} value={`${service.provider}:${service.service}`}>{service.name}</option>)}
+                </optgroup>
               </select></label>
-              <label><span>Amount (KES)</span><input type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
-              <button type="submit" className="feature-primary-button" disabled={estimating}>{estimating ? "Checking band…" : "Estimate fee"}</button>
+              {estimationAvailable ? (
+                <>
+                  <label><span>Amount (KES)</span><input type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
+                  <button type="submit" className="feature-primary-button" disabled={estimating}>{estimating ? "Checking band…" : "Estimate fee"}</button>
+                </>
+              ) : (
+                <div className="fees-monitor-only">
+                  <ShieldCheck size={17} aria-hidden="true" />
+                  <div>
+                    <strong>Use the confirmed charge</strong>
+                    <p>{selectedServiceDefinition?.helper}</p>
+                    <small>{selectedServiceDefinition?.effectiveLabel}</small>
+                    {selectedServiceDefinition?.source && (
+                      <a href={selectedServiceDefinition.source} target="_blank" rel="noreferrer">
+                        {selectedServiceDefinition.sourceLabel} <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </form>
             {estimateError && <p className="transaction-form-error" role="alert">{estimateError}</p>}
             {estimate && (
@@ -216,7 +250,7 @@ function Fees() {
       </div>
 
       <section className="fees-tariff-section">
-        <header><div><span>Published reference</span><h2>Compare tariff types</h2><p>Airtel to Airtel is free; cross-network, withdrawal and Paybill bands differ.</p></div><small>Catalog {catalog?.version}</small></header>
+        <header><div><span>Fee coverage</span><h2>Compare and monitor fee types</h2><p>Published bands can be estimated; variable M-PESA, Fuliza and bank charges stay tied to provider evidence.</p></div><small>Catalog {catalog?.version}</small></header>
         <div className="fees-tariff-grid">
           {(catalog?.services || []).map((service) => {
             const presentation = providerPresentation(service.provider);
@@ -227,8 +261,19 @@ function Fees() {
                 <h3>{service.name}</h3>
                 <p>{service.helper}</p>
                 <small>{service.effectiveLabel}</small>
-                <button type="button" onClick={() => setExpandedService(expanded ? null : `${service.provider}:${service.service}`)}>{expanded ? "Hide bands" : `View ${service.bands.length} bands`}</button>
-                {expanded && <div className="fees-band-list">{service.bands.map((band) => <div key={band.upTo}><span>Up to KES {Number(band.upTo).toLocaleString("en-KE")}</span><strong>{formatCurrency(band.fee)}</strong></div>)}</div>}
+                {service.estimationAvailable !== false ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-label={`${expanded ? "Hide" : "View"} tariff bands for ${service.name}`}
+                      onClick={() => setExpandedService(expanded ? null : `${service.provider}:${service.service}`)}
+                    >
+                      {expanded ? "Hide bands" : `View ${service.bands.length} bands`}
+                    </button>
+                    {expanded && <div className="fees-band-list">{service.bands.map((band) => <div key={band.upTo}><span>Up to KES {Number(band.upTo).toLocaleString("en-KE")}</span><strong>{formatCurrency(band.fee)}</strong></div>)}</div>}
+                  </>
+                ) : <span className="fees-monitor-badge">Tracked from your records</span>}
                 <a href={service.source} target="_blank" rel="noreferrer">Official source <ExternalLink size={13} /></a>
               </article>
             );

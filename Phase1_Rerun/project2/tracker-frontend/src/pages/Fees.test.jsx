@@ -73,6 +73,32 @@ const catalog = {
       sourceLabel: "Airtel Money current tariff guide",
       effectiveLabel: "Current page checked 23 Aug 2026",
       bands: [{ upTo: "250000", fee: "0" }],
+      estimationAvailable: true,
+    },
+    {
+      provider: "mpesa",
+      service: "send_money",
+      name: "M-PESA Send Money",
+      helper: "Estimate from the published table and confirm the final charge.",
+      source: "https://www.safaricom.co.ke/images/Downloads/M-PESA-BULK-PAYMENT-TARIFF-FORM.pdf",
+      sourceLabel: "Safaricom M-PESA registered-wallet tariff form",
+      effectiveLabel: "Public Safaricom form checked 23 Aug 2026",
+      bands: [
+        { upTo: "100", fee: "0" },
+        { upTo: "500", fee: "7" },
+      ],
+      estimationAvailable: true,
+    },
+    {
+      provider: "fuliza_mpesa",
+      service: "maintenance_fee",
+      name: "Fuliza daily maintenance fee",
+      helper: "Monitor recurring maintenance charges.",
+      source: "https://www.safaricom.co.ke/",
+      sourceLabel: "Safaricom Fuliza pricing announcement",
+      effectiveLabel: "Terms vary by amount and duration",
+      bands: [],
+      estimationAvailable: false,
     },
   ],
   bankReferences: [
@@ -138,8 +164,37 @@ describe("Fees", () => {
       amount: "500",
     });
 
-    await user.click(screen.getByRole("button", { name: "View 2 bands" }));
+    await user.click(screen.getByRole("button", {
+      name: "View tariff bands for Airtel to another network",
+    }));
     await waitFor(() => expect(screen.getByText("Up to KES 100")).toBeInTheDocument());
   });
-});
 
+  it("estimates M-PESA from its table while keeping Fuliza evidence-only", async () => {
+    const user = userEvent.setup();
+    render(<Fees />);
+    await screen.findByRole("heading", { name: "Transaction Fees" });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Fee type" }),
+      "mpesa:send_money",
+    );
+
+    expect(screen.getByRole("button", { name: "Estimate fee" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Estimate fee" }));
+    expect(api.post).toHaveBeenLastCalledWith("/fees/estimate", {
+      provider: "mpesa",
+      service: "send_money",
+      amount: "1000",
+    });
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Fee type" }),
+      "fuliza_mpesa:maintenance_fee",
+    );
+
+    expect(screen.getByText("Use the confirmed charge")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Estimate fee" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Tracked from your records").length).toBeGreaterThan(0);
+  });
+});

@@ -16,7 +16,7 @@ from app.models.transaction_import import TransactionImport
 
 ZERO = Decimal("0")
 MONEY = Decimal("0.01")
-TARIFF_CATALOG_VERSION = "kenya-public-tariffs-2026-08-23"
+TARIFF_CATALOG_VERSION = "kenya-public-tariffs-2026-08-23.3"
 
 AIRTEL_SOURCE = "https://www.airtelkenya.com/tariffs_charges"
 AIRTEL_PAYBILL_SOURCE = (
@@ -24,6 +24,18 @@ AIRTEL_PAYBILL_SOURCE = (
     "Airtel-Money-Reduces-Its-Paybill-And-Wallet-To-Bank-Charges"
 )
 MPESA_SOURCE = "https://www.safaricom.co.ke/images/Downloads/mpesa-business-till.pdf"
+MPESA_TARIFF_SOURCE = (
+    "https://www.safaricom.co.ke/images/Downloads/"
+    "M-PESA-BULK-PAYMENT-TARIFF-FORM.pdf"
+)
+MPESA_POCHI_SOURCE = (
+    "https://www.safaricom.co.ke/media-center-landing/press-releases/"
+    "m-pesa-tariff-reduction"
+)
+FULIZA_SOURCE = (
+    "https://www.safaricom.co.ke/media-center-landing/press-releases/"
+    "safaricom-ncba-and-kcb-restructure-fuliza-with-free-daily-fees"
+)
 
 
 class FeeEstimateError(ValueError):
@@ -98,6 +110,39 @@ AIRTEL_PAYBILL = (
     (Decimal("250000"), Decimal("105")),
 )
 
+MPESA_SEND_MONEY = (
+    (Decimal("100"), Decimal("0")),
+    (Decimal("500"), Decimal("7")),
+    (Decimal("1000"), Decimal("13")),
+    (Decimal("1500"), Decimal("23")),
+    (Decimal("2500"), Decimal("33")),
+    (Decimal("3500"), Decimal("53")),
+    (Decimal("5000"), Decimal("57")),
+    (Decimal("7500"), Decimal("78")),
+    (Decimal("10000"), Decimal("90")),
+    (Decimal("15000"), Decimal("100")),
+    (Decimal("20000"), Decimal("105")),
+    (Decimal("250000"), Decimal("108")),
+)
+
+MPESA_WITHDRAWAL = (
+    (Decimal("49"), Decimal("0")),
+    (Decimal("100"), Decimal("11")),
+    (Decimal("500"), Decimal("29")),
+    (Decimal("1000"), Decimal("29")),
+    (Decimal("1500"), Decimal("29")),
+    (Decimal("2500"), Decimal("29")),
+    (Decimal("3500"), Decimal("52")),
+    (Decimal("5000"), Decimal("69")),
+    (Decimal("7500"), Decimal("87")),
+    (Decimal("10000"), Decimal("115")),
+    (Decimal("15000"), Decimal("167")),
+    (Decimal("20000"), Decimal("185")),
+    (Decimal("35000"), Decimal("197")),
+    (Decimal("50000"), Decimal("278")),
+    (Decimal("250000"), Decimal("309")),
+)
+
 
 TARIFF_SERVICES = {
     ("airtel_money", "on_net"): {
@@ -150,7 +195,104 @@ TARIFF_SERVICES = {
         "effectiveLabel": "Public rule checked 23 Aug 2026",
         "bands": ((Decimal("250000"), Decimal("0")),),
     },
+    ("mpesa", "send_money"): {
+        "provider": "mpesa",
+        "service": "send_money",
+        "name": "M-PESA Send Money",
+        "helper": (
+            "Estimate from Safaricom's registered-wallet bands, then replace "
+            "it with the confirmation-message fee when available."
+        ),
+        "source": MPESA_TARIFF_SOURCE,
+        "sourceLabel": "Safaricom M-PESA registered-wallet tariff form",
+        "effectiveLabel": "Public Safaricom form checked 23 Aug 2026",
+        "bands": MPESA_SEND_MONEY,
+    },
+    ("mpesa", "withdrawal"): {
+        "provider": "mpesa",
+        "service": "withdrawal",
+        "name": "M-PESA agent withdrawal",
+        "helper": (
+            "Estimate the standard withdrawal band; the confirmation message "
+            "remains the final charge."
+        ),
+        "source": MPESA_TARIFF_SOURCE,
+        "sourceLabel": "Safaricom M-PESA withdrawal tariff form",
+        "effectiveLabel": "Public Safaricom form checked 23 Aug 2026",
+        "bands": MPESA_WITHDRAWAL,
+    },
+    ("mpesa", "pochi"): {
+        "provider": "mpesa",
+        "service": "pochi",
+        "name": "M-PESA Pochi la Biashara",
+        "helper": (
+            "Safaricom applies Send Money bands to Pochi; confirm the charge "
+            "shown before completing the transaction."
+        ),
+        "source": MPESA_POCHI_SOURCE,
+        "sourceLabel": "Safaricom M-PESA tariff announcement",
+        "effectiveLabel": "Planning estimate using the current Send Money bands",
+        "bands": MPESA_SEND_MONEY,
+    },
 }
+
+
+MONITORED_SERVICES = (
+    {
+        "provider": "mpesa",
+        "service": "paybill",
+        "name": "M-PESA Paybill",
+        "helper": "Paybill charges can depend on the business tariff arrangement.",
+        "source": "https://www.safaricom.co.ke/media-center-landing/frequently-asked-questions/m-pesa-paybill",
+        "sourceLabel": "Safaricom M-PESA Paybill guide",
+        "effectiveLabel": "Use the charge in the confirmation message",
+    },
+    {
+        "provider": "fuliza_mpesa",
+        "service": "access_fee",
+        "name": "Fuliza access fee",
+        "helper": "Captured separately from the amount borrowed.",
+        "source": FULIZA_SOURCE,
+        "sourceLabel": "Safaricom Fuliza pricing announcement",
+        "effectiveLabel": "Your Fuliza message is the authoritative charge",
+    },
+    {
+        "provider": "fuliza_mpesa",
+        "service": "maintenance_fee",
+        "name": "Fuliza daily maintenance fee",
+        "helper": "Monitor recurring maintenance charges without treating principal as spending.",
+        "source": FULIZA_SOURCE,
+        "sourceLabel": "Safaricom Fuliza pricing announcement",
+        "effectiveLabel": "Terms vary by amount and borrowing duration",
+    },
+    {
+        "provider": "bank",
+        "service": "transfer",
+        "name": "Bank transfer",
+        "helper": "Monitor the actual charge from the selected bank and transfer channel.",
+        "source": "https://www.centralbank.go.ke/bank-supervision/",
+        "sourceLabel": "Central Bank of Kenya banking supervision",
+        "effectiveLabel": "Fees vary by bank, account and channel",
+    },
+    {
+        "provider": "bank",
+        "service": "atm_withdrawal",
+        "name": "Bank ATM withdrawal",
+        "helper": "Own-bank and other-bank ATM charges can differ.",
+        "source": "https://www.centralbank.go.ke/bank-supervision/",
+        "sourceLabel": "Central Bank of Kenya banking supervision",
+        "effectiveLabel": "Use the bank statement or tariff for the account",
+    },
+    {
+        "provider": "bank",
+        "service": "card_charge",
+        "name": "Bank card or foreign-currency charge",
+        "helper": "Monitor card, conversion and cross-border charges as separate costs.",
+        "source": "https://www.centralbank.go.ke/bank-supervision/",
+        "sourceLabel": "Central Bank of Kenya banking supervision",
+        "effectiveLabel": "Charges depend on bank, card, currency and merchant channel",
+    },
+)
 
 
 def get_fee_tariff_catalog() -> dict[str, object]:
@@ -160,7 +302,15 @@ def get_fee_tariff_catalog() -> dict[str, object]:
             key: value
             for key, value in tariff.items()
             if key != "bands"
-        } | {"bands": _band_table(tariff["bands"])})
+        } | {
+            "bands": _band_table(tariff["bands"]),
+            "estimationAvailable": True,
+        })
+    services.extend({
+        **service,
+        "bands": [],
+        "estimationAvailable": False,
+    } for service in MONITORED_SERVICES)
     return {
         "version": TARIFF_CATALOG_VERSION,
         "currency": "KES",
@@ -177,6 +327,24 @@ def get_fee_tariff_catalog() -> dict[str, object]:
                 "sourceLabel": "Official products and services tariff guide",
                 "source": "https://equitygroupholdings.com/ke/images/docs/tariff-guide.pdf",
                 "note": "Use the exact channel row and confirm taxes before recording a fee.",
+            },
+            {
+                "name": "Co-operative Bank of Kenya",
+                "sourceLabel": "Official Co-op Bank tariff guide",
+                "source": "https://www.co-opbank.co.ke/tariff-guide",
+                "note": "Mobile, agent, ATM and PesaLink channels have different charges.",
+            },
+            {
+                "name": "NCBA Bank Kenya",
+                "sourceLabel": "Official NCBA tariffs and fees",
+                "source": "https://ncbagroup.com/ke/tariffs-fees/",
+                "note": "Choose the account and transaction channel before using a tariff row.",
+            },
+            {
+                "name": "Absa Bank Kenya",
+                "sourceLabel": "Official Absa rates and fees",
+                "source": "https://www.absabank.co.ke/rates-and-fees/",
+                "note": "Bank-to-wallet and account tariffs are published separately.",
             },
         ],
         "warning": (

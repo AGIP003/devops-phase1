@@ -42,6 +42,28 @@ def test_airtel_tariff_boundaries(service, amount, expected_fee):
 
 
 @pytest.mark.no_database
+@pytest.mark.parametrize(
+    ("service", "amount", "expected_fee"),
+    [
+        ("send_money", "100.00", "0.00"),
+        ("send_money", "100.01", "7.00"),
+        ("send_money", "1000.00", "13.00"),
+        ("send_money", "250000.00", "108.00"),
+        ("withdrawal", "49.00", "0.00"),
+        ("withdrawal", "50.00", "11.00"),
+        ("withdrawal", "50000.00", "278.00"),
+        ("pochi", "2500.00", "33.00"),
+    ],
+)
+def test_mpesa_tariff_boundaries(service, amount, expected_fee):
+    result = estimate_public_tariff("mpesa", service, amount)
+
+    assert result["estimatedFee"] == expected_fee
+    assert result["confidence"] == "published_band_estimate"
+    assert result["warning"].startswith("Estimate only")
+
+
+@pytest.mark.no_database
 @pytest.mark.parametrize("amount", ["0", "not-money", "10.001", "250000.01"])
 def test_tariff_estimator_rejects_unsupported_amounts(amount):
     with pytest.raises(FeeEstimateError):
@@ -51,12 +73,26 @@ def test_tariff_estimator_rejects_unsupported_amounts(amount):
 @pytest.mark.no_database
 def test_tariff_catalog_keeps_sources_and_bank_fees_separate():
     catalog = get_fee_tariff_catalog()
+    services = {
+        (service["provider"], service["service"]): service
+        for service in catalog["services"]
+    }
 
     assert catalog["version"]
     assert any(service["service"] == "paybill_wallet_bank" for service in catalog["services"])
+    assert services[("mpesa", "send_money")]["estimationAvailable"] is True
+    assert services[("mpesa", "withdrawal")]["estimationAvailable"] is True
+    assert services[("mpesa", "pochi")]["estimationAvailable"] is True
+    assert services[("mpesa", "paybill")]["estimationAvailable"] is False
+    assert services[("fuliza_mpesa", "maintenance_fee")]["estimationAvailable"] is False
+    assert services[("bank", "transfer")]["estimationAvailable"] is False
+    assert services[("mpesa", "buy_goods")]["estimationAvailable"] is True
     assert {bank["name"] for bank in catalog["bankReferences"]} == {
+        "Absa Bank Kenya",
+        "Co-operative Bank of Kenya",
         "Equity Bank Kenya",
         "KCB Bank Kenya",
+        "NCBA Bank Kenya",
     }
     assert all("bands" not in bank for bank in catalog["bankReferences"])
 
@@ -194,4 +230,3 @@ def test_fee_catalog_and_estimator_routes_require_authentication(
     assert estimate_response.status_code == 200
     assert estimate_response.get_json()["estimatedFee"] == "6.00"
     assert estimate_response.headers["Cache-Control"] == "private, no-store"
-
