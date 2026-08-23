@@ -55,6 +55,15 @@ AIRTIME_TOPUP_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+AIRTIME_TOPUP_FOR_LINE_PATTERN = re.compile(
+    rf"^(?P<reference>[A-Z0-9]{{11}})\s+Successful\.\s*"
+    rf"Airtime top up for line\s+{PHONE_PATTERN}\s+of\s+"
+    rf"Ksh\s*(?P<amount>{MONEY_PATTERN})\s+is successful\.\s*"
+    rf"Bal:\s*Ksh\s*(?P<balance>{MONEY_PATTERN})\."
+    r"(?:\s*To check your airtime balance,\s*dial\s+\*131#)?$",
+    re.IGNORECASE,
+)
+
 PAYBILL_PATTERN = re.compile(
     rf"^(?P<reference>[A-Z0-9]{{11}})\.\s*"
     rf"Ksh\s*(?P<amount>{MONEY_PATTERN})\s+paid to\s+"
@@ -151,7 +160,10 @@ def parse_airtel_money_message(message: str) -> ParsedTransactionMessage:
             provider_transaction_type="data_bundle",
         )
 
-    airtime_topup_match = AIRTIME_TOPUP_PATTERN.fullmatch(clean_message)
+    airtime_topup_match = (
+        AIRTIME_TOPUP_PATTERN.fullmatch(clean_message)
+        or AIRTIME_TOPUP_FOR_LINE_PATTERN.fullmatch(clean_message)
+    )
 
     if airtime_topup_match is not None:
         return ParsedTransactionMessage(

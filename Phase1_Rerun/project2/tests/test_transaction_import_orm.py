@@ -27,6 +27,14 @@ def sample_airtel_topup_message() -> str:
     )
 
 
+def sample_airtel_topup_for_line_message() -> str:
+    return (
+        "29148245185 Successful. Airtime top up for line 101784609 "
+        "of Ksh 20 is successful. Bal: Ksh 520.5. To check your "
+        "airtime balance, dial *131#"
+    )
+
+
 def seed_provider_payment_methods(app) -> None:
     with app.app_context():
         db.session.add_all([
@@ -120,6 +128,28 @@ def test_airtel_topup_requires_user_supplied_date_when_provider_omits_it(
     assert saved.status_code == 201, saved.get_json()
     assert saved.get_json()["data"]["date"] == "2026-08-20"
     assert saved.get_json()["import"]["occurredAt"] is None
+
+
+def test_preview_accepts_airtel_topup_for_line_template(
+    client,
+    register_user,
+):
+    owner = register_user("owner", "owner@example.com")
+
+    response = client.post(
+        "/api/transaction-imports/preview",
+        headers=authorization(owner["token"]),
+        json={"message": sample_airtel_topup_for_line_message()},
+    )
+
+    assert response.status_code == 200, response.get_json()
+    payload = response.get_json()
+    assert payload["provider"] == "airtel_money"
+    assert payload["amount"] == "20"
+    assert payload["suggestedCategory"] == "airtime"
+    assert payload["requiresDate"] is True
+    assert payload["occurredAt"] is None
+    assert "101784609" not in str(payload)
 
 
 def test_import_saves_original_date_fee_and_explicit_alias_atomically(

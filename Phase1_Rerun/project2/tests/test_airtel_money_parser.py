@@ -90,6 +90,29 @@ def test_parses_airtime_topup_without_retaining_recipient_phone():
     assert "0700000000" not in result.description
 
 
+def test_parses_airtime_topup_for_line_without_retaining_recipient_line():
+    message = (
+        "29148245185 Successful. Airtime top up for line 101784609 "
+        "of Ksh 20 is successful. Bal: Ksh 520.5. To check your "
+        "airtime balance, dial *131#"
+    )
+
+    result = parse_airtel_money_message(message)
+
+    assert result.provider == "airtel_money"
+    assert result.external_reference == "29148245185"
+    assert result.amount == Decimal("20")
+    assert result.direction is TransactionDirection.EXPENSE
+    assert result.provider_transaction_type == "airtime_topup"
+    assert result.description == "Airtel airtime top up"
+    assert result.counterparty == "Airtel subscriber"
+    assert result.fee is None
+    assert result.resulting_balance == Decimal("520.5")
+    assert result.occurred_at is None
+    assert "101784609" not in result.description
+    assert "101784609" not in result.counterparty
+
+
 def test_parses_airtel_paybill_without_exposing_account_number():
     message = (
         "D3PKHAXK2GW. Ksh 2,284 paid to SAMPLE SUPERMARKET          "
