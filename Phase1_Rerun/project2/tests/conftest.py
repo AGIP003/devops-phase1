@@ -6,6 +6,10 @@ from app.extensions import db
 from app.models.user import User
 
 DATABASE_TABLES = (
+    "supplier_quotation_prices",
+    "supplier_quotations",
+    "quotation_items",
+    "quotation_projects",
     "ai_daily_usage",
     "commitment_occurrences",
     "recurring_commitments",

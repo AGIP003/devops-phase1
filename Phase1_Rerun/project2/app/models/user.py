@@ -55,6 +55,13 @@ class User(TimeStampMixin, Base):
     debts = relationship("Debt", back_populates="user", cascade="all, delete-orphan", lazy="select")
     savings_goals = relationship("SavingsGoal", back_populates="user", cascade="all, delete-orphan", lazy="select")
     recurring_commitments = relationship("RecurringCommitment", back_populates="user", cascade="all, delete-orphan", lazy="select")
+    quotation_projects = relationship(
+        "QuotationProject",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="select",
+    )
     provider_financing_events = relationship(
         "ProviderFinancingEvent",
         back_populates="user",

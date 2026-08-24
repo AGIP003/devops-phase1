@@ -6,6 +6,7 @@ from app.extensions import bcrypt, mail, limiter, migrate, db
 from app.auth_routes import auth_bp
 from app.telegram_routes import telegram_bp
 from app.ai_routes import ai_bp
+from app.quotation_routes import quotation_bp
 from flask_talisman import Talisman
 from app.docs import api 
 from config import get_config, get_test_database_url, validate_environment
@@ -83,6 +84,8 @@ def create_app(config_name=None):
             Debt, DebtEntry, DebtFeeTerm, DebtSchedule,
             SavingsGoal, SavingsGoalEntry,
             RecurringCommitment, CommitmentOccurrence,
+            QuotationProject, QuotationItem,
+            SupplierQuotation, SupplierQuotationPrice,
         )
 
     Talisman(
@@ -99,6 +102,8 @@ def create_app(config_name=None):
         app.logger.info("✓ Telegram blueprint registered successfully")
         app.register_blueprint(ai_bp)
         app.logger.info("✓ AI blueprint registered successfully")
+        app.register_blueprint(quotation_bp)
+        app.logger.info("✓ Quotation blueprint registered successfully")
     except Exception as e:
         app.logger.error("✗ Failed to register auth blueprint: %s", e)
         import traceback

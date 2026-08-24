@@ -17,6 +17,12 @@ from app.models.recurring_commitment import (
     CommitmentOccurrence,
     RecurringCommitment,
 )
+from app.models.quotation import (
+    QuotationItem,
+    QuotationProject,
+    SupplierQuotation,
+    SupplierQuotationPrice,
+)
 
 __all__ = [
     "Base",
@@ -43,5 +49,9 @@ __all__ = [
     "SavingsGoalEntry",
     "RecurringCommitment",
     "CommitmentOccurrence",
+    "QuotationProject",
+    "QuotationItem",
+    "SupplierQuotation",
+    "SupplierQuotationPrice",
     "SoftDeleteMixin",
 ]

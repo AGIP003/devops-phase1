@@ -10,6 +10,11 @@ from app.models.recurring_commitment import (
     CommitmentOccurrence,
     RecurringCommitment,
 )
+from app.models.quotation import (
+    QuotationItem,
+    QuotationProject,
+    SupplierQuotation,
+)
 from app.services.savings_goal_service import calculate_savings_goal_plan
 
 def authenticated_user_to_dict(user: User) -> dict[str, object]:
@@ -86,6 +91,109 @@ def budget_to_dict(budget: Budget) -> dict[str, object]:
             else None
         ),
         "items": [budget_item_to_dict(item) for item in ordered_items],
+    }
+
+
+def quotation_item_to_dict(item: QuotationItem) -> dict[str, object]:
+    return {
+        "id": item.id,
+        "name": item.name,
+        "quantity": str(item.quantity),
+        "unit": item.unit,
+        "position": item.position,
+    }
+
+
+def _money(value: Decimal) -> str:
+    """Return an API-safe two-decimal currency string without using floats."""
+    return str(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def supplier_quotation_to_dict(
+    project: QuotationProject,
+    quotation: SupplierQuotation,
+) -> dict[str, object]:
+    price_by_item = {
+        price.item_id: price.unit_price
+        for price in quotation.prices
+    }
+    subtotal = sum(
+        (
+            item.quantity * price_by_item[item.id]
+            for item in project.items
+            if item.id in price_by_item
+        ),
+        Decimal("0"),
+    )
+    tax = (
+        subtotal * quotation.tax_rate / Decimal("100")
+        if quotation.tax_mode == "excluded"
+        else Decimal("0")
+    )
+    total = max(
+        subtotal + quotation.delivery_cost + tax - quotation.discount,
+        Decimal("0"),
+    )
+    item_count = len(project.items)
+    priced_item_count = len(price_by_item)
+    complete = item_count > 0 and priced_item_count == item_count
+    coverage = round((priced_item_count / item_count) * 100) if item_count else 0
+
+    return {
+        "id": quotation.id,
+        "supplier": quotation.supplier,
+        "contact": quotation.contact,
+        "validUntil": quotation.valid_until.isoformat(),
+        "deliveryCost": _money(quotation.delivery_cost),
+        "discount": _money(quotation.discount),
+        "taxMode": quotation.tax_mode,
+        "taxRate": str(quotation.tax_rate),
+        "deliveryDays": quotation.delivery_days,
+        "paymentTerms": quotation.payment_terms,
+        "preferred": quotation.preferred,
+        "prices": [
+            {
+                "itemId": item.id,
+                "unitPrice": _money(price_by_item[item.id]),
+            }
+            for item in sorted(project.items, key=lambda item: (item.position, item.id))
+            if item.id in price_by_item
+        ],
+        "breakdown": {
+            "complete": complete,
+            "coverage": coverage,
+            "pricedItemCount": priced_item_count,
+            "itemCount": item_count,
+            "subtotal": _money(subtotal),
+            "deliveryCost": _money(quotation.delivery_cost),
+            "tax": _money(tax),
+            "discount": _money(quotation.discount),
+            "total": _money(total),
+        },
+        "createdAt": quotation.created_at.isoformat() if quotation.created_at else None,
+        "updatedAt": quotation.updated_at.isoformat() if quotation.updated_at else None,
+    }
+
+
+def quotation_project_to_dict(project: QuotationProject) -> dict[str, object]:
+    ordered_items = sorted(project.items, key=lambda item: (item.position, item.id))
+    ordered_quotes = sorted(project.quotations, key=lambda quote: quote.id)
+    preferred = next((quote for quote in ordered_quotes if quote.preferred), None)
+    return {
+        "id": project.id,
+        "title": project.title,
+        "category": project.category,
+        "notes": project.notes,
+        "currencyCode": project.currency_code,
+        "status": project.status,
+        "preferredQuoteId": preferred.id if preferred else None,
+        "items": [quotation_item_to_dict(item) for item in ordered_items],
+        "quotations": [
+            supplier_quotation_to_dict(project, quotation)
+            for quotation in ordered_quotes
+        ],
+        "createdAt": project.created_at.isoformat() if project.created_at else None,
+        "updatedAt": project.updated_at.isoformat() if project.updated_at else None,
     }
 
 
