@@ -133,6 +133,28 @@ def test_parses_airtel_paybill_without_exposing_account_number():
     )
 
 
+def test_parses_airtel_paybill_with_colon_after_fee_label():
+    message = (
+        "X3QE2FJGH6A. Ksh 5,120 paid to SAMPLE BANK C2B account 000000 "
+        "on 24/08/2026 14:19.Fee: Ksh 42. Bal:Ksh 658.5. "
+        "MPESA ID:UAAAS047TP"
+    )
+
+    result = parse_airtel_money_message(message)
+
+    assert result.provider == "airtel_money"
+    assert result.provider_transaction_type == "paybill"
+    assert result.external_reference == "X3QE2FJGH6A"
+    assert result.amount == Decimal("5120")
+    assert result.fee == Decimal("42")
+    assert result.counterparty == "SAMPLE BANK C2B"
+    assert result.description == "Paid SAMPLE BANK C2B"
+    assert "000000" not in result.description
+    assert result.occurred_at == datetime(
+        2026, 8, 24, 14, 19, tzinfo=NAIROBI_TIMEZONE
+    )
+
+
 def test_rejects_unknown_airtel_message():
     with pytest.raises(AirtelMoneyMessageParseError):
         parse_airtel_money_message("Your Airtel balance is available")

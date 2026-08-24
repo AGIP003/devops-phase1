@@ -71,7 +71,7 @@ PAYBILL_PATTERN = re.compile(
     rf"(?P<account_reference>\S+)\s+on\s+"
     rf"(?P<date>\d{{1,2}}/\d{{1,2}}/\d{{2,4}})\s+"
     rf"(?P<time>\d{{1,2}}:\d{{2}})\.\s*"
-    rf"Fee\s+Ksh\s*(?P<fee>{MONEY_PATTERN})\.\s*"
+    rf"Fee:?\s*Ksh\s*(?P<fee>{MONEY_PATTERN})\.\s*"
     rf"Bal:\s*Ksh\s*(?P<balance>{MONEY_PATTERN})\.\s*"
     r"MPESA ID:\s*(?P<network_reference>[A-Z0-9]{10})$",
     re.IGNORECASE,
