@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,5 +124,23 @@ describe("Quotations", () => {
     );
     expect(await screen.findByText("Preferred")).toBeInTheDocument();
     expect(screen.getAllByText("Lowest cost")).toHaveLength(1);
+  });
+
+  it("offers common units and sends a user-defined custom unit", async () => {
+    const user = userEvent.setup();
+    render(<Quotations />);
+
+    await screen.findAllByText("Office chairs");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.type(screen.getByLabelText("Item"), "Seedling tray");
+    await user.selectOptions(screen.getByLabelText("Unit"), "custom");
+    const customUnit = screen.getByLabelText("Custom unit");
+    await user.type(customUnit, "trays");
+    await user.click(within(customUnit.closest("form")).getByRole("button", { name: "Add item" }));
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/quotation-projects/41/items",
+      { name: "Seedling tray", quantity: "1", unit: "trays" },
+    );
   });
 });

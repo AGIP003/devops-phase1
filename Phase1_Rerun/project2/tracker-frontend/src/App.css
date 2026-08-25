@@ -6221,6 +6221,7 @@ body.public-screen {
 .quotation-page-header { align-items: flex-end; }
 .quotation-page button { font: inherit; }
 .quote-workspace { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start; }
+.quote-workspace-single { grid-template-columns: minmax(0, 1fr); }
 .quote-main { min-width: 0; display: grid; gap: 18px; }
 .quote-project-sidebar { position: sticky; top: 84px; padding: 16px; border: 1px solid var(--quote-line); border-radius: 18px; background: #fff; box-shadow: 0 12px 35px rgba(31, 50, 40, .06); }
 .quote-sidebar-heading, .quote-editor-heading, .quote-section-heading, .quote-project-overview, .quote-offer-topline, .quote-card-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
@@ -6259,6 +6260,8 @@ body.public-screen {
 .quote-section-heading h2, .quote-editor-heading h2 { margin: 3px 0; color: var(--quote-ink); font-size: 1.18rem; }
 .quote-section-heading > div { min-width: 0; }
 .quote-inline-empty, .quote-empty-state { padding: 28px; border: 1px dashed #cbd7cf; border-radius: 15px; background: var(--quote-soft); color: var(--quote-muted); text-align: center; }
+.quote-inline-empty { display: grid; gap: 5px; }
+.quote-inline-empty strong { color: var(--quote-ink); }
 .quote-empty-state { min-height: 370px; display: grid; place-items: center; align-content: center; gap: 10px; }
 .quote-empty-state h2, .quote-empty-state p { margin: 0; }
 .quote-empty-symbol { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; background: #dff1e6; color: var(--quote-accent); font-size: 1.5rem; font-weight: 900; }
@@ -6271,6 +6274,9 @@ body.public-screen {
 .quote-field textarea { min-height: 82px; resize: vertical; }
 .quote-field input:focus, .quote-field textarea:focus, .quote-field select:focus, .quote-mobile-selectors select:focus { border-color: #54a879; box-shadow: 0 0 0 3px rgba(51, 145, 91, .12); }
 .quote-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+.quote-details-toggle { display: inline-flex; align-items: center; justify-content: center; width: 100%; margin-top: 14px; padding: 10px 12px; border: 1px dashed #b8c9bd; border-radius: 11px; background: #f8faf8; color: var(--quote-accent); font-weight: 800; cursor: pointer; }
+.quote-details-toggle:hover { border-style: solid; background: #eef7f1; }
+.quote-advanced-fields { margin-top: 12px; padding: 14px; border-radius: 13px; background: var(--quote-soft); }
 .quote-item-form-grid { grid-template-columns: minmax(0, 2fr) minmax(90px, .7fr) minmax(100px, .7fr); }
 .quote-price-entry { display: grid; gap: 8px; margin: 18px 0; padding: 15px; border-radius: 14px; background: var(--quote-soft); }
 .quote-price-entry h3 { margin: 0 0 3px; color: var(--quote-ink); }
@@ -6322,6 +6328,11 @@ body.public-screen {
 .quote-lowest-label { color: #16734a !important; font-weight: 800 !important; }
 .quote-missing-price { color: #a35e2c; font-size: .8rem; font-weight: 700; }
 .quote-mobile-comparison { display: none; }
+.quote-locked-step { display: flex; align-items: center; grid-template-columns: none; gap: 14px; min-height: 96px; border-style: dashed; background: #fafbfa; box-shadow: none; }
+.quote-locked-step h2, .quote-locked-step p { margin: 0; }
+.quote-locked-step h2 { color: #59675e; font-size: 1rem; }
+.quote-locked-step p { margin-top: 4px; color: var(--quote-muted); font-size: .86rem; }
+.quote-step-number { display: grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; background: #e9eeea; color: #748078; font-weight: 900; }
 
 @media (max-width: 1000px) {
   .quote-workspace { grid-template-columns: 1fr; }
