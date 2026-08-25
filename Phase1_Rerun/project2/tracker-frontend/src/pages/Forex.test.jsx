@@ -70,12 +70,23 @@ describe("Forex", () => {
     expect(screen.getByText(/CBK reference rates, dated 2026-08-14/i)).toBeInTheDocument();
 
     const usdCard = screen.getByText("US Dollar").closest("button");
-    expect(within(usdCard).getByText("0.00774")).toBeInTheDocument();
+    expect(within(usdCard).getByText("0.00774 USD")).toBeInTheDocument();
     expect(screen.getByText("Japanese Yen")).toBeInTheDocument();
 
     await user.click(usdCard);
     expect(localStorage.getItem("adjustedCurrency")).toBe("USD");
-    expect(screen.getAllByText("US$77.40").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "1 USD compared with other currencies" })).toBeInTheDocument();
+    expect(screen.getByText("1 USD", { selector: ".forex-conversion-preview strong" })).toBeInTheDocument();
+  });
+
+  it("starts with a one-dollar conversion while keeping both sides editable", async () => {
+    renderForex();
+
+    await screen.findByText("Current CBK rates");
+    expect(screen.getByLabelText("Amount")).toHaveValue(1);
+    expect(screen.getByLabelText("From")).toHaveValue("USD");
+    expect(screen.getByLabelText("To")).toHaveValue("KES");
+    expect(screen.getByText(/1 USD = 129\.199 KES/)).toBeInTheDocument();
   });
 
   it("converts between two non-KES selections through the shared KES rates", async () => {

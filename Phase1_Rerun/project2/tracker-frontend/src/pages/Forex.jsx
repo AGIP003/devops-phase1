@@ -10,14 +10,18 @@ import {
 
 import {
   convertCurrency,
-  convertFromKes,
   formatCurrencyAmount,
   getCurrencyByCode,
 } from "../data/currencies";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
 
 
-const sampleAmount = 10000;
+function formatRate(value) {
+  if (value === null) return "Unavailable";
+  const absoluteValue = Math.abs(value);
+  const maximumFractionDigits = absoluteValue >= 1 ? 4 : 6;
+  return value.toLocaleString("en-KE", { maximumFractionDigits });
+}
 
 function Forex() {
   const {
@@ -25,7 +29,6 @@ function Forex() {
     currency,
     currencyCode,
     error,
-    formatCurrency,
     loading,
     rateDate,
     rates,
@@ -33,9 +36,9 @@ function Forex() {
     setCurrencyCode,
     stale,
   } = useAdjustedCurrency();
-  const [amount, setAmount] = useState("10000");
-  const [fromCode, setFromCode] = useState("KES");
-  const [toCode, setToCode] = useState("USD");
+  const [amount, setAmount] = useState("1");
+  const [fromCode, setFromCode] = useState("USD");
+  const [toCode, setToCode] = useState("KES");
   const [searchQuery, setSearchQuery] = useState("");
 
   const numericAmount = Number(amount);
@@ -168,7 +171,7 @@ function Forex() {
           <small>
             {unitRate === null
               ? "The selected reference rate is unavailable."
-              : `1 ${fromCode} = ${unitRate.toLocaleString("en-KE", { maximumFractionDigits: 6 })} ${toCode}`}
+              : `1 ${fromCode} = ${formatRate(unitRate)} ${toCode}`}
           </small>
         </div>
       </section>
@@ -180,8 +183,9 @@ function Forex() {
           <p>{currency.name}</p>
         </div>
         <div className="forex-conversion-preview">
-          <small>KES {sampleAmount.toLocaleString("en-KE")} adjusted to</small>
-          <strong>{formatCurrency(sampleAmount)}</strong>
+          <small>Rate-list base</small>
+          <strong>1 {currency.code}</strong>
+          <p>Every card below is compared from this currency.</p>
         </div>
       </section>
 
@@ -189,7 +193,7 @@ function Forex() {
         <div className="forex-market-heading">
           <div>
             <span>{currencies.length} CBK-supported currencies</span>
-            <h2 id="display-currency-title">Choose your display currency</h2>
+            <h2 id="display-currency-title">1 {currencyCode} compared with other currencies</h2>
           </div>
           <label className="forex-search">
             <Search size={17} aria-hidden="true" />
@@ -206,7 +210,7 @@ function Forex() {
         <div className="forex-grid">
           {filteredCurrencies.map((item) => {
             const selected = item.code === currencyCode;
-            const convertedRate = convertFromKes(1, item.code, rates);
+            const convertedRate = convertCurrency(1, currencyCode, item.code, rates);
             return (
               <button
                 type="button"
@@ -221,11 +225,7 @@ function Forex() {
                 </div>
                 <div className="forex-rate">
                   <ArrowRightLeft size={15} aria-hidden="true" />
-                  <span>
-                    {convertedRate === null
-                      ? "Unavailable"
-                      : convertedRate.toLocaleString("en-KE", { maximumFractionDigits: 5 })}
-                  </span>
+                  <span>{formatRate(convertedRate)} {item.code}</span>
                 </div>
                 {selected && <Check className="forex-check" size={18} aria-hidden="true" />}
               </button>
