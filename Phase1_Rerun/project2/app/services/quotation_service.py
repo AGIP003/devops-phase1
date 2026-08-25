@@ -199,6 +199,58 @@ def delete_quotation_item_for_user(
         raise
 
 
+def update_quotation_item_prices_for_user(
+    user_id: int,
+    project_id: int,
+    item_id: int,
+    *,
+    prices: dict[int, Decimal | None],
+) -> QuotationProject | None:
+    """Update one requested item's price across several supplier quotations."""
+    try:
+        project = get_quotation_project_for_user(user_id, project_id)
+        if project is None:
+            return None
+
+        item = next((item for item in project.items if item.id == item_id), None)
+        if item is None:
+            return None
+
+        quotations = {quote.id: quote for quote in project.quotations}
+        if not set(prices).issubset(quotations):
+            raise ValueError(
+                "A supplied quotation does not belong to this comparison."
+            )
+
+        for quotation_id, unit_price in prices.items():
+            quotation = quotations[quotation_id]
+            stored_price = next(
+                (price for price in quotation.prices if price.item_id == item_id),
+                None,
+            )
+
+            if unit_price is None:
+                if stored_price is not None:
+                    db.session.delete(stored_price)
+                continue
+
+            if stored_price is None:
+                quotation.prices.append(
+                    SupplierQuotationPrice(
+                        item_id=item_id,
+                        unit_price=unit_price,
+                    )
+                )
+            else:
+                stored_price.unit_price = unit_price
+
+        db.session.commit()
+        return get_quotation_project_for_user(user_id, project_id)
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def _validated_price_items(
     project: QuotationProject,
     prices: dict[int, Decimal],

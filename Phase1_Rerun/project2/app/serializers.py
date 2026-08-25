@@ -143,7 +143,11 @@ def supplier_quotation_to_dict(
         "id": quotation.id,
         "supplier": quotation.supplier,
         "contact": quotation.contact,
-        "validUntil": quotation.valid_until.isoformat(),
+        "validUntil": (
+            quotation.valid_until.isoformat()
+            if quotation.valid_until
+            else None
+        ),
         "deliveryCost": _money(quotation.delivery_cost),
         "discount": _money(quotation.discount),
         "taxMode": quotation.tax_mode,

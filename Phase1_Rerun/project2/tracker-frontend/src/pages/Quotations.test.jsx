@@ -143,4 +143,83 @@ describe("Quotations", () => {
       { name: "Seedling tray", quantity: "1", unit: "trays" },
     );
   });
+
+  it("allows an existing item quantity to be corrected", async () => {
+    const user = userEvent.setup();
+    render(<Quotations />);
+
+    await screen.findAllByText("Office chairs");
+    await user.click(screen.getByRole("button", { name: "Edit Chair" }));
+    const quantity = screen.getByLabelText("Quantity");
+    await user.clear(quantity);
+    await user.type(quantity, "12");
+    await user.click(screen.getByRole("button", { name: "Update item" }));
+
+    expect(api.patch).toHaveBeenCalledWith(
+      "/quotation-projects/41/items/1",
+      { name: "Chair", quantity: "12", unit: "pcs" },
+    );
+  });
+
+  it("opens one price panel for all existing suppliers after adding an item", async () => {
+    const user = userEvent.setup();
+    const withNewItem = {
+      ...project,
+      items: [
+        ...project.items,
+        { id: 3, name: "Footrest", quantity: "2.00", unit: "pcs", position: 2 },
+      ],
+      quotations: project.quotations.map((quote) => ({
+        ...quote,
+        breakdown: { ...quote.breakdown, complete: false, coverage: 67 },
+      })),
+    };
+    const withPrices = {
+      ...withNewItem,
+      quotations: withNewItem.quotations.map((quote, index) => ({
+        ...quote,
+        prices: [...quote.prices, { itemId: 3, unitPrice: index ? "650.00" : "600.00" }],
+      })),
+    };
+    api.post.mockResolvedValueOnce({ data: { data: withNewItem } });
+    api.patch.mockResolvedValueOnce({ data: { data: withPrices } });
+    render(<Quotations />);
+
+    await screen.findAllByText("Office chairs");
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    await user.type(screen.getByLabelText("Item"), "Footrest");
+    const quantity = screen.getByLabelText("Quantity");
+    await user.clear(quantity);
+    await user.type(quantity, "2");
+    await user.click(within(quantity.closest("form")).getByRole("button", { name: "Add item" }));
+
+    expect(await screen.findByText("Add Footrest prices")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Complete Office unit price for Footrest"), "600");
+    await user.type(screen.getByLabelText("Cheap but incomplete unit price for Footrest"), "650");
+    await user.click(screen.getByRole("button", { name: "Save supplier prices" }));
+
+    expect(api.patch).toHaveBeenCalledWith(
+      "/quotation-projects/41/items/3/prices",
+      {
+        prices: [
+          { quotationId: 10, unitPrice: "600" },
+          { quotationId: 11, unitPrice: "650" },
+        ],
+      },
+    );
+  });
+
+  it("keeps quote validity optional and makes extra costs discoverable", async () => {
+    const user = userEvent.setup();
+    render(<Quotations />);
+
+    await screen.findAllByText("Office chairs");
+    await user.click(screen.getByRole("button", { name: "Add supplier" }));
+    expect(screen.getByLabelText("Valid until (optional)")).not.toBeRequired();
+    expect(screen.queryByLabelText("Delivery cost")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Add delivery and other costs/i }));
+    expect(screen.getByLabelText("Delivery cost")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tax treatment")).toBeInTheDocument();
+  });
 });

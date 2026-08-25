@@ -6267,6 +6267,10 @@ body.public-screen {
 .quote-empty-symbol { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; background: #dff1e6; color: var(--quote-accent); font-size: 1.5rem; font-weight: 900; }
 
 .quote-editor { margin-bottom: 18px; border-color: #bad8c6; }
+.quote-editor-intro, .quote-form-note { margin: 8px 0 0; color: var(--quote-muted); font-size: .88rem; }
+.quote-item-price-editor { margin: 0; border-color: #82bd99; background: linear-gradient(145deg, #fff, #f5fbf7); }
+.quote-item-price-editor .quote-price-entry { margin-bottom: 8px; }
+.quote-form-note { padding-left: 2px; }
 .quote-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
 .quote-field { display: grid; gap: 6px; color: #4e5d54; font-size: .84rem; font-weight: 700; }
 .quote-field-wide { grid-column: 1 / -1; }
@@ -6274,8 +6278,14 @@ body.public-screen {
 .quote-field textarea { min-height: 82px; resize: vertical; }
 .quote-field input:focus, .quote-field textarea:focus, .quote-field select:focus, .quote-mobile-selectors select:focus { border-color: #54a879; box-shadow: 0 0 0 3px rgba(51, 145, 91, .12); }
 .quote-form-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
-.quote-details-toggle { display: inline-flex; align-items: center; justify-content: center; width: 100%; margin-top: 14px; padding: 10px 12px; border: 1px dashed #b8c9bd; border-radius: 11px; background: #f8faf8; color: var(--quote-accent); font-weight: 800; cursor: pointer; }
-.quote-details-toggle:hover { border-style: solid; background: #eef7f1; }
+.quote-details-toggle { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; width: 100%; margin-top: 14px; padding: 13px 14px; border: 1px solid #9fcbb1; border-radius: 13px; background: linear-gradient(135deg, #edf8f1, #f8fbf9); color: var(--quote-accent); text-align: left; cursor: pointer; box-shadow: 0 6px 18px rgba(37, 113, 72, .08); }
+.quote-details-toggle:hover { border-color: #61a77d; background: #e8f6ed; }
+.quote-details-toggle > span:nth-child(2) { display: grid; gap: 2px; }
+.quote-details-toggle strong { color: #185f3e; font-size: .9rem; }
+.quote-details-toggle small { color: #64746a; font-size: .76rem; font-weight: 600; }
+.quote-details-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #d8efe1; }
+.quote-details-chevron { transition: transform .18s ease; }
+.quote-details-toggle.is-open .quote-details-chevron { transform: rotate(180deg); }
 .quote-advanced-fields { margin-top: 12px; padding: 14px; border-radius: 13px; background: var(--quote-soft); }
 .quote-item-form-grid { grid-template-columns: minmax(0, 2fr) minmax(90px, .7fr) minmax(100px, .7fr); }
 .quote-price-entry { display: grid; gap: 8px; margin: 18px 0; padding: 15px; border-radius: 14px; background: var(--quote-soft); }
@@ -6289,6 +6299,7 @@ body.public-screen {
 
 .quote-request-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
 .quote-request-list > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 12px; border: 1px solid var(--quote-line); border-radius: 12px; background: var(--quote-soft); }
+.quote-item-actions { display: flex; flex: 0 0 auto; gap: 5px; }
 .quote-request-list span { display: grid; gap: 2px; min-width: 0; }
 .quote-request-list strong, .quote-request-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quote-request-list small { color: var(--quote-muted); }

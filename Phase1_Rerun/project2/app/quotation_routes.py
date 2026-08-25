@@ -18,6 +18,7 @@ from app.services.quotation_service import (
     list_quotation_projects_for_user,
     set_preferred_supplier_for_user,
     update_quotation_item_for_user,
+    update_quotation_item_prices_for_user,
     update_quotation_project_for_user,
     update_supplier_quotation_for_user,
 )
@@ -82,8 +83,10 @@ def _positive_decimal(data, key):
     return value
 
 
-def _date(data, key):
+def _date(data, key, *, required=True):
     value = data.get(key)
+    if value in (None, "") and not required:
+        return None
     if not isinstance(value, str):
         abort(400, description=f"{key} must be a date")
     try:
@@ -128,6 +131,34 @@ def _prices(data):
     return prices
 
 
+def _supplier_prices(data):
+    raw_prices = data.get("prices")
+    if not isinstance(raw_prices, list) or not raw_prices:
+        abort(400, description="prices must be a non-empty list")
+
+    prices = {}
+    for price in raw_prices:
+        if not isinstance(price, dict):
+            abort(400, description="Each supplier price must be an object")
+
+        quotation_id = price.get("quotationId")
+        if isinstance(quotation_id, bool):
+            abort(400, description="quotationId must be an integer")
+        try:
+            quotation_id = int(quotation_id)
+        except (TypeError, ValueError):
+            abort(400, description="quotationId must be an integer")
+        if quotation_id <= 0 or quotation_id in prices:
+            abort(400, description="Each supplier may have one price")
+
+        unit_price = price.get("unitPrice")
+        prices[quotation_id] = (
+            None if unit_price in (None, "") else _decimal(price, "unitPrice")
+        )
+
+    return prices
+
+
 def _project_fields(data):
     return {
         "title": _text(data, "title", maximum=100),
@@ -151,7 +182,7 @@ def _quotation_fields(data):
     return {
         "supplier": _text(data, "supplier", maximum=100),
         "contact": _text(data, "contact", maximum=100, required=False),
-        "valid_until": _date(data, "validUntil"),
+        "valid_until": _date(data, "validUntil", required=False),
         "delivery_cost": _decimal(data, "deliveryCost", default="0"),
         "discount": _decimal(data, "discount", default="0"),
         "tax_mode": tax_mode,
@@ -271,6 +302,24 @@ def delete_item(project_id, item_id):
     project = delete_quotation_item_for_user(
         g.current_user["user_id"], project_id, item_id
     )
+    if project is None:
+        abort(404, description="Quotation item not found")
+    return _private_json({"data": quotation_project_to_dict(project)})
+
+
+@quotation_bp.patch("/<int:project_id>/items/<int:item_id>/prices")
+@login_required
+def update_item_prices(project_id, item_id):
+    data = _payload()
+    try:
+        project = update_quotation_item_prices_for_user(
+            g.current_user["user_id"],
+            project_id,
+            item_id,
+            prices=_supplier_prices(data),
+        )
+    except ValueError as error:
+        abort(400, description=str(error))
     if project is None:
         abort(404, description="Quotation item not found")
     return _private_json({"data": quotation_project_to_dict(project)})

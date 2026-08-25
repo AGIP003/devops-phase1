@@ -139,7 +139,7 @@ class SupplierQuotation(TimeStampMixin, Base):
     )
     supplier: Mapped[str] = mapped_column(String(100), nullable=False)
     contact: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    valid_until: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     delivery_cost: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, default=0, server_default=text("0")
     )

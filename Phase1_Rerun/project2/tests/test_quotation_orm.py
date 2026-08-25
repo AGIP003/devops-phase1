@@ -163,3 +163,87 @@ def test_only_one_supplier_can_be_preferred(client, register_user):
     assert selected["preferredQuoteId"] == second["id"]
     assert selected["status"] == "supplier_selected"
     assert [quote["preferred"] for quote in selected["quotations"]] == [False, True]
+
+
+def test_supplier_validity_date_is_optional(client, register_user):
+    owner = register_user("quote-no-date", "quote-no-date@example.com")
+    token = owner["token"]
+    project = create_project(client, token, "Quote without expiry")
+    project = add_item(client, token, project["id"], "Consulting", "1", "job")
+    item = project["items"][0]
+
+    project = add_quote(
+        client,
+        token,
+        project,
+        "No-expiry Supplier",
+        [{"itemId": item["id"], "unitPrice": "5000.00"}],
+        validUntil=None,
+    )
+
+    assert project["quotations"][0]["validUntil"] is None
+
+
+def test_new_item_prices_are_updated_across_owned_supplier_quotes(
+    client,
+    register_user,
+):
+    owner = register_user("quote-bulk-owner", "quote-bulk-owner@example.com")
+    intruder = register_user(
+        "quote-bulk-intruder",
+        "quote-bulk-intruder@example.com",
+    )
+    token = owner["token"]
+    project = create_project(client, token, "Renovation materials")
+    project = add_item(client, token, project["id"], "Cement", "10", "bags")
+    cement = project["items"][0]
+    project = add_quote(
+        client,
+        token,
+        project,
+        "Supplier One",
+        [{"itemId": cement["id"], "unitPrice": "800"}],
+    )
+    project = add_quote(
+        client,
+        token,
+        project,
+        "Supplier Two",
+        [{"itemId": cement["id"], "unitPrice": "790"}],
+    )
+    project = add_item(client, token, project["id"], "Sand", "2", "loads")
+    sand = project["items"][1]
+    first_quote, second_quote = project["quotations"]
+
+    intruder_response = client.patch(
+        f"/api/quotation-projects/{project['id']}/items/{sand['id']}/prices",
+        headers=authorization(intruder["token"]),
+        json={
+            "prices": [
+                {"quotationId": first_quote["id"], "unitPrice": "5000"},
+            ]
+        },
+    )
+    assert intruder_response.status_code == 404
+
+    response = client.patch(
+        f"/api/quotation-projects/{project['id']}/items/{sand['id']}/prices",
+        headers=authorization(token),
+        json={
+            "prices": [
+                {"quotationId": first_quote["id"], "unitPrice": "5000"},
+                {"quotationId": second_quote["id"], "unitPrice": "5100"},
+            ]
+        },
+    )
+
+    assert response.status_code == 200, response.get_json()
+    updated = response.get_json()["data"]
+    assert [quote["breakdown"]["coverage"] for quote in updated["quotations"]] == [
+        100,
+        100,
+    ]
+    assert updated["quotations"][0]["prices"][-1] == {
+        "itemId": sand["id"],
+        "unitPrice": "5000.00",
+    }
