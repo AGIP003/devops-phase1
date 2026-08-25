@@ -85,6 +85,18 @@ class BaseConfig:
         10,
     )
 
+    NSE_API_BASE_URL = os.getenv(
+        "NSE_API_BASE_URL",
+        "https://mystocks.africa/api/v1",
+    )
+    NSE_CACHE_TTL_SECONDS = get_env_int("NSE_CACHE_TTL_SECONDS", 900)
+    NSE_CONNECT_TIMEOUT_SECONDS = get_env_int(
+        "NSE_CONNECT_TIMEOUT_SECONDS",
+        3,
+    )
+    NSE_READ_TIMEOUT_SECONDS = get_env_int("NSE_READ_TIMEOUT_SECONDS", 12)
+    NSE_MIN_STOCK_COUNT = get_env_int("NSE_MIN_STOCK_COUNT", 50)
+
     SECRET_KEY = os.getenv("SECRET_KEY")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     DATABASE_URL = os.getenv("DATABASE_URL")

@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.user import User
 
 DATABASE_TABLES = (
+    "nse_market_cache",
     "supplier_quotation_prices",
     "supplier_quotations",
     "quotation_items",

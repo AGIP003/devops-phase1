@@ -7,6 +7,7 @@ from app.auth_routes import auth_bp
 from app.telegram_routes import telegram_bp
 from app.ai_routes import ai_bp
 from app.quotation_routes import quotation_bp
+from app.nse_routes import nse_bp
 from flask_talisman import Talisman
 from app.docs import api 
 from config import get_config, get_test_database_url, validate_environment
@@ -81,6 +82,7 @@ def create_app(config_name=None):
             PaymentMethod, PaymentMethodGroup, TelegramLink,
             TelegramUserPreferences, AuthIdentity, AIDailyUsage,
             ForexRate,
+            NseMarketCache,
             Debt, DebtEntry, DebtFeeTerm, DebtSchedule,
             SavingsGoal, SavingsGoalEntry,
             RecurringCommitment, CommitmentOccurrence,
@@ -104,6 +106,8 @@ def create_app(config_name=None):
         app.logger.info("✓ AI blueprint registered successfully")
         app.register_blueprint(quotation_bp)
         app.logger.info("✓ Quotation blueprint registered successfully")
+        app.register_blueprint(nse_bp)
+        app.logger.info("✓ NSE blueprint registered successfully")
     except Exception as e:
         app.logger.error("✗ Failed to register auth blueprint: %s", e)
         import traceback

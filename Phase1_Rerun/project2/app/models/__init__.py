@@ -11,6 +11,7 @@ from app.models.telegram_preferences import TelegramUserPreferences
 from app.models.auth_identity import AuthIdentity
 from app.models.ai_daily_usage import AIDailyUsage
 from app.models.forex_rate import ForexRate
+from app.models.nse_market_cache import NseMarketCache
 from app.models.debt import Debt, DebtEntry, DebtFeeTerm, DebtSchedule
 from app.models.savings_goal import SavingsGoal, SavingsGoalEntry
 from app.models.recurring_commitment import (
@@ -41,6 +42,7 @@ __all__ = [
     "AuthIdentity",
     "AIDailyUsage",
     "ForexRate",
+    "NseMarketCache",
     "Debt",
     "DebtEntry",
     "DebtFeeTerm",
