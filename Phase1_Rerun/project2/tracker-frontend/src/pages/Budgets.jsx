@@ -373,9 +373,8 @@ function Budgets() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className="coming-soon-pill">Live budgets</span>
           <h1>Budgets</h1>
-          <p>Build reusable shopping lists, tick items while buying, and compare against last spend.</p>
+          <p>Plan a purchase, tick items as you shop, and compare the result with what you expected to spend.</p>
         </div>
         <button
           type="button"

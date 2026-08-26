@@ -66,8 +66,7 @@ describe("Forex", () => {
     const user = userEvent.setup();
     renderForex();
 
-    expect(await screen.findByText("Current CBK rates")).toBeInTheDocument();
-    expect(screen.getByText(/CBK reference rates, dated 2026-08-14/i)).toBeInTheDocument();
+    expect(await screen.findByText("CBK reference rates · 2026-08-14")).toBeInTheDocument();
 
     const usdCard = screen.getByText("US Dollar").closest("button");
     expect(within(usdCard).getByText("0.00774 USD")).toBeInTheDocument();
@@ -82,7 +81,7 @@ describe("Forex", () => {
   it("starts with a one-dollar conversion while keeping both sides editable", async () => {
     renderForex();
 
-    await screen.findByText("Current CBK rates");
+    await screen.findByText("CBK reference rates · 2026-08-14");
     expect(screen.getByLabelText("Amount")).toHaveValue(1);
     expect(screen.getByLabelText("From")).toHaveValue("USD");
     expect(screen.getByLabelText("To")).toHaveValue("KES");
@@ -93,7 +92,7 @@ describe("Forex", () => {
     const user = userEvent.setup();
     renderForex();
 
-    await screen.findByText("Current CBK rates");
+    await screen.findByText("CBK reference rates · 2026-08-14");
     await user.clear(screen.getByLabelText("Amount"));
     await user.type(screen.getByLabelText("Amount"), "100");
     await user.selectOptions(screen.getByLabelText("From"), "USD");
@@ -107,7 +106,7 @@ describe("Forex", () => {
     const user = userEvent.setup();
     renderForex();
 
-    await screen.findByText("Current CBK rates");
+    await screen.findByText("CBK reference rates · 2026-08-14");
     await user.type(screen.getByRole("searchbox", { name: "Search currencies" }), "JPY");
 
     expect(screen.getByText("Japanese Yen")).toBeInTheDocument();
@@ -121,7 +120,7 @@ describe("Forex", () => {
 
     renderForex();
 
-    expect(await screen.findByText("Last known rates")).toBeInTheDocument();
+    expect(await screen.findByText("Last available CBK rates · 2026-08-14")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("last validated rates");
   });
 

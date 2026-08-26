@@ -425,9 +425,8 @@ function Goals() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className="coming-soon-pill">Live goal tracker</span>
           <h1>Savings & Goals</h1>
-          <p>Choose a reasonable target. Get informed on what to save as your progress changes.</p>
+          <p>Turn a target into a saving plan and see whether you are keeping pace.</p>
         </div>
         <button type="button" className="feature-primary-button" onClick={openCreateForm}><Plus size={17} aria-hidden="true" /> Add goal</button>
       </div>

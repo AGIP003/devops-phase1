@@ -18,7 +18,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import EChart from "../components/analytics/EChart";
@@ -162,6 +162,7 @@ function Stocks() {
   const [selectedTicker, setSelectedTicker] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const comparisonRef = useRef(null);
 
   const loadMarket = useCallback(async ({ manual = false } = {}) => {
     manual ? setRefreshing(true) : setLoading(true);
@@ -278,6 +279,12 @@ function Stocks() {
     fetchDetail(stock);
   }
 
+  function showComparison() {
+    if (comparisonTickers.length < 2) return;
+    comparisonRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    comparisonRef.current?.querySelector("h2")?.focus({ preventScroll: true });
+  }
+
   const chartOption = useMemo(() => {
     const history = selectedDetail?.priceHistory || [];
     return {
@@ -331,8 +338,8 @@ function Stocks() {
   return (
     <div className="feature-page nse-page">
       <header className="feature-page-header nse-page-header">
-        <div><span className="nse-kicker">Nairobi Securities Exchange</span><h1>Market watch</h1><p>Explore price movement, compare companies and understand the terms behind the numbers.</p></div>
-        <button type="button" className="nse-refresh-button" onClick={() => loadMarket({ manual: true })} disabled={refreshing}><RefreshCw className={refreshing ? "is-spinning" : ""} size={16} />{refreshing ? "Checking…" : "Refresh"}</button>
+        <div className="nse-heading-row"><h1>NSE market watch</h1><button type="button" className="nse-refresh-button" onClick={() => loadMarket({ manual: true })} disabled={refreshing}><RefreshCw className={refreshing ? "is-spinning" : ""} size={16} />{refreshing ? "Checking…" : "Refresh"}</button></div>
+        <p>Check delayed market prices, save companies you follow, and compare up to three side by side.</p>
       </header>
 
       <section className={`nse-source-strip ${market.stale ? "is-stale" : ""}`} role="status">
@@ -350,7 +357,7 @@ function Stocks() {
 
       <div className="nse-workspace">
         <main className="nse-explorer">
-          <div className="nse-section-header"><div><span className="nse-eyebrow">Company explorer</span><h2>Find a listed company</h2></div><span className="nse-result-count">{filteredStocks.length} results</span></div>
+          <div className="nse-section-header"><div><h2>Find a listed company</h2></div><span className="nse-result-count">{filteredStocks.length} results</span></div>
           <div className="nse-controls">
             <label className="nse-search"><Search size={17} /><span className="sr-only">Search listed companies</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search company, ticker or sector" />{query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={15} /></button>}</label>
             <label className="nse-select-control"><SlidersHorizontal size={16} /><span className="sr-only">Sort companies</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value)}><option value="movement">Largest movement</option><option value="name">Company name</option><option value="price">Highest price</option><option value="sector">Sector</option></select></label>
@@ -358,6 +365,13 @@ function Stocks() {
           <div className="nse-sector-tabs" aria-label="Filter companies by sector">
             {sectors.map((sectorName) => <button type="button" key={sectorName} className={sectorName === sector ? "active" : ""} onClick={() => setSector(sectorName)} aria-pressed={sectorName === sector}>{sectorName}</button>)}
           </div>
+          {comparisonTickers.length > 0 && (
+            <section className="nse-compare-tray" aria-label="Selected companies">
+              <div className="nse-compare-summary"><GitCompareArrows size={17} /><span><strong>{comparisonTickers.length} {comparisonTickers.length === 1 ? "company" : "companies"} selected</strong><small>{comparisonTickers.length < 2 ? "Choose one more company to compare" : "Ready for a side-by-side view"}</small></span></div>
+              <div className="nse-compare-chips">{comparisonStocks.map(({ summary }) => <button type="button" key={summary.ticker} onClick={() => toggleComparison(summary)} aria-label={`Remove ${summary.ticker} from comparison`}>{summary.ticker}<X size={13} /></button>)}</div>
+              <button type="button" className="nse-compare-action" onClick={showComparison} disabled={comparisonTickers.length < 2}>Compare {comparisonTickers.length >= 2 ? `${comparisonTickers.length} companies` : "selected companies"}<ChevronRight size={15} /></button>
+            </section>
+          )}
           <div className="nse-list-header" aria-hidden="true"><span>Company</span><span>Last price</span><span>Movement</span><span>Actions</span></div>
           <div className="nse-company-list">
             {filteredStocks.map((stock) => {
@@ -369,8 +383,8 @@ function Stocks() {
                   <div className="nse-row-price"><small>Last price</small><strong>{formatPrice(stock.price, stock.currency)}</strong></div>
                   <div className="nse-row-movement"><small>Movement</small><Movement value={stock.changePercent} /></div>
                   <div className="nse-row-actions">
-                    <button type="button" className={compared ? "is-active" : ""} onClick={() => toggleComparison(stock)} aria-pressed={compared} aria-label={`${compared ? "Remove" : "Add"} ${stock.ticker} ${compared ? "from" : "to"} comparison`} title="Compare company">{compared ? <Check size={16} /> : <GitCompareArrows size={16} />}</button>
-                    <button type="button" className={followed ? "is-active" : ""} onClick={() => toggleFollow(stock)} aria-pressed={followed} aria-label={`${followed ? "Remove" : "Save"} ${stock.ticker} ${followed ? "from" : "to"} watchlist`} title="Save company">{followed ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}</button>
+                    <button type="button" className={compared ? "is-active" : ""} onClick={() => toggleComparison(stock)} aria-pressed={compared} aria-label={`${compared ? "Remove" : "Add"} ${stock.ticker} ${compared ? "from" : "to"} comparison`} title="Compare company">{compared ? <Check size={16} /> : <GitCompareArrows size={16} />}<span>{compared ? "Compared" : "Compare"}</span></button>
+                    <button type="button" className={followed ? "is-active" : ""} onClick={() => toggleFollow(stock)} aria-pressed={followed} aria-label={`${followed ? "Remove" : "Save"} ${stock.ticker} ${followed ? "from" : "to"} watchlist`} title="Save company">{followed ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}<span>{followed ? "Saved" : "Save"}</span></button>
                     <button type="button" onClick={() => fetchDetail(stock, { open: true })} className="nse-view-button">View <ChevronRight size={15} /></button>
                   </div>
                 </article>
@@ -394,13 +408,6 @@ function Stocks() {
             {triggeredAlerts.length > 0 && <div className="nse-triggered"><strong>{triggeredAlerts.length} movement {triggeredAlerts.length === 1 ? "check" : "checks"}</strong><span>{triggeredAlerts.map((stock) => stock.ticker).join(", ")} crossed {alertThreshold}% in the supplied data.</span></div>}
           </section>
 
-          <section className="nse-side-card nse-compare-card">
-            <div className="nse-side-title"><div><GitCompareArrows size={18} /><span><small>Peer comparison</small><strong>{comparisonTickers.length} of {MAX_COMPARISONS} selected</strong></span></div></div>
-            <p>Select companies from the same sector when possible; ratios mean more beside a genuine peer.</p>
-            <div className="nse-compare-chips">{comparisonStocks.map(({ summary }) => <button type="button" key={summary.ticker} onClick={() => toggleComparison(summary)}>{summary.ticker}<X size={13} /></button>)}</div>
-            {!comparisonTickers.length && <p className="nse-empty-copy">Use the compare icon beside a company to start.</p>}
-          </section>
-
           <details className="nse-side-card nse-glossary">
             <summary><CircleHelp size={18} /><span><small>Plain-language guide</small><strong>Trading terms</strong></span><ChevronRight size={16} /></summary>
             <div>{TRADING_TERMS.map(([term, definition]) => <article key={term}><strong>{term}</strong><p>{definition}</p></article>)}</div>
@@ -408,9 +415,9 @@ function Stocks() {
         </aside>
       </div>
 
-      {comparisonStocks.length > 0 && (
-        <section className="nse-comparison" aria-labelledby="nse-comparison-heading">
-          <div className="nse-section-header"><div><span className="nse-eyebrow">Side-by-side evidence</span><h2 id="nse-comparison-heading">Company comparison</h2></div><button type="button" onClick={() => setComparisonTickers([])}>Clear comparison</button></div>
+      {comparisonStocks.length >= 2 && (
+        <section className="nse-comparison" id="nse-comparison" ref={comparisonRef} aria-labelledby="nse-comparison-heading">
+          <div className="nse-section-header"><div><h2 id="nse-comparison-heading" tabIndex="-1">Compare selected companies</h2></div><button type="button" onClick={() => setComparisonTickers([])}>Clear comparison</button></div>
           <div className="nse-comparison-scroll"><table><thead><tr><th>Measure</th>{comparisonStocks.map(({ summary }) => <th key={summary.ticker}>{summary.ticker}<small>{summary.sector}</small></th>)}</tr></thead><tbody>
             {[
               ["Last price", ({ summary }) => formatPrice(summary.price, summary.currency)],
@@ -425,6 +432,25 @@ function Stocks() {
               ["YTD return", ({ detail }) => formatPercent(detail?.performance?.YTD)],
             ].map(([label, render]) => <tr key={label}><th>{label}</th>{comparisonStocks.map((entry) => <td key={entry.summary.ticker}>{entry.detail ? render(entry) : <span className="nse-loading-value">Loading…</span>}</td>)}</tr>)}
           </tbody></table></div>
+          <div className="nse-comparison-mobile">
+            {comparisonStocks.map(({ summary, detail }) => (
+              <article key={summary.ticker}>
+                <header>
+                  <span><strong>{summary.ticker}</strong><small>{summary.name}</small></span>
+                  <Movement value={summary.changePercent} compact />
+                </header>
+                <dl>
+                  <div><dt>Last price</dt><dd>{formatPrice(summary.price, summary.currency)}</dd></div>
+                  <div><dt>Market cap</dt><dd>{detail ? formatCompact(detail.marketCap, `${detail.currency || "KES"} `) : "Loading…"}</dd></div>
+                  <div><dt>P/E</dt><dd>{detail ? detail.peRatio ?? "Not supplied" : "Loading…"}</dd></div>
+                  <div><dt>EPS</dt><dd>{detail ? detail.eps ? formatPrice(detail.eps, detail.currency) : "Not supplied" : "Loading…"}</dd></div>
+                  <div><dt>Dividend yield</dt><dd>{detail ? formatPercent(detail.dividendYield) : "Loading…"}</dd></div>
+                  <div><dt>YTD return</dt><dd>{detail ? formatPercent(detail.performance?.YTD) : "Loading…"}</dd></div>
+                </dl>
+                <button type="button" onClick={() => fetchDetail(summary, { open: true })}>Open company evidence <ChevronRight size={15} /></button>
+              </article>
+            ))}
+          </div>
           <p className="nse-comparison-note"><Info size={14} /> Missing values are shown as “Not supplied.” MoneyTiq does not manufacture financial ratios.</p>
         </section>
       )}

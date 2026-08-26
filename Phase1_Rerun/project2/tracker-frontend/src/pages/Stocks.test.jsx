@@ -68,9 +68,15 @@ const detailResponse = {
   },
 };
 
+const scrollIntoView = vi.fn();
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    configurable: true,
+    value: scrollIntoView,
+  });
   api.get.mockImplementation((url) => {
     if (url === "/nse/stocks") return Promise.resolve(marketResponse);
     if (url.includes("SCOM.KE")) return Promise.resolve(detailResponse);
@@ -123,10 +129,14 @@ describe("Stocks market watch", () => {
     await screen.findByRole("heading", { name: "Find a listed company" });
 
     await user.click(screen.getByRole("button", { name: "Add SCOM to comparison" }));
+    await user.click(screen.getByRole("button", { name: "Add KCB to comparison" }));
 
-    expect(await screen.findByRole("heading", { name: "Company comparison" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Compare selected companies" })).toBeInTheDocument();
     await waitFor(() => expect(api.get).toHaveBeenCalledWith("/nse/stocks/SCOM.KE"));
     expect(screen.getByText(/MoneyTiq does not manufacture financial ratios/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Compare 2 companies" }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
   });
 
   it("identifies stale fallback data instead of presenting it as current", async () => {

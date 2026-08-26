@@ -72,14 +72,15 @@ function Forex() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className={`coming-soon-pill ${stale ? "forex-status-stale" : ""}`}>
-            {loading ? "Loading rates" : stale ? "Last known rates" : "Current CBK rates"}
-          </span>
-          <h1>Currency workspace</h1>
+          <h1>Currency converter</h1>
           <p>
-            Convert currencies and choose how money appears across MoneyTiq.
-            {rateDate ? ` CBK reference rates, dated ${rateDate}.` : ""}
+            Convert an amount and choose the currency MoneyTiq uses to display your money.
           </p>
+          <div className={`feature-source-context ${stale ? "is-stale" : ""}`} aria-live="polite">
+            <span aria-hidden="true" />
+            {loading ? "Checking CBK rates" : stale ? "Last available CBK rates" : "CBK reference rates"}
+            {rateDate ? ` · ${rateDate}` : ""}
+          </div>
         </div>
         <button
           type="button"

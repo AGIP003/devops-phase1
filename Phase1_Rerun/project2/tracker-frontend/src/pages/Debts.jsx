@@ -710,9 +710,8 @@ function Debts() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className="coming-soon-pill">Live debt tracker</span>
           <h1>Debts & Loans</h1>
-          <p>Track what you owe, what people owe you, and every balance-changing event.</p>
+          <p>Keep separate balances for money you owe and money owed to you, with a history of every change.</p>
         </div>
         <button type="button" className="feature-primary-button" onClick={openCreateForm}><Plus size={17} aria-hidden="true" /> Add debt</button>
       </div>

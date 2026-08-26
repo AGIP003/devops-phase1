@@ -807,9 +807,8 @@ function Analytics() {
     <div className="feature-page analytics-page">
       <header className="feature-page-header analytics-header">
         <div>
-          <span className="coming-soon-pill">Live financial analytics</span>
           <h1>Analytics</h1>
-          <p>See what changed, useful insights, and where a review may help.</p>
+          <p>Find spending patterns, compare periods, and see which commitments may need attention.</p>
         </div>
         <div className="analytics-periods" aria-label="Analytics period">
           {PERIODS.map(([value, label]) => (

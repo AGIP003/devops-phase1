@@ -255,11 +255,10 @@ function Landing() {
 
       <section className="money-hero">
         <div className="money-hero-copy">
-          <span className="money-pill"><ShieldCheck size={13} /> Your money, one clear view</span>
-          <h1>Track spending, budgets, bills, debts, goals, and fees in one place.</h1>
+          <h1>Know where your money went and what needs attention next.</h1>
           <p>
-            MoneyTiq helps you see what came in, what went out, what is due, and what is still safe to spend.
-            Add entries in the app or from Telegram, and keep everything private to your account.
+            Track spending alongside budgets, bills, debts, goals, and transaction fees.
+            Add entries in the app or from Telegram, then see what is due and what is still safe to spend.
           </p>
 
           <div className="landing-actions money-hero-actions">
@@ -268,6 +267,7 @@ function Landing() {
             </Link>
             <Link className="public-button secondary" to="/login">Log in</Link>
           </div>
+          <p className="money-trust-note"><ShieldCheck size={15} aria-hidden="true" /> Your financial records stay private to your account.</p>
         </div>
 
         <section className="money-dashboard-mock" aria-label="MoneyTiq dashboard preview">

@@ -126,9 +126,8 @@ function Fees() {
     <div className="feature-page fees-page">
       <header className="feature-page-header fees-page-header">
         <div>
-          <span className="coming-soon-pill">Live fee evidence</span>
           <h1>Transaction Fees</h1>
-          <p>Track M-PESA, Airtel Money, Fuliza and bank charges without mixing confirmed fees with estimates.</p>
+          <p>See confirmed charges separately from estimates, then check how much they add to your spending.</p>
         </div>
         <button type="button" className="analytics-refresh-button" onClick={loadFees} disabled={loading}>
           <RefreshCw size={16} className={loading ? "is-spinning" : ""} />

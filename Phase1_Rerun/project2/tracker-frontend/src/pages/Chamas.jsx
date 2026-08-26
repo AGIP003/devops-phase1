@@ -33,9 +33,8 @@ function Chamas() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
-          <span className="coming-soon-pill">Frontend mock</span>
           <h1>Chama Tracker</h1>
-          <p>Track chama contributions, public status, reminders, voting, and release.</p>
+          <p>Preview group contributions, reminders, voting, and payouts. Changes on this page are not saved yet.</p>
         </div>
         <button type="button" className="feature-primary-button" disabled>
           <Plus size={17} aria-hidden="true" />

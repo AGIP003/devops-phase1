@@ -36,6 +36,7 @@ describe("SummaryCards", () => {
 
     expect(screen.getByText("Emergency fund")).toBeInTheDocument();
     expect(screen.getByText("Collected: KES 25000.00")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Goal options" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Debt" }));
     expect(screen.getByText("KES 7000.00")).toBeInTheDocument();

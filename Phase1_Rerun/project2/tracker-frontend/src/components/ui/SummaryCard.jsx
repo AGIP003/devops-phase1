@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, EyeOff, MoreVertical, Target, TrendingDown, Wallet, Scale, CircleDollarSign } from "lucide-react";
+import { Eye, EyeOff, Target, TrendingDown, Wallet, Scale, CircleDollarSign } from "lucide-react";
 
 function SummaryDebtPulseLine({ progress }) {
     const gradientId = `summaryDebtPulse${React.useId().replace(/:/g, "")}`;
@@ -134,9 +134,6 @@ const SummaryCards = React.memo(function SummaryCards({ filteredTransactions, de
                         <Target size={16} aria-hidden="true" />
                         Goal
                     </span>
-                    <button type="button" aria-label="Goal options">
-                        <MoreVertical size={16} aria-hidden="true" />
-                    </button>
                 </div>
                 <div className="summary-goal-body">
                     <SummaryGoalRing progress={goalProgress} />
