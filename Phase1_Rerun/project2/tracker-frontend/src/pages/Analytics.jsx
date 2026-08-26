@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -143,8 +143,12 @@ function Analytics() {
   const [aiError, setAiError] = useState("");
   const [weeklySummary, setWeeklySummary] = useState(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [dismissedInsights, setDismissedInsights] = useState(() => new Set());
   const [lastDismissedInsight, setLastDismissedInsight] = useState(null);
+  const aiDrawerRef = useRef(null);
+  const aiDrawerTriggerRef = useRef(null);
+  const aiDrawerCloseRef = useRef(null);
 
   const loadSummary = useCallback(async () => {
     setLoading(true);
@@ -181,6 +185,41 @@ function Analytics() {
       setScenarioCategory(categories[0].category);
     }
   }, [scenarioCategory, summary?.expenseCategories]);
+
+  useEffect(() => {
+    if (!aiDrawerOpen) return undefined;
+
+    aiDrawerCloseRef.current?.focus();
+
+    const handleDrawerKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setAiDrawerOpen(false);
+        window.requestAnimationFrame(() => aiDrawerTriggerRef.current?.focus());
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusableElements = aiDrawerRef.current?.querySelectorAll(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href]',
+      );
+      if (!focusableElements?.length) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleDrawerKeyDown);
+    return () => window.removeEventListener("keydown", handleDrawerKeyDown);
+  }, [aiDrawerOpen]);
 
   const monthlyOption = useMemo(() => {
     const rows = summary?.monthlyTrend || [];
@@ -797,10 +836,12 @@ function Analytics() {
     setAiQuestion(card.question);
     setAiResult(null);
     setAiError("");
-    document.getElementById("analytics-assistant")?.scrollIntoView?.({
-      behavior: "smooth",
-      block: "center",
-    });
+    setAiDrawerOpen(true);
+  }
+
+  function closeAiDrawer() {
+    setAiDrawerOpen(false);
+    window.requestAnimationFrame(() => aiDrawerTriggerRef.current?.focus());
   }
 
   return (
@@ -959,38 +1000,6 @@ function Analytics() {
           )}
         </section>
 
-        <section className="analytics-panel analytics-ai-panel" id="analytics-assistant">
-          <header>
-            <div><span>Grounded assistant</span><h2>Ask about your finances</h2><p>The AI chooses one approved calculation; your database—not the model—produces the figures.</p><small className="analytics-assistant-boundary">Answers only · Nothing changes without your approval</small></div>
-          </header>
-          <form className="analytics-ai-form" onSubmit={askFinanceAssistant}>
-            <textarea value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} maxLength={500} placeholder="How many times did I buy airtime this month? Where could I adjust spending?" aria-label="Question about your finances" />
-            <div>
-              <button type="submit" className="feature-primary-button" disabled={aiLoading || !aiQuestion.trim()}>{aiLoading ? "Checking your data…" : "Ask securely"}</button>
-              <button type="button" className="scenario-reset" onClick={loadWeeklySummary} disabled={weeklyLoading}>{weeklyLoading ? "Preparing…" : "Preview weekly review"}</button>
-            </div>
-          </form>
-          {aiError && <p className="analytics-form-error" role="alert">{aiError}</p>}
-          {aiResult && (
-            <div className="analytics-ai-answer">
-              <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted explanation</span>
-              <strong>{aiResult.answer}</strong>
-              {(aiResult.evidence || []).map((item) => <p key={item}>{item}</p>)}
-              {(aiResult.caveats || []).map((item) => <small key={item}>{item}</small>)}
-            </div>
-          )}
-          {weeklySummary && (
-            <div className="analytics-ai-answer weekly">
-              <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted weekly review</span>
-              <strong>{weeklySummary.headline}</strong>
-              <p>{weeklySummary.summary}</p>
-              {(weeklySummary.observations || []).map((item) => <p key={item}>• {item}</p>)}
-              {(weeklySummary.options || []).map((item) => <small key={item}>Option: {item}</small>)}
-              <small>Preview only. Nothing is sent automatically.</small>
-            </div>
-          )}
-        </section>
-
         <section className="analytics-panel analytics-calendar-panel">
             <header>
               <div><span>Daily rhythm</span><h2>Spending calendar</h2><p>Intensity shows which days carried the most expense activity.</p></div>
@@ -1067,6 +1076,96 @@ function Analytics() {
         <strong>How these figures are calculated</strong>
         <p>Cash flow comes from your non-deleted transactions. Confirmed provider fees and clearly labelled tariff estimates are added separately; unsupported fees stay unknown rather than becoming invented numbers. Commitments are monthly estimates from active bills, subscriptions, debt schedules and goal gaps. AI may explain an approved calculation, but it never creates these totals or receives database access.</p>
       </section>
+
+      <button
+        ref={aiDrawerTriggerRef}
+        type="button"
+        className="analytics-ai-edge-trigger"
+        aria-label="Open financial assistant"
+        aria-controls="analytics-ai-drawer"
+        aria-expanded={aiDrawerOpen}
+        onClick={() => setAiDrawerOpen(true)}
+      >
+        <Sparkles size={19} aria-hidden="true" />
+        <span aria-hidden="true">Ask AI</span>
+      </button>
+
+      {aiDrawerOpen && (
+        <div
+          className="analytics-ai-drawer-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeAiDrawer();
+          }}
+        >
+          <aside
+            ref={aiDrawerRef}
+            id="analytics-ai-drawer"
+            className="analytics-ai-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="analytics-ai-drawer-title"
+          >
+            <header className="analytics-ai-drawer-header">
+              <div>
+                <span>Grounded assistant</span>
+                <h2 id="analytics-ai-drawer-title">Ask about your finances</h2>
+                <p>Your records produce the figures. AI helps explain them.</p>
+              </div>
+              <button
+                ref={aiDrawerCloseRef}
+                type="button"
+                className="analytics-ai-drawer-close"
+                aria-label="Close financial assistant"
+                onClick={closeAiDrawer}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="analytics-ai-drawer-body">
+              <small className="analytics-assistant-boundary">
+                Answers only · Nothing changes without your approval
+              </small>
+              <form className="analytics-ai-form" onSubmit={askFinanceAssistant}>
+                <textarea
+                  value={aiQuestion}
+                  onChange={(event) => setAiQuestion(event.target.value)}
+                  maxLength={500}
+                  placeholder="How many times did I buy airtime this month? Where could I adjust spending?"
+                  aria-label="Question about your finances"
+                />
+                <div>
+                  <button type="submit" className="feature-primary-button" disabled={aiLoading || !aiQuestion.trim()}>
+                    {aiLoading ? "Checking your data…" : "Ask securely"}
+                  </button>
+                  <button type="button" className="scenario-reset" onClick={loadWeeklySummary} disabled={weeklyLoading}>
+                    {weeklyLoading ? "Preparing…" : "Preview weekly review"}
+                  </button>
+                </div>
+              </form>
+              {aiError && <p className="analytics-form-error" role="alert">{aiError}</p>}
+              {aiResult && (
+                <div className="analytics-ai-answer">
+                  <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted explanation</span>
+                  <strong>{aiResult.answer}</strong>
+                  {(aiResult.evidence || []).map((item) => <p key={item}>{item}</p>)}
+                  {(aiResult.caveats || []).map((item) => <small key={item}>{item}</small>)}
+                </div>
+              )}
+              {weeklySummary && (
+                <div className="analytics-ai-answer weekly">
+                  <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted weekly review</span>
+                  <strong>{weeklySummary.headline}</strong>
+                  <p>{weeklySummary.summary}</p>
+                  {(weeklySummary.observations || []).map((item) => <p key={item}>• {item}</p>)}
+                  {(weeklySummary.options || []).map((item) => <small key={item}>Option: {item}</small>)}
+                  <small>Preview only. Nothing is sent automatically.</small>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

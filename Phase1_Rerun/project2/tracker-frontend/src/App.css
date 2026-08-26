@@ -10105,9 +10105,8 @@ body.public-screen {
   height: 250px;
 }
 
-.analytics-search-panel,
-.analytics-ai-panel {
-  grid-column: auto;
+.analytics-search-panel {
+  grid-column: 1 / -1;
 }
 
 .analytics-search-form {
@@ -10197,10 +10196,6 @@ body.public-screen {
   box-shadow: 0 1px 5px rgb(42 51 39 / 10%);
 }
 
-.analytics-ai-panel > header > svg {
-  color: #969f17;
-}
-
 .analytics-assistant-boundary {
   color: #657068;
   display: inline-block;
@@ -10263,6 +10258,144 @@ body.public-screen {
   text-transform: uppercase;
 }
 
+.analytics-ai-edge-trigger {
+  align-items: center;
+  background: #eef0dc;
+  border: 1px solid rgb(22 30 24 / 22%);
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -5px 7px 20px rgb(27 37 29 / 16%);
+  color: #263326;
+  cursor: pointer;
+  display: flex;
+  gap: 0.4rem;
+  height: 48px;
+  justify-content: center;
+  padding: 0.45rem 0.75rem;
+  position: fixed;
+  right: 0;
+  top: 48%;
+  transform: translateY(-50%);
+  width: 88px;
+  z-index: 70;
+}
+
+.analytics-ai-edge-trigger::before {
+  background: #9ea71c;
+  border-radius: 999px;
+  content: "";
+  height: 20px;
+  left: 4px;
+  position: absolute;
+  width: 2px;
+}
+
+.analytics-ai-edge-trigger span {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.analytics-ai-edge-trigger:hover,
+.analytics-ai-edge-trigger:focus-visible {
+  background: #e4e8c2;
+  box-shadow: -7px 9px 24px rgb(27 37 29 / 20%);
+  outline: none;
+}
+
+.analytics-ai-drawer-backdrop {
+  background: rgb(23 31 26 / 32%);
+  display: flex;
+  inset: 0;
+  justify-content: flex-end;
+  position: fixed;
+  z-index: 100;
+}
+
+.analytics-ai-drawer {
+  animation: analytics-drawer-enter 220ms ease-out;
+  background: #fbfcf8;
+  border-left: 1px solid #dce2d8;
+  box-shadow: -18px 0 45px rgb(22 30 24 / 20%);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 100%;
+  width: min(440px, calc(100vw - 1rem));
+}
+
+.analytics-ai-drawer-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #e1e5dc;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.35rem 1.25rem 1rem;
+}
+
+.analytics-ai-drawer-header > div {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.analytics-ai-drawer-header span {
+  color: #727b16;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.analytics-ai-drawer-header h2,
+.analytics-ai-drawer-header p {
+  margin: 0;
+}
+
+.analytics-ai-drawer-header h2 {
+  color: #263326;
+  font-size: 1.35rem;
+}
+
+.analytics-ai-drawer-header p {
+  color: #657068;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.analytics-ai-drawer-close {
+  align-items: center;
+  background: #f0f2e8;
+  border: 1px solid #dce2d8;
+  border-radius: 10px;
+  color: #263326;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.analytics-ai-drawer-close:hover,
+.analytics-ai-drawer-close:focus-visible {
+  background: #e5e9d3;
+  outline: 2px solid rgb(158 167 28 / 25%);
+  outline-offset: 2px;
+}
+
+.analytics-ai-drawer-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+@keyframes analytics-drawer-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 .analytics-form-error {
   margin: 0.5rem 0;
   color: #a43e35;
@@ -10294,9 +10427,8 @@ body.public-screen {
     grid-column: auto;
   }
 
-  .analytics-search-panel,
-  .analytics-ai-panel {
-    grid-column: auto;
+  .analytics-search-panel {
+    grid-column: 1 / -1;
   }
 
   .analytics-scenario-layout {
@@ -10305,6 +10437,30 @@ body.public-screen {
 }
 
 @media (max-width: 520px) {
+  .analytics-ai-edge-trigger {
+    display: grid;
+    gap: 0;
+    height: 60px;
+    padding: 0.45rem 0.55rem;
+    top: 45%;
+    width: 44px;
+  }
+
+  .analytics-ai-edge-trigger span {
+    display: none;
+  }
+
+  .analytics-ai-drawer {
+    border-left: 0;
+    width: 100%;
+  }
+
+  .analytics-ai-drawer-header,
+  .analytics-ai-drawer-body {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
   .analytics-search-form {
     grid-template-columns: 1fr auto;
   }
@@ -10410,7 +10566,8 @@ body.public-screen {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .is-spinning {
+  .is-spinning,
+  .analytics-ai-drawer {
     animation: none;
   }
 }
