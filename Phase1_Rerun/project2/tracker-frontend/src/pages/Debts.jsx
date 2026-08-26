@@ -785,10 +785,10 @@ function Debts() {
         </form>
       )}
 
-      <section className="feature-summary-grid">
-        <div className="feature-summary-card debt-negative"><span>You Owe</span><strong>{formatCurrency(summary.youOwe)}</strong><small>Active recorded obligations</small></div>
-        <div className="feature-summary-card debt-positive"><span>Owed to You</span><strong>{formatCurrency(summary.owedToYou)}</strong><small>Money expected back</small></div>
-        <div className="feature-summary-card"><span>Net Position</span><strong>{formatCurrency(summary.netPosition)}</strong><small>{summary.netPosition < 0 ? "More owed than receivable" : "Receivables ahead"}</small></div>
+      <section className="feature-summary-grid debt-position-summary">
+        <div className="feature-summary-card debt-net-position"><span>Net position</span><strong>{formatCurrency(summary.netPosition)}</strong><small>{summary.netPosition < 0 ? "You owe more than you expect back" : "Expected repayments are ahead"}</small></div>
+        <div className="feature-summary-card debt-negative"><span>You owe</span><strong>{formatCurrency(summary.youOwe)}</strong><small>Active obligations</small></div>
+        <div className="feature-summary-card debt-positive"><span>Owed to you</span><strong>{formatCurrency(summary.owedToYou)}</strong><small>Money expected back</small></div>
       </section>
 
       <div className="debts-layout">

@@ -130,15 +130,15 @@ function Fees() {
           <h1>Transaction Fees</h1>
           <p>See confirmed charges separately from estimates, then check how much they add to your spending.</p>
         </div>
-        <button type="button" className="analytics-refresh-button" onClick={loadFees} disabled={loading}>
+        <button type="button" className="fees-refresh-button" onClick={loadFees} disabled={loading}>
           <RefreshCw size={16} className={loading ? "is-spinning" : ""} />
-          Refresh
+          {loading ? "Refreshing…" : "Refresh fees"}
         </button>
       </header>
 
       {error && <div className="analytics-inline-error" role="alert">{error}</div>}
 
-      <section className="feature-summary-grid fees-kpi-grid" aria-label="Fee totals">
+      <section className="feature-summary-grid fees-kpi-grid fee-summary-ledger" aria-label="Fee totals">
         <article className="feature-summary-card fees-summary-card">
           <span>This week</span>
           <strong>{formatCurrency(summary?.totalWeek || 0)}</strong>
@@ -242,6 +242,19 @@ function Fees() {
             )}
           </section>
 
+          <section className="fees-recent-card">
+            <h2>Recent fee evidence</h2>
+            <div className="fees-event-list">
+              {(summary?.recentEvents || []).length === 0 && <div className="fees-empty-state">Import a provider message with a fee to see it here.</div>}
+              {(summary?.recentEvents || []).map((event) => (
+                <div className="fees-event-row" key={event.id}>
+                  <div><strong>{event.description}</strong><small>{providerPresentation(event.provider).name} · {dateFormatter.format(new Date(`${event.date}T00:00:00`))} · {event.source.replaceAll("_", " ")}</small></div>
+                  <span>{formatCurrency(event.fee)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="fees-insight-card">
             <div className="fees-insight-icon" aria-hidden="true"><ShieldCheck size={20} /></div>
             <div><h2>Evidence beats estimates</h2><p>Provider-message fees are preserved as confirmed. A tariff estimate remains visibly separate until you review it.</p></div>
@@ -281,26 +294,11 @@ function Fees() {
         </div>
       </section>
 
-      <div className="fees-lower-grid">
-        <section className="fees-recent-card">
-          <h2>Recent fee evidence</h2>
-          <div className="fees-event-list">
-            {(summary?.recentEvents || []).length === 0 && <div className="fees-empty-state">Import a provider message with a fee to see it here.</div>}
-            {(summary?.recentEvents || []).map((event) => (
-              <div className="fees-event-row" key={event.id}>
-                <div><strong>{event.description}</strong><small>{providerPresentation(event.provider).name} · {dateFormatter.format(new Date(`${event.date}T00:00:00`))} · {event.source.replaceAll("_", " ")}</small></div>
-                <span>{formatCurrency(event.fee)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="fees-bank-card">
-          <div className="fees-card-heading"><Building2 size={19} /><div><h2>Bank tariff references</h2><p>Not auto-estimated because account and channel rules differ.</p></div></div>
-          <div className="fees-bank-list">{(catalog?.bankReferences || []).map((bank) => <a href={bank.source} target="_blank" rel="noreferrer" key={bank.name}><div><strong>{bank.name}</strong><small>{bank.sourceLabel}</small><p>{bank.note}</p></div><ExternalLink size={16} /></a>)}</div>
-          <small className="fees-catalog-warning">{catalog?.warning}</small>
-        </section>
-      </div>
+      <section className="fees-bank-card fees-bank-section">
+        <div className="fees-card-heading"><Building2 size={19} /><div><h2>Bank tariff references</h2><p>Not auto-estimated because account and channel rules differ.</p></div></div>
+        <div className="fees-bank-list">{(catalog?.bankReferences || []).map((bank) => <a href={bank.source} target="_blank" rel="noreferrer" key={bank.name}><div><strong>{bank.name}</strong><small>{bank.sourceLabel}</small><p>{bank.note}</p></div><ExternalLink size={16} /></a>)}</div>
+        <small className="fees-catalog-warning">{catalog?.warning}</small>
+      </section>
     </div>
   );
 }

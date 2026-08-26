@@ -1,4 +1,4 @@
-import { ClipboardCheck, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ClipboardCheck, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../services/api";
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
@@ -52,6 +52,9 @@ function Budgets() {
   const remaining = targetAmount - checkedTotal;
   const checkedCount = checkedItems.length;
   const progress = targetAmount > 0 ? Math.min(100, Math.round((checkedTotal / targetAmount) * 100)) : 0;
+  const formItemsTotal = getBudgetTotal(form.items);
+  const formTarget = toCurrencyNumber(form.targetAmount);
+  const formDifference = formTarget - formItemsTotal;
 
   const otherBudgets = useMemo(
     () => budgetList.filter((budget) => budget.id !== activeBudget?.id),
@@ -85,7 +88,7 @@ function Budgets() {
   useEffect(() => {
     if (!showForm) return;
 
-    budgetFormRef.current?.scrollIntoView({
+    budgetFormRef.current?.scrollIntoView?.({
       behavior: "smooth",
       block: "start",
     });
@@ -283,15 +286,29 @@ function Budgets() {
   }
 
   function renderBudgetForm(extraClassName = "") {
+    const isEditing = Boolean(editingBudgetId);
+
     return (
       <form
         className={`budget-list-card budget-create-form ${extraClassName}`.trim()}
         onSubmit={saveBudget}
         ref={budgetFormRef}
+        aria-label={isEditing ? "Edit budget" : "Create budget"}
       >
+        <header className="budget-form-heading">
+          <div>
+            <span>{isEditing ? "Editing saved budget" : "New budget"}</span>
+            <h2>{isEditing ? "Update the plan" : "Build your spending plan"}</h2>
+            <p>Set the overall limit, then give each planned item a realistic estimate.</p>
+          </div>
+          <button type="button" className="budget-form-close" onClick={resetForm} aria-label="Close budget form" title="Close">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+
         <div className="budget-form-grid">
           <label>
-            <span>Name</span>
+            <span>Budget name</span>
             <input
               type="text"
               value={form.name}
@@ -309,7 +326,7 @@ function Budgets() {
             />
           </label>
           <label>
-            <span>Target</span>
+            <span>Spending limit</span>
             <input
               type="number"
               min="0.01"
@@ -321,23 +338,39 @@ function Budgets() {
           </label>
         </div>
 
-        <div className="budget-form-items">
+        <section className="budget-form-items-section">
+          <div className="budget-form-items-heading">
+            <div><h3>Planned items</h3><small>{form.items.length} {form.items.length === 1 ? "item" : "items"} · {formatCurrency(formItemsTotal)} planned</small></div>
+            <button type="button" className="secondary-button budget-add-item-button" onClick={addItemRow}>
+              <Plus size={15} aria-hidden="true" /> Add item
+            </button>
+          </div>
+          <div className="budget-form-items">
           {form.items.map((item, index) => (
             <div className="budget-form-item" key={`budget-form-item-${index}`}>
-              <input
-                type="text"
-                value={item.name}
-                onChange={(event) => updateItem(index, "name", event.target.value)}
-                placeholder="Item name"
-              />
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={item.estimatedAmount}
-                onChange={(event) => updateItem(index, "estimatedAmount", event.target.value)}
-                placeholder="Estimate"
-              />
+              <span className="budget-item-number" aria-hidden="true">{index + 1}</span>
+              <label>
+                <span>Item</span>
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={(event) => updateItem(index, "name", event.target.value)}
+                  placeholder="e.g. Groceries"
+                  aria-label={`Item ${index + 1} name`}
+                />
+              </label>
+              <label>
+                <span>Estimated cost</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={item.estimatedAmount}
+                  onChange={(event) => updateItem(index, "estimatedAmount", event.target.value)}
+                  placeholder="0.00"
+                  aria-label={`Item ${index + 1} estimated cost`}
+                />
+              </label>
               <button
                 type="button"
                 className="budget-remove-item-button"
@@ -350,19 +383,22 @@ function Budgets() {
               </button>
             </div>
           ))}
+          </div>
+        </section>
+
+        <div className={`budget-draft-balance ${formDifference < 0 ? "is-over" : ""}`}>
+          <span>{formDifference < 0 ? "Items exceed the limit" : "Unallocated amount"}</span>
+          <strong>{formatCurrency(Math.abs(formDifference))}</strong>
         </div>
 
         {formError && <p className="transaction-form-message transaction-form-error">{formError}</p>}
 
         <div className="budget-form-actions">
-          <button type="button" className="secondary-button" onClick={addItemRow}>
-            Add item
-          </button>
           <button type="button" className="secondary-button" onClick={resetForm}>
             Cancel
           </button>
           <button type="submit" className="feature-primary-button" disabled={isCreating}>
-            {isCreating ? "Saving..." : editingBudgetId ? "Update budget" : "Save budget"}
+            {isCreating ? "Saving..." : editingBudgetId ? "Save changes" : "Save budget"}
           </button>
         </div>
       </form>
@@ -413,23 +449,25 @@ function Budgets() {
         </section>
       ) : (
         <>
-          <section className="feature-summary-grid">
-            <div className="feature-summary-card">
-              <span>Target</span>
+          <section className="feature-summary-grid budget-summary-ledger">
+            <div className="feature-summary-card budget-summary-target">
+              <span>Planned total</span>
               <strong>{formatCurrency(targetAmount)}</strong>
               <small>{activeBudget.name}</small>
             </div>
             <div className="feature-summary-card">
-              <span>Checked Off</span>
+              <span>In your basket</span>
               <strong>{formatCurrency(checkedTotal)}</strong>
               <small>{checkedCount} of {activeBudget.items.length} items</small>
             </div>
             <div className="feature-summary-card">
-              <span>Remaining</span>
+              <span>Still available</span>
               <strong>{formatCurrency(remaining)}</strong>
               <small>Last spend: {formatCurrency(activeBudget.lastSpend || 0)}</small>
             </div>
           </section>
+
+          {showForm && editingBudgetId === activeBudget.id && renderBudgetForm("budget-edit-form")}
 
           <div className="budget-layout">
             <div className="budget-main-column">
@@ -451,6 +489,7 @@ function Budgets() {
                       title="Edit budget"
                     >
                       <Pencil size={16} aria-hidden="true" />
+                      <span>Edit</span>
                     </button>
                     <button
                       type="button"
@@ -461,6 +500,7 @@ function Budgets() {
                       title="Delete budget"
                     >
                       <Trash2 size={16} aria-hidden="true" />
+                      <span>{deletingBudgetId === activeBudget.id ? "Deleting…" : "Delete"}</span>
                     </button>
                   </div>
                 </div>
@@ -485,11 +525,10 @@ function Budgets() {
                 </div>
               </section>
 
-              {showForm && editingBudgetId === activeBudget.id && renderBudgetForm("budget-edit-form")}
             </div>
 
             <aside className="budget-side-card">
-              <h2>Saved Lists</h2>
+              <h2>Saved lists</h2>
               <div className="saved-budget-list">
                 {otherBudgets.length ? (
                   otherBudgets.map((budget) => (

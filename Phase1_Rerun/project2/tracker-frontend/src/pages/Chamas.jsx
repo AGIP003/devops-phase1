@@ -43,7 +43,7 @@ function Chamas() {
         </button>
       </div>
 
-      <section className="feature-summary-grid">
+      <section className="feature-summary-grid chama-summary-ledger">
         <div className="feature-summary-card">
           <span>Total Pool</span>
           <strong>{formatCurrency(totalPool)}</strong>

@@ -844,7 +844,7 @@ function Analytics() {
       <section className="analytics-insights" aria-labelledby="analytics-insights-title">
         <header className="analytics-insights-header">
           <div>
-            <span>Moneytiqx insights</span>
+            <span>Data insights</span>
             <h2 id="analytics-insights-title">What deserves attention</h2>
             <p>Specific signals from your records, with the calculation window and a useful next step.</p>
           </div>
@@ -962,7 +962,6 @@ function Analytics() {
         <section className="analytics-panel analytics-ai-panel" id="analytics-assistant">
           <header>
             <div><span>Grounded assistant</span><h2>Ask about your finances</h2><p>The AI chooses one approved calculation; your database—not the model—produces the figures.</p><small className="analytics-assistant-boundary">Answers only · Nothing changes without your approval</small></div>
-            <Sparkles aria-hidden="true" />
           </header>
           <form className="analytics-ai-form" onSubmit={askFinanceAssistant}>
             <textarea value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} maxLength={500} placeholder="How many times did I buy airtime this month? Where could I adjust spending?" aria-label="Question about your finances" />

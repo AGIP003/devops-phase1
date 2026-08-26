@@ -454,10 +454,10 @@ function Goals() {
         </form>
       )}
 
-      <section className="feature-summary-grid">
-        <div className="feature-summary-card"><span>Total Saved</span><strong>{formatCurrency(summary.saved)}</strong><small>{summary.progress}% of all targets</small></div>
-        <div className="feature-summary-card"><span>Combined Target</span><strong>{formatCurrency(summary.target)}</strong><small>{goals.length} {goals.length === 1 ? "goal" : "goals"}</small></div>
-        <div className="feature-summary-card"><span>Goals Reached</span><strong>{summary.reached}</strong><small>Progress comes from recorded savings</small></div>
+      <section className="feature-summary-grid goal-summary-ledger">
+        <div className="feature-summary-card goal-summary-saved"><span>Saved so far</span><strong>{formatCurrency(summary.saved)}</strong><small>{summary.progress}% of all targets</small><div className="goal-summary-progress" aria-hidden="true"><span style={{ width: `${Math.min(summary.progress, 100)}%` }} /></div></div>
+        <div className="feature-summary-card"><span>Combined target</span><strong>{formatCurrency(summary.target)}</strong><small>{goals.length} {goals.length === 1 ? "goal" : "goals"}</small></div>
+        <div className="feature-summary-card"><span>Reached</span><strong>{summary.reached}</strong><small>Completed saving goals</small></div>
       </section>
 
       {loading && <div className="goal-loading-card">Loading your goals…</div>}

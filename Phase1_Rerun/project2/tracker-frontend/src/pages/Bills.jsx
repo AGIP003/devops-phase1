@@ -564,10 +564,10 @@ function Bills() {
       {success && <p className="debt-page-message debt-page-success" role="status">{success}</p>}
       {showCreateForm && renderCreateForm()}
 
-      <section className="feature-summary-grid">
-        <div className="feature-summary-card"><span>Estimated Monthly</span><strong>{formatCurrency(summary.monthly)}</strong><small>Normalized from {summary.activeCount} active recurring items</small></div>
-        <div className="feature-summary-card"><span>Due Next</span><strong>{summary.next?.name || "Nothing due"}</strong><small>{summary.next ? formatDate(summary.next.nextDueDate) : "Add a bill or subscription"}</small></div>
-        <div className="feature-summary-card"><span>Needs Attention</span><strong>{summary.overdue}</strong><small>{summary.overdue === 1 ? "overdue item" : "overdue items"}</small></div>
+      <section className="feature-summary-grid commitment-summary-ledger">
+        <div className="feature-summary-card commitment-due-next"><span>Due next</span><strong>{summary.next?.name || "Nothing due"}</strong><small>{summary.next ? formatDate(summary.next.nextDueDate) : "Add a bill or subscription"}</small></div>
+        <div className="feature-summary-card"><span>Estimated monthly</span><strong>{formatCurrency(summary.monthly)}</strong><small>{summary.activeCount} active recurring {summary.activeCount === 1 ? "item" : "items"}</small></div>
+        <div className={`feature-summary-card commitment-attention${summary.overdue ? " has-overdue" : ""}`}><span>Needs attention</span><strong>{summary.overdue}</strong><small>{summary.overdue === 1 ? "overdue item" : "overdue items"}</small></div>
       </section>
 
       <div className="commitment-filter-bar" aria-label="Filter recurring payments">

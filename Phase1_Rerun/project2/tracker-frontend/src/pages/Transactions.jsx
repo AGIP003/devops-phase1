@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, ChevronDown, FileText, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import EmptyState from '../components/ui/EmptyState';
 import { useAdjustedCurrency } from "../hooks/useAdjustedCurrency";
@@ -262,7 +262,6 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 }
 
 function Transaction() {
-    const { toggleSidebar } = useOutletContext();
     const [searchParams, setSearchParams] = useSearchParams();
     const { formatCurrency } = useAdjustedCurrency();
     const [transactions, setTransactions] = useState([]);
@@ -446,13 +445,6 @@ function Transaction() {
         <div className="transactions-page">
             <div className="transactions-page-header">
                 <div className="dashboard-header-left">
-                    <button type="button" className="icon-button" aria-label="Toggle sidebar" onClick={toggleSidebar}>
-                        <span className="menu-icon" aria-hidden="true">
-                            <span />
-                            <span />
-                            <span />
-                        </span>
-                    </button>
                     <div>
                         <h1 className="transactions-header">Transactions</h1>
                         <p>Search, filter and manage records</p>

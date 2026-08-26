@@ -25,7 +25,7 @@
 .nse-page .page-context-label { color: var(--nse-green-dark); }
 .nse-page-header p { max-width: 670px; }
 .nse-refresh-button,
-.nse-error button { align-items: center; background: var(--nse-ink); border: 1px solid var(--nse-ink); border-radius: 999px; color: white; display: inline-flex; font-size: .78rem; font-weight: 850; gap: .45rem; min-height: 40px; padding: 0 .9rem; }
+.nse-error button { align-items: center; background: var(--nse-ink); border: 1px solid var(--nse-ink); border-radius: 9px; color: white; display: inline-flex; font-size: .78rem; font-weight: 700; gap: .45rem; min-height: 40px; padding: 0 .9rem; }
 .is-spinning { animation: nse-spin .8s linear infinite; }
 @keyframes nse-spin { to { transform: rotate(360deg); } }
 
@@ -204,7 +204,9 @@
 
 .nse-loading,
 .nse-error,
-.nse-empty-state { align-items: center; background: white; border: 1px solid var(--nse-line); border-radius: 16px; display: grid; gap: .45rem; justify-items: center; min-height: 280px; padding: 1.5rem; text-align: center; }
+.nse-empty-state { align-items: center; background: white; border: 1px solid var(--nse-line); border-radius: 10px; display: grid; gap: .2rem .75rem; grid-template-columns: auto minmax(0, 1fr); justify-items: start; min-height: 0; padding: 1rem; text-align: left; }
+.nse-empty-state > svg { grid-row: 1 / 4; }
+.nse-empty-state > button { grid-column: 2; }
 .nse-loading svg,
 .nse-error svg,
 .nse-empty-state svg { color: var(--nse-green); }
@@ -220,8 +222,18 @@
 }
 
 @media (max-width: 760px) {
+  .nse-page { display: flex; flex-direction: column; }
   .nse-page-header { align-items: stretch; gap: .75rem; }
   .nse-refresh-button { justify-content: center; min-height: 44px; width: 100%; }
+  .nse-page-header { order: 0; }
+  .nse-source-strip { order: 1; }
+  .nse-workspace,
+  .nse-sidebar { display: contents; }
+  .nse-watchlist-card { margin-bottom: 1rem; order: 2; }
+  .nse-pulse-grid { order: 3; }
+  .nse-explorer { order: 4; }
+  .nse-glossary { margin-top: 1rem; order: 5; }
+  .nse-comparison { order: 6; }
   .nse-source-strip { align-items: start; grid-template-columns: auto 1fr; }
   .nse-source-strip > small { grid-column: 1 / -1; }
   .nse-source-strip div,

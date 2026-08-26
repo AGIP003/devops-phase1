@@ -395,7 +395,7 @@ function Stocks() {
         </main>
 
         <aside className="nse-sidebar">
-          <section className="nse-side-card">
+          <section className="nse-side-card nse-watchlist-card">
             <div className="nse-side-title"><div><BookmarkCheck size={18} /><span><small>Your watchlist</small><strong>{followedStocks.length} {followedStocks.length === 1 ? "company" : "companies"}</strong></span></div><label><span>Movement check</span><select value={alertThreshold} onChange={(event) => setAlertThreshold(Number(event.target.value))}>{[1, 2, 3, 5, 10].map((value) => <option value={value} key={value}>{value}%</option>)}</select></label></div>
             <p className="nse-local-note">Saved on this device. Cross-device alerts need the future notification service.</p>
             <div className="nse-watchlist">

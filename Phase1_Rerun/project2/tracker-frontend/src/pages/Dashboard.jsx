@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { BadgePercent, ChevronDown, FileUp, HandCoins, PencilLine } from "lucide-react";
 import api from '../services/api'
 import { getCurrentUser } from "../utils/auth";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import AddTransactionForm from "../components/auth/AddTransactionForm";
 import { useMemo, useCallback } from "react";
@@ -57,7 +57,6 @@ function DebtPulseLine({ progress }) {
 
 function Dashboard() {
     const navigate = useNavigate();
-    const { toggleSidebar } = useOutletContext();
     const addMenuRef = useRef(null);
     const addTransactionPanelRef = useRef(null);
     const [transactions, setTransactions] = useState([]);
@@ -247,13 +246,6 @@ function Dashboard() {
                     )}
                 </div>
                 <div className="dashboard-header-left">
-                    <button type="button" className="icon-button" aria-label="Toggle sidebar" onClick={toggleSidebar}>
-                        <span className="menu-icon" aria-hidden="true">
-                            <span />
-                            <span />
-                            <span />
-                        </span>
-                    </button>
                     <div className="dashboard-welcome-copy">
                         <h1>Welcome, {displayName}</h1>
                         <p>Showing {filteredTransactions.length} of {transactions.length} transactions</p>

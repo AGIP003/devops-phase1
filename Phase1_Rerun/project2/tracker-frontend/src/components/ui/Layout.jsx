@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { BadgePercent, CalendarClock, ChartBarBig, ChartNoAxesCombined, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
+import { BadgePercent, CalendarClock, ChartBarBig, ChartNoAxesCombined, ChevronLeft, ChevronRight, ClipboardCheck, Coins, FileText, HandCoins, Landmark, LayoutDashboard, LogOut, PiggyBank, ReceiptText } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { removeAuthSession } from "../../utils/auth";
 import { Toaster } from "react-hot-toast"
@@ -78,6 +78,17 @@ function Layout() {
                         <strong>Finance</strong>
                         <span>Tracker</span>
                     </div>
+                    <button
+                        type="button"
+                        className="sidebar-collapse-button"
+                        onClick={toggleSidebar}
+                        aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
+                        title={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
+                    >
+                        {sidebarCollapsed
+                            ? <ChevronRight size={17} strokeWidth={2.6} aria-hidden="true" />
+                            : <ChevronLeft size={17} strokeWidth={2.6} aria-hidden="true" />}
+                    </button>
                 </div>
                 <nav
                     className={`sidebar-nav ${sidebarScrolling ? "is-scrolling" : ""}`}
@@ -215,7 +226,7 @@ function Layout() {
             </aside>
             <main className="main-content">
 
-                <Outlet context={{ sidebarCollapsed, toggleSidebar }} />
+                <Outlet />
             </main>
             <TelegramLinkPanel
                 open={showTelegramPanel}
