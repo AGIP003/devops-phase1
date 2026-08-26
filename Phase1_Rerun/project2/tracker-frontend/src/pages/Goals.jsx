@@ -425,6 +425,7 @@ function Goals() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
+          <span className="page-context-label">Saving plans</span>
           <h1>Savings & Goals</h1>
           <p>Turn a target into a saving plan and see whether you are keeping pace.</p>
         </div>

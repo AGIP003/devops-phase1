@@ -33,6 +33,7 @@ function Chamas() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
+          <span className="page-context-label">Group money preview</span>
           <h1>Chama Tracker</h1>
           <p>Preview group contributions, reminders, voting, and payouts. Changes on this page are not saved yet.</p>
         </div>

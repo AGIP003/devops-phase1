@@ -373,6 +373,7 @@ function Budgets() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
+          <span className="page-context-label">Plan before you spend</span>
           <h1>Budgets</h1>
           <p>Plan a purchase, tick items as you shop, and compare the result with what you expected to spend.</p>
         </div>

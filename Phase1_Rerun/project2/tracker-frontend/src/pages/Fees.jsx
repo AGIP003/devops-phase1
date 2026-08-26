@@ -126,6 +126,7 @@ function Fees() {
     <div className="feature-page fees-page">
       <header className="feature-page-header fees-page-header">
         <div>
+          <span className="page-context-label">The cost of moving money</span>
           <h1>Transaction Fees</h1>
           <p>See confirmed charges separately from estimates, then check how much they add to your spending.</p>
         </div>

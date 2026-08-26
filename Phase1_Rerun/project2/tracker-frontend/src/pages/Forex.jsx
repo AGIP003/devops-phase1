@@ -72,6 +72,7 @@ function Forex() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
+          <span className="page-context-label">Foreign exchange</span>
           <h1>Currency converter</h1>
           <p>
             Convert an amount and choose the currency MoneyTiq uses to display your money.

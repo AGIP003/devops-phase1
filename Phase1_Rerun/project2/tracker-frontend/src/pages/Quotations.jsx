@@ -284,7 +284,7 @@ function Quotations() {
   }
 
   return <div className="feature-page quotation-page">
-    <header className="feature-page-header quotation-page-header"><div><h1>Quotation comparison</h1><p>List what you need, add each supplier’s prices, and compare the complete delivered cost side by side.</p></div><button type="button" className="feature-primary-button" onClick={() => setPanel("project-create")}><Plus size={17} /> New comparison</button></header>
+    <header className="feature-page-header quotation-page-header"><div><span className="page-context-label">Supplier decisions</span><h1>Quotation comparison</h1><p>List what you need, add each supplier’s prices, and compare the complete delivered cost side by side.</p></div><button type="button" className="feature-primary-button" onClick={() => setPanel("project-create")}><Plus size={17} /> New comparison</button></header>
     {error && <div className="quote-error" role="alert"><CircleAlert size={18} /><span>{error}</span><button type="button" onClick={() => setError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
     {panel === "project-create" && <ProjectForm saving={saving} onCancel={() => setPanel(null)} onSubmit={createProject} />}
     <div className={`quote-workspace${projects.length > 1 ? "" : " quote-workspace-single"}`}>

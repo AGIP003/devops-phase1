@@ -94,6 +94,7 @@ function DemoPreview() {
 
       <section className="demo-shell" aria-label="Interactive MoneyTiq preview">
         <aside className="demo-sidebar">
+          <span className="page-context-label">Interactive preview</span>
           <h1>See how MoneyTiq works before you sign in.</h1>
           <p>
             Add a few sample entries, switch views, and see how your money would feel inside the app.
@@ -127,6 +128,7 @@ function DemoPreview() {
         <section className="demo-board">
           <header className="demo-board-header">
             <div>
+              <span className="page-context-label">Sample workspace</span>
               <h2>Sample money for {selectedMonth}</h2>
             </div>
             <label>

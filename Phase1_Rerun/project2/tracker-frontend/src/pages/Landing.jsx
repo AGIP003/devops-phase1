@@ -255,6 +255,7 @@ function Landing() {
 
       <section className="money-hero">
         <div className="money-hero-copy">
+          <span className="page-context-label">Personal finance, made practical</span>
           <h1>Know where your money went and what needs attention next.</h1>
           <p>
             Track spending alongside budgets, bills, debts, goals, and transaction fees.

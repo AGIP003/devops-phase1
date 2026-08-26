@@ -21,9 +21,8 @@
 .nse-page button:disabled { cursor: wait; opacity: .65; }
 .nse-page .sr-only { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
 
-.nse-page-header { display: grid; gap: .35rem; }
-.nse-heading-row { align-items: center; display: flex; gap: 1rem; justify-content: space-between; width: 100%; }
-.nse-heading-row h1 { margin: 0; }
+.nse-page-header { align-items: center; }
+.nse-page .page-context-label { color: var(--nse-green-dark); }
 .nse-page-header p { max-width: 670px; }
 .nse-refresh-button,
 .nse-error button { align-items: center; background: var(--nse-ink); border: 1px solid var(--nse-ink); border-radius: 999px; color: white; display: inline-flex; font-size: .78rem; font-weight: 850; gap: .45rem; min-height: 40px; padding: 0 .9rem; }
@@ -221,10 +220,8 @@
 }
 
 @media (max-width: 760px) {
-  .nse-page-header { gap: .45rem; }
-  .nse-heading-row { align-items: center; gap: .65rem; }
-  .nse-heading-row h1 { font-size: clamp(1.45rem, 7vw, 1.8rem); min-width: 0; }
-  .nse-refresh-button { flex: 0 0 auto; justify-content: center; min-height: 40px; }
+  .nse-page-header { align-items: stretch; gap: .75rem; }
+  .nse-refresh-button { justify-content: center; min-height: 44px; width: 100%; }
   .nse-source-strip { align-items: start; grid-template-columns: auto 1fr; }
   .nse-source-strip > small { grid-column: 1 / -1; }
   .nse-source-strip div,

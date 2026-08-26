@@ -556,7 +556,7 @@ function Bills() {
   return (
     <div className="feature-page">
       <div className="feature-page-header">
-        <div><h1>Bills & Subscriptions</h1><p>See what is due next, record a payment, and stop a recurring cost without losing its history.</p></div>
+        <div><span className="page-context-label">Upcoming commitments</span><h1>Bills & Subscriptions</h1><p>See what is due next, record a payment, and stop a recurring cost without losing its history.</p></div>
         <button type="button" className="feature-primary-button" onClick={openCreateForm}><Plus size={17} aria-hidden="true" /> Add item</button>
       </div>
 

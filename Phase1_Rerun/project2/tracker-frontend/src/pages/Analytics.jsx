@@ -807,6 +807,7 @@ function Analytics() {
     <div className="feature-page analytics-page">
       <header className="feature-page-header analytics-header">
         <div>
+          <span className="page-context-label">Your financial overview</span>
           <h1>Analytics</h1>
           <p>Find spending patterns, compare periods, and see which commitments may need attention.</p>
         </div>

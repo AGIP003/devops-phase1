@@ -710,6 +710,7 @@ function Debts() {
     <div className="feature-page">
       <div className="feature-page-header">
         <div>
+          <span className="page-context-label">Balances and repayments</span>
           <h1>Debts & Loans</h1>
           <p>Keep separate balances for money you owe and money owed to you, with a history of every change.</p>
         </div>

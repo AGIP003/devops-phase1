@@ -3979,6 +3979,16 @@ body.public-screen {
   margin: 0;
 }
 
+.page-context-label {
+  color: var(--accent);
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
 .goal-label {
   background: #f4f6ea;
   border: 1px solid var(--border-soft);

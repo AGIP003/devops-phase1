@@ -338,8 +338,8 @@ function Stocks() {
   return (
     <div className="feature-page nse-page">
       <header className="feature-page-header nse-page-header">
-        <div className="nse-heading-row"><h1>NSE market watch</h1><button type="button" className="nse-refresh-button" onClick={() => loadMarket({ manual: true })} disabled={refreshing}><RefreshCw className={refreshing ? "is-spinning" : ""} size={16} />{refreshing ? "Checking…" : "Refresh"}</button></div>
-        <p>Check delayed market prices, save companies you follow, and compare up to three side by side.</p>
+        <div><span className="page-context-label">Nairobi Securities Exchange</span><h1>Market watch</h1><p>Check delayed market prices, save companies you follow, and compare up to three side by side.</p></div>
+        <button type="button" className="nse-refresh-button" onClick={() => loadMarket({ manual: true })} disabled={refreshing}><RefreshCw className={refreshing ? "is-spinning" : ""} size={16} />{refreshing ? "Checking…" : "Refresh"}</button>
       </header>
 
       <section className={`nse-source-strip ${market.stale ? "is-stale" : ""}`} role="status">
