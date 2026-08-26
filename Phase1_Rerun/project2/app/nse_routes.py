@@ -13,10 +13,16 @@ nse_bp = Blueprint("nse", __name__, url_prefix="/api/nse")
 
 
 def _market_response(result, key):
+    rows = result.payload if isinstance(result.payload, list) else [result.payload]
+    currencies = sorted({
+        row.get("currency")
+        for row in rows
+        if isinstance(row, dict) and row.get("currency")
+    })
     response = jsonify({
         key: result.payload,
         "exchange": "NSE",
-        "currency": "KES",
+        "currencies": currencies,
         "source": {
             "name": "mystocks.africa",
             "url": "https://mystocks.africa/exchanges/nse-kenya",

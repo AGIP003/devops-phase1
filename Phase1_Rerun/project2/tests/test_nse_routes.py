@@ -78,4 +78,5 @@ def test_nse_market_route_requires_authentication_and_attributes_source(
     assert response.get_json()["stocks"][0]["price"] == "37.25"
     assert response.get_json()["source"]["license"] == "CC BY 4.0"
     assert response.get_json()["source"]["quoteType"] == "Delayed or end-of-day"
+    assert response.get_json()["currencies"] == ["KES"]
     assert response.headers["Cache-Control"] == "private, max-age=60"

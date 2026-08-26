@@ -26,14 +26,14 @@ class FakeResponse:
         return self.payload
 
 
-def stock_row(symbol="SCOM.KE", name="Safaricom PLC"):
+def stock_row(symbol="SCOM.KE", name="Safaricom PLC", currency="KES"):
     return {
         "symbol": symbol,
         "name": name,
         "price": Decimal("37.25"),
         "openPrice": Decimal("36.60"),
         "change": Decimal("1.776"),
-        "currency": "KES",
+        "currency": currency,
         "exchange": "NSE",
         "sector": "Telecommunications",
         "assetType": "STOCK",
@@ -147,3 +147,19 @@ def test_symbol_validation_accepts_ticker_or_provider_symbol_only():
     assert normalize_symbol("KCB.KE") == "KCB.KE"
     with pytest.raises(NseDataError):
         normalize_symbol("../../secrets")
+
+
+def test_market_client_accepts_usd_denominated_nse_securities():
+    result = fetch_nse_stocks(
+        api_base_url="https://licensed.example/api/v1",
+        minimum_stock_count=2,
+        connect_timeout_seconds=3,
+        read_timeout_seconds=12,
+        http_get=lambda *args, **kwargs: FakeResponse([
+            stock_row(),
+            stock_row("TRFC.KE", "TRIFIC Green USD I-REIT", "USD"),
+        ]),
+    )
+
+    trific = next(stock for stock in result.payload if stock["ticker"] == "TRFC")
+    assert trific["currency"] == "USD"

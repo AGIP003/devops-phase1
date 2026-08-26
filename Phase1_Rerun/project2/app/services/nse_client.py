@@ -24,6 +24,7 @@ class ProviderPayload:
 HttpGet = Callable[..., requests.Response]
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9]{1,12}(?:\.KE)?$")
 URL_PATTERN = re.compile(r"https?://[^\s\"']+", re.IGNORECASE)
+NSE_QUOTE_CURRENCIES = {"KES", "USD"}
 
 
 def normalize_symbol(symbol: str) -> str:
@@ -130,7 +131,7 @@ def _normalize_summary(row: dict) -> tuple[dict, datetime | None]:
     symbol = normalize_symbol(_text(row.get("symbol"), "symbol", maximum=15))
     exchange = _text(row.get("exchange"), "exchange", maximum=12).upper()
     currency = _text(row.get("currency"), "currency", maximum=3).upper()
-    if exchange != "NSE" or currency != "KES":
+    if exchange != "NSE" or currency not in NSE_QUOTE_CURRENCIES:
         raise NseDataError("NSE provider returned an unexpected market or currency")
 
     updated_at = _timestamp(row.get("lastPriceUpdate"), "lastPriceUpdate")

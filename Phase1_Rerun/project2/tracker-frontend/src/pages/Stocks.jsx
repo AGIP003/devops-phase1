@@ -283,7 +283,10 @@ function Stocks() {
     return {
       animationDuration: 350,
       grid: { left: 12, right: 14, top: 20, bottom: 28, containLabel: true },
-      tooltip: { trigger: "axis", valueFormatter: (value) => formatPrice(value) },
+      tooltip: {
+        trigger: "axis",
+        valueFormatter: (value) => formatPrice(value, selectedDetail?.currency),
+      },
       xAxis: {
         type: "category",
         boundaryGap: false,
@@ -294,7 +297,10 @@ function Stocks() {
       yAxis: {
         type: "value",
         scale: true,
-        axisLabel: { color: "#738076", formatter: (value) => `KES ${value}` },
+        axisLabel: {
+          color: "#738076",
+          formatter: (value) => `${selectedDetail?.currency || "KES"} ${value}`,
+        },
         splitLine: { lineStyle: { color: "#edf0ed" } },
       },
       series: [{
@@ -407,13 +413,13 @@ function Stocks() {
           <div className="nse-section-header"><div><span className="nse-eyebrow">Side-by-side evidence</span><h2 id="nse-comparison-heading">Company comparison</h2></div><button type="button" onClick={() => setComparisonTickers([])}>Clear comparison</button></div>
           <div className="nse-comparison-scroll"><table><thead><tr><th>Measure</th>{comparisonStocks.map(({ summary }) => <th key={summary.ticker}>{summary.ticker}<small>{summary.sector}</small></th>)}</tr></thead><tbody>
             {[
-              ["Last price", ({ summary }) => formatPrice(summary.price)],
+              ["Last price", ({ summary }) => formatPrice(summary.price, summary.currency)],
               ["Supplied movement", ({ summary }) => <Movement value={summary.changePercent} compact />],
-              ["Market capitalisation", ({ detail }) => formatCompact(detail?.marketCap, "KES ")],
+              ["Market capitalisation", ({ detail }) => formatCompact(detail?.marketCap, `${detail?.currency || "KES"} `)],
               ["P/E ratio", ({ detail }) => detail?.peRatio ?? "Not supplied"],
-              ["EPS", ({ detail }) => detail?.eps ? formatPrice(detail.eps) : "Not supplied"],
+              ["EPS", ({ detail }) => detail?.eps ? formatPrice(detail.eps, detail.currency) : "Not supplied"],
               ["Dividend yield", ({ detail }) => formatPercent(detail?.dividendYield)],
-              ["DPS", ({ detail }) => detail?.dividendPerShare ? formatPrice(detail.dividendPerShare) : "Not supplied"],
+              ["DPS", ({ detail }) => detail?.dividendPerShare ? formatPrice(detail.dividendPerShare, detail.currency) : "Not supplied"],
               ["Volume", ({ detail }) => formatCompact(detail?.volume)],
               ["1-year return", ({ detail }) => formatPercent(detail?.performance?.["1Y"])],
               ["YTD return", ({ detail }) => formatPercent(detail?.performance?.YTD)],
@@ -431,15 +437,15 @@ function Stocks() {
             {detailError && <div className="nse-detail-error" role="alert"><p>{detailError}</p><button type="button" onClick={() => { const stock = stocks.find((item) => item.ticker === selectedTicker); if (stock) fetchDetail(stock, { open: true }); }}>Try again</button></div>}
             {selectedDetail && !detailLoading && (
               <>
-                <header className="nse-detail-header"><span className="nse-company-mark">{selectedDetail.ticker.slice(0, 2)}</span><div><span>{selectedDetail.ticker} · {selectedDetail.sector}</span><h2 id="nse-detail-title">{selectedDetail.name}</h2><p>{selectedDetail.industry || "Industry not supplied"}{selectedDetail.isin ? ` · ISIN ${selectedDetail.isin}` : ""}</p></div><div className="nse-detail-quote"><strong>{formatPrice(selectedDetail.price)}</strong><Movement value={selectedDetail.changePercent} /></div></header>
+                <header className="nse-detail-header"><span className="nse-company-mark">{selectedDetail.ticker.slice(0, 2)}</span><div><span>{selectedDetail.ticker} · {selectedDetail.sector}</span><h2 id="nse-detail-title">{selectedDetail.name}</h2><p>{selectedDetail.industry || "Industry not supplied"}{selectedDetail.isin ? ` · ISIN ${selectedDetail.isin}` : ""}</p></div><div className="nse-detail-quote"><strong>{formatPrice(selectedDetail.price, selectedDetail.currency)}</strong><Movement value={selectedDetail.changePercent} /></div></header>
                 <div className="nse-detail-status"><span>{selectedDetail.eodStatus || "Quote status not supplied"}</span><span>Confidence: {selectedDetail.quoteConfidence || "not supplied"}</span><span>As of {formatFreshness(selectedDetail.lastPriceUpdate || selectedDetail.priceAsOf)} EAT</span></div>
                 {selectedDetail.description && <p className="nse-description">{selectedDetail.description}</p>}
 
                 <section className="nse-detail-section"><div className="nse-detail-section-title"><LineChart size={17} /><div><h3>Price history</h3><p>Direction and scale over the dates supplied by the source.</p></div></div>{selectedDetail.priceHistory?.length > 1 ? <EChart option={chartOption} ariaLabel={`${selectedDetail.name} supplied price history`} className="nse-price-chart" /> : <div className="nse-chart-empty">Not enough verified history to draw a chart.</div>}</section>
 
-                <section className="nse-detail-section"><div className="nse-detail-section-title"><BarChart3 size={17} /><div><h3>Trading snapshot</h3><p>Session activity and company size.</p></div></div><div className="nse-detail-metrics"><MetricCard label="Open price" value={formatPrice(selectedDetail.openPrice)} /><MetricCard label="Previous close" value={formatPrice(selectedDetail.previousClose)} /><MetricCard label="Day range" value={selectedDetail.dayLow || selectedDetail.dayHigh ? `${formatPrice(selectedDetail.dayLow)} – ${formatPrice(selectedDetail.dayHigh)}` : "Not supplied"} /><MetricCard label="Volume" value={formatCompact(selectedDetail.volume)} /><MetricCard label="Market capitalisation" value={formatCompact(selectedDetail.marketCap, "KES ")} /><MetricCard label="Shares outstanding" value={formatCompact(selectedDetail.sharesOutstanding)} /></div></section>
+                <section className="nse-detail-section"><div className="nse-detail-section-title"><BarChart3 size={17} /><div><h3>Trading snapshot</h3><p>Session activity and company size.</p></div></div><div className="nse-detail-metrics"><MetricCard label="Open price" value={formatPrice(selectedDetail.openPrice, selectedDetail.currency)} /><MetricCard label="Previous close" value={formatPrice(selectedDetail.previousClose, selectedDetail.currency)} /><MetricCard label="Day range" value={selectedDetail.dayLow || selectedDetail.dayHigh ? `${formatPrice(selectedDetail.dayLow, selectedDetail.currency)} – ${formatPrice(selectedDetail.dayHigh, selectedDetail.currency)}` : "Not supplied"} /><MetricCard label="Volume" value={formatCompact(selectedDetail.volume)} /><MetricCard label="Market capitalisation" value={formatCompact(selectedDetail.marketCap, `${selectedDetail.currency || "KES"} `)} /><MetricCard label="Shares outstanding" value={formatCompact(selectedDetail.sharesOutstanding)} /></div></section>
 
-                <section className="nse-detail-section"><div className="nse-detail-section-title"><CircleHelp size={17} /><div><h3>Fundamentals and ratios</h3><p>Useful context, never a recommendation by itself.</p></div></div><div className="nse-detail-metrics"><MetricCard label="P/E ratio" value={selectedDetail.peRatio ?? "Not supplied"} /><MetricCard label="EPS" value={selectedDetail.eps ? formatPrice(selectedDetail.eps) : "Not supplied"} /><MetricCard label="Dividend yield" value={formatPercent(selectedDetail.dividendYield)} /><MetricCard label="DPS" value={selectedDetail.dividendPerShare ? formatPrice(selectedDetail.dividendPerShare) : "Not supplied"} /></div><p className="nse-unavailable-ratios">P/B, ROE, debt-to-equity, current ratio and free-cash-flow yield are not supplied by this source, so they are not estimated.</p></section>
+                <section className="nse-detail-section"><div className="nse-detail-section-title"><CircleHelp size={17} /><div><h3>Fundamentals and ratios</h3><p>Useful context, never a recommendation by itself.</p></div></div><div className="nse-detail-metrics"><MetricCard label="P/E ratio" value={selectedDetail.peRatio ?? "Not supplied"} /><MetricCard label="EPS" value={selectedDetail.eps ? formatPrice(selectedDetail.eps, selectedDetail.currency) : "Not supplied"} /><MetricCard label="Dividend yield" value={formatPercent(selectedDetail.dividendYield)} /><MetricCard label="DPS" value={selectedDetail.dividendPerShare ? formatPrice(selectedDetail.dividendPerShare, selectedDetail.currency) : "Not supplied"} /></div><p className="nse-unavailable-ratios">P/B, ROE, debt-to-equity, current ratio and free-cash-flow yield are not supplied by this source, so they are not estimated.</p></section>
 
                 <section className="nse-detail-section"><div className="nse-detail-section-title"><BarChart3 size={17} /><div><h3>Price returns</h3><p>Historical price movement for each available period.</p></div></div><div className="nse-performance-grid">{Object.entries(selectedDetail.performance || {}).map(([period, value]) => <div key={period}><span>{period}</span><Movement value={value} compact /></div>)}</div></section>
 
