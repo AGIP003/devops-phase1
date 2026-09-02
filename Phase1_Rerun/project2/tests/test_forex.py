@@ -21,6 +21,9 @@ from app.services.forex_service import (
 )
 
 
+pytestmark = pytest.mark.external
+
+
 QUOTES = SUPPORTED_QUOTES
 RATE_VALUES = {
     "AED": Decimal("0.02843"),

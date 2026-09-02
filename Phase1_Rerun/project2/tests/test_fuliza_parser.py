@@ -7,6 +7,9 @@ from app.importers.contracts import FulizaNoticeType
 from app.importers.fuliza import FulizaMessageParseError, parse_fuliza_message
 
 
+pytestmark = pytest.mark.no_database
+
+
 def test_parses_fuliza_draw_without_treating_it_as_income():
     message = (
         "UAAIU33DWG Confirmed. Fuliza M-PESA amount is Ksh 1010.00. "

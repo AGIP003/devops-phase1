@@ -1,3 +1,7 @@
+import pytest
+
+
+@pytest.mark.critical
 def test_register_user_factory_creates_distinct_users(register_user):
     #Arrange + Act
     owner = register_user("owner", "owner@example.com")

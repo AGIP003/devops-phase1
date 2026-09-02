@@ -36,6 +36,18 @@ DATABASE_TABLES = (
 )
 
 
+def pytest_collection_modifyitems(items):
+    """Derive PostgreSQL integration status from the cleanup contract.
+
+    Every test without ``no_database`` receives the autouse PostgreSQL cleanup
+    fixture below, so it is an integration test by definition. Keeping that
+    rule here prevents marker labels from disagreeing with test behaviour.
+    """
+    for item in items:
+        if item.get_closest_marker("no_database") is None:
+            item.add_marker(pytest.mark.integration)
+
+
 def assert_safe_test_database():
     database_name = db.session.execute(
         text("SELECT current_database()")

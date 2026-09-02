@@ -11,6 +11,9 @@ from app.importers.airtel_money import (
 from app.importers.contracts import TransactionDirection
 
 
+pytestmark = pytest.mark.no_database
+
+
 NAIROBI_TIMEZONE = ZoneInfo("Africa/Nairobi")
 
 

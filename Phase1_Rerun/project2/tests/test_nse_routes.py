@@ -1,7 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from app.services.nse_client import NseProviderError, ProviderPayload
 from app.services.nse_service import NseMarketResult, get_nse_stocks
+
+
+pytestmark = pytest.mark.external
 
 
 MARKET_ROWS = [{

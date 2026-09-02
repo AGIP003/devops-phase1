@@ -1,3 +1,4 @@
+import pytest
 from types import SimpleNamespace
 
 from app.schemas import (
@@ -7,6 +8,19 @@ from app.schemas import (
 )
 from app.services.ai_support import AIServiceUnavailableError
 
+
+pytestmark = pytest.mark.external
+
+
+@pytest.fixture()
+def enabled_ai(app, monkeypatch):
+    """Enable AI for tests that replace the external provider boundary."""
+    monkeypatch.setitem(
+        app.config,
+        "AI_FALLBACK_ENABLED",
+        True,
+    )
+    return app
 
 def authorization(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
@@ -21,10 +35,12 @@ def test_telegram_assistant_requires_authentication(client):
     assert response.status_code == 401
 
 
+@pytest.mark.critical
 def test_telegram_assistant_returns_only_validated_output(
     client,
     register_user,
     monkeypatch,
+    enabled_ai,
 ):
     from app import ai_routes
 
@@ -64,6 +80,7 @@ def test_telegram_assistant_returns_fixed_reply_for_unrelated_topic(
     client,
     register_user,
     monkeypatch,
+    enabled_ai,
 ):
     from app import ai_routes
     from app.services.telegram_assistant import (
@@ -115,10 +132,12 @@ def test_disabled_ai_returns_service_unavailable(
     assert response.get_json()["error"] == "AI assistance disabled"
 
 
+@pytest.mark.critical
 def test_ai_provider_error_returns_correlated_safe_request_id(
     client,
     register_user,
     monkeypatch,
+    enabled_ai,
 ):
     from app import ai_routes
 
@@ -144,6 +163,7 @@ def test_analytics_question_returns_only_bounded_tool_evidence(
     client,
     register_user,
     monkeypatch,
+    enabled_ai,
 ):
     from app import ai_routes
 

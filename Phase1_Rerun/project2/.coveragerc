@@ -1,0 +1,11 @@
+[run]
+source =
+    app
+    bot
+omit =
+    */tests/*
+    app/test_email.py
+
+[report]
+show_missing = True
+precision = 1

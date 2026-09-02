@@ -1,5 +1,7 @@
+import pytest
 from datetime import date, timedelta
 
+pytestmark = pytest.mark.integration
 
 def authorization(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
@@ -32,7 +34,7 @@ def create_transaction(
     assert response.status_code == 201, response.get_json()
     return response.get_json()["data"]
 
-
+@pytest.mark.critical
 def test_summary_aggregates_real_domains_and_enforces_ownership(
     client,
     register_user,
@@ -139,6 +141,7 @@ def test_summary_aggregates_real_domains_and_enforces_ownership(
     assert other_summary["goals"]["activeCount"] == 0
 
 
+@pytest.mark.critical
 def test_summary_rejects_invalid_period_and_requires_authentication(
     client,
     register_user,
