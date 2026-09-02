@@ -60,9 +60,14 @@ that occurrence and deliberately does not advance the next due date a second
 time.
 
 The Bills screen uses compact rows for quick scanning and expands one row at a
-time for details and history. Known providers such as Spotify, Netflix, ChatGPT,
-YouTube and Figma use bundled interface marks; unknown providers receive the
-normal fallback icon. No third-party logo is fetched while the page loads.
+time for details and history. A normalized provider registry recognizes spacing
+and punctuation variants such as `Chat GPT`, `ChatGPT Plus`, `KPLC`, `Kenya
+Power`, `Viu.to`, `Railway`, `Vercel`, `Snapchat+`, `X Premium`, `iCloud+` and
+`Google Photos`. Maintained Simple Icons SVG paths are
+bundled for supported brands. The OpenAI mark is kept as a reviewed local SVG
+because newer Simple Icons releases omit it; Kenyan and other unsupported
+services use explicit branded badges or normal service symbols. No third-party
+logo is fetched while the page loads.
 
 ## Integrity and failure behavior
 
