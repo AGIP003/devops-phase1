@@ -114,3 +114,31 @@ jobs:
             --entrypoint python \
             moneytiq-ci:${{ github.sha }} \
             -m compileall -q app bot
+
+      - name: Start application container
+        run: |
+          docker run \
+            --detach \
+            --name moneytiq-smoke \
+            --publish 127.0.0.1:5000:5000 \
+            --env FLASK_ENV=testing \
+            --env TEST_DATABASE_URL=postgresql://postgres:postgres@database.invalid:5432/finance_tracker_test \
+            --env WEB_CONCURRENCY=1 \
+            moneytiq-ci:${{ github.sha }}
+
+      - name: Verify container serves HTTP
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:5000/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Container did not become healthy."
+          docker logs moneytiq-smoke
+          exit 1
+
+      - name: Stop smoke-test container
+        if: always()
+        run: docker rm --force moneytiq-smoke 2>/dev/null || true
