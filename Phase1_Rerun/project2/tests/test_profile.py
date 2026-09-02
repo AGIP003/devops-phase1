@@ -4,11 +4,12 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models.user import User
 
+pytestmark = pytest.mark.integration
 
 def authorization(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
-
+@pytest.mark.critical
 def test_authenticated_user_can_persist_display_name(
     app,
     client,
@@ -40,7 +41,10 @@ def test_authenticated_user_can_persist_display_name(
         },
     )
     assert login_response.status_code == 200
-    assert login_response.get_json()["user"]["display_name"] == "Owner Name"
+
+    login_payload = login_response.get_json()
+    assert login_payload["user"]["display_name"] == "Owner Name"
+    assert login_payload.get("token") or login_payload.get("access_token")
 
 
 def test_profile_update_uses_authenticated_user_not_client_user_id(

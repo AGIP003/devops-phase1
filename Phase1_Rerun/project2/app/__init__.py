@@ -10,7 +10,7 @@ from app.quotation_routes import quotation_bp
 from app.nse_routes import nse_bp
 from flask_talisman import Talisman
 from app.docs import api 
-from config import get_config, get_test_database_url, validate_environment
+from config import get_config, get_database_url, get_test_database_url, validate_environment
 from flask import g, request
 import logging
 import os
@@ -30,6 +30,8 @@ def create_app(config_name=None):
 
     if selected_config == "testing":
         app.config["SQLALCHEMY_DATABASE_URI"] = get_test_database_url()
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = get_database_url()
 
     jwt_secret_key = app.config.get("JWT_SECRET_KEY")
 

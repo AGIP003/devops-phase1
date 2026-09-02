@@ -131,6 +131,7 @@ def test_provider_failure_logging_exposes_diagnostics_not_sensitive_data(caplog)
     assert "sk-secret-value" not in log_text
 
 
+@pytest.mark.external
 def test_transaction_parser_returns_validated_output(
     ai_app,
     monkeypatch,
@@ -173,6 +174,7 @@ def test_transaction_parser_returns_validated_output(
     )
 
 
+@pytest.mark.external
 def test_transaction_parser_rejects_noncanonical_category(
     ai_app,
     monkeypatch,
@@ -208,6 +210,7 @@ def test_transaction_parser_rejects_noncanonical_category(
         ai_parser.parse_with_ai("250 matatu fare")
 
 
+@pytest.mark.external
 def test_receipt_parser_returns_validated_output(
     ai_app,
     monkeypatch,
@@ -249,6 +252,7 @@ def test_receipt_parser_returns_validated_output(
     assert "instructions" in fake_client.responses.request
 
 
+@pytest.mark.external
 def test_receipt_parser_rejects_incomplete_provider_response(
     ai_app,
     monkeypatch,
@@ -301,6 +305,7 @@ def test_unvalidated_receipt_spends_no_budget(monkeypatch):
         ai_budget_service.run_receipt_ai(b"raw-user-input")
 
 
+@pytest.mark.external
 def test_telegram_assistant_returns_validated_transaction(
     ai_app,
     monkeypatch,
@@ -390,6 +395,7 @@ def test_unrelated_telegram_message_spends_no_ai_budget(monkeypatch):
         )
 
 
+@pytest.mark.external
 def test_unsupported_ai_wording_is_replaced(ai_app, monkeypatch):
     parsed = TelegramAssistantResponse.model_validate({
         "intent": "unsupported",
@@ -431,6 +437,7 @@ def test_invalid_assistant_input_spends_no_budget(monkeypatch):
         ai_budget_service.run_telegram_assistant_ai("  ", user_id=1)
 
 
+@pytest.mark.external
 def test_finance_assistant_uses_one_allowlisted_owned_tool(ai_app, monkeypatch):
     plan = AnalyticsQuestionPlan.model_validate({
         "tool": "search_spending",

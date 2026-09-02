@@ -1,9 +1,13 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
 from telegram.ext import ConversationHandler
 
 from bot.handlers import import_message
+
+
+pytestmark = [pytest.mark.no_database, pytest.mark.external]
 
 
 class FakeMessage:

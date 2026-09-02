@@ -1,10 +1,14 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
 from telegram.ext import ConversationHandler
 
 from app.services.image_validation import ValidatedImage
 from bot.handlers import receipts
+
+
+pytestmark = [pytest.mark.no_database, pytest.mark.external]
 
 
 class FakeStatus:

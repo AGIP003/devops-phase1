@@ -1,6 +1,11 @@
 import unittest
 
+import pytest
+
 from bot.transaction_parser import TransactionInputError, parse_transaction
+
+
+pytestmark = pytest.mark.no_database
 
 
 class TransactionParserTests(unittest.TestCase):

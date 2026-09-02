@@ -12,3 +12,6 @@ __pycache__/
 !runtime.txt
 
 .coverage
+.pytest_cache/
+htmlcov/
+test-results/

@@ -8,6 +8,7 @@ from .settings import (
     DevelopmentConfig,
     ProductionConfig,
     TestingConfig,
+    get_database_url,
     get_test_database_url,
 )
 from .validators import validate_environment
@@ -19,6 +20,7 @@ __all__ = [
     "TestingConfig",
     "validate_environment",
     "get_config",
+    "get_database_url",
     "get_test_database_url",
 ]
 

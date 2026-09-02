@@ -10,9 +10,85 @@ from sqlalchemy.exc import IntegrityError
 from app.models.category import Category
 from app.services.transaction_service import create_transaction_for_user
 
+pytestmark = pytest.mark.integration
+
 def authorization(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
+
+def transaction_payload(description: str) -> dict[str, str]:
+    return {
+        "amount": "300.00",
+        "category": "food",
+        "type": "expense",
+        "date": date.today().isoformat(),
+        "description": description,
+        "payment_method": "m-pesa",
+    }
+
+
+@pytest.mark.critical
+def test_authenticated_user_can_create_transaction(
+    client,
+    register_user,
+    payment_method,
+):
+    owner = register_user("creator", "creator@example.com")
+
+    response = client.post(
+        "/api/transactions",
+        headers=authorization(owner["token"]),
+        json=transaction_payload("created through the API"),
+    )
+
+    assert response.status_code == 201, response.get_json()
+    payload = response.get_json()
+    transaction = payload["data"]
+    assert payload["status"] == "success"
+    assert isinstance(transaction["id"], int)
+    assert isinstance(transaction["user_id"], int)
+    assert transaction["date"] == date.today().isoformat()
+    assert transaction["description"] == "created through the api"
+    assert transaction["type"] == "expense"
+    assert transaction["category"] == "Food"
+    assert transaction["amount"] == "300.00"
+    assert transaction["payment_method"] == "m-pesa"
+
+
+@pytest.mark.critical
+def test_transaction_list_contains_only_authenticated_users_transactions(
+    client,
+    register_user,
+    payment_method,
+):
+    owner = register_user("list-owner", "list-owner@example.com")
+    intruder = register_user("list-intruder", "list-intruder@example.com")
+
+    owner_create = client.post(
+        "/api/transactions",
+        headers=authorization(owner["token"]),
+        json=transaction_payload("owner-only transaction"),
+    )
+    intruder_create = client.post(
+        "/api/transactions",
+        headers=authorization(intruder["token"]),
+        json=transaction_payload("intruder-only transaction"),
+    )
+    assert owner_create.status_code == 201, owner_create.get_json()
+    assert intruder_create.status_code == 201, intruder_create.get_json()
+
+    response = client.get(
+        "/api/transactions",
+        headers=authorization(owner["token"]),
+    )
+
+    assert response.status_code == 200
+    listed_ids = {transaction["id"] for transaction in response.get_json()}
+    assert listed_ids == {owner_create.get_json()["data"]["id"]}
+    assert intruder_create.get_json()["data"]["id"] not in listed_ids
+
+
+@pytest.mark.critical
 def test_user_cannot_read_another_users_transaction(client, register_user, payment_method):
     # Arrange
     owner = register_user("owner", "owner@example.com")
@@ -44,7 +120,7 @@ def test_user_cannot_read_another_users_transaction(client, register_user, payme
         headers=authorization(intruder["token"]),
     )
 
-        # The intruder cannot read it.
+    # The intruder cannot read it.
     assert intruder_response.status_code == 404
 
     # The intruder cannot modify it.

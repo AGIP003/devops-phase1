@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from sqlalchemy import func, select
 
 from app.extensions import db
@@ -14,6 +15,9 @@ from app.services.google_identity_service import (
     InvalidGoogleCredentialError,
 )
 from app.services.token_service import issue_access_token
+
+
+pytestmark = pytest.mark.external
 
 
 def authorization(token: str) -> dict[str, str]:
@@ -34,6 +38,7 @@ def google_identity(
     )
 
 
+@pytest.mark.critical
 def test_google_login_creates_one_oauth_user_and_is_idempotent(
     app,
     client,

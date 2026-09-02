@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
+import pytest
+
 from app.extensions import db
 from app.models.telegram_link import TelegramLink
 
@@ -51,6 +53,7 @@ def test_telegram_link_token_is_single_use(client, register_user):
     }
 
 
+@pytest.mark.critical
 def test_telegram_session_issues_a_token_accepted_by_middleware(
     client,
     register_user,

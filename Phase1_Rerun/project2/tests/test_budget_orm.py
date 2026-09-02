@@ -1,7 +1,11 @@
+import pytest
+
+
 def authorization(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+@pytest.mark.critical
 def test_user_cannot_access_another_users_budget(client, register_user):
     #Arrange
     owner = register_user("owner", "owner@example.com")

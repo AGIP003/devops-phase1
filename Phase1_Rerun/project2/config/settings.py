@@ -112,7 +112,7 @@ class BaseConfig:
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME
 
     # SQLAlchemy
-    SQLALCHEMY_DATABASE_URI = get_database_url()
+    SQLALCHEMY_DATABASE_URI = None
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO") == "true"
 
@@ -173,6 +173,8 @@ class TestingConfig(BaseConfig):
     SQLALCHEMY_ECHO = False
     RATELIMIT_ENABLED = False
     GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"
+    OPENAI_API_KEY = None
+    AI_FALLBACK_ENABLED = False
 
 
 class ProductionConfig(BaseConfig):

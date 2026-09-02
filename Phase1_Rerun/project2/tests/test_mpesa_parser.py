@@ -7,6 +7,9 @@ import pytest
 from zoneinfo import ZoneInfo
 
 
+pytestmark = pytest.mark.no_database
+
+
 NAIROBI_TIMEZONE = ZoneInfo("Africa/Nairobi")
 
 def test_parses_sent_money_message():

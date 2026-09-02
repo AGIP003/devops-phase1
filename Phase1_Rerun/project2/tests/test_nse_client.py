@@ -45,6 +45,7 @@ def stock_row(symbol="SCOM.KE", name="Safaricom PLC", currency="KES"):
     }
 
 
+@pytest.mark.external
 def test_market_client_validates_unique_nse_rows_and_preserves_decimal_strings():
     request_details = {}
 
@@ -80,6 +81,7 @@ def test_market_client_validates_unique_nse_rows_and_preserves_decimal_strings()
     assert request_details["timeout"] == (3, 12)
 
 
+@pytest.mark.external
 def test_market_client_rejects_incomplete_or_duplicate_market_data():
     with pytest.raises(NseDataError, match="incomplete"):
         fetch_nse_stocks(
@@ -103,6 +105,7 @@ def test_market_client_rejects_incomplete_or_duplicate_market_data():
         )
 
 
+@pytest.mark.external
 def test_company_client_preserves_unavailable_ratios_instead_of_inventing_zero():
     detail = {
         **stock_row(),
@@ -149,6 +152,7 @@ def test_symbol_validation_accepts_ticker_or_provider_symbol_only():
         normalize_symbol("../../secrets")
 
 
+@pytest.mark.external
 def test_market_client_accepts_usd_denominated_nse_securities():
     result = fetch_nse_stocks(
         api_base_url="https://licensed.example/api/v1",

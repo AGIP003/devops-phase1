@@ -8,6 +8,9 @@ from app.services.google_identity_service import (
 )
 
 
+pytestmark = [pytest.mark.no_database, pytest.mark.external]
+
+
 def test_google_verifier_builds_identity_from_verified_claims(app, monkeypatch):
     captured = {}
 
