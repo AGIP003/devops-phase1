@@ -18,6 +18,7 @@ from app.services.ai_support import (
     AIInvalidResponseError,
     AIServiceUnavailableError,
 )
+from app.services.finance_assistant import build_weekly_data_summary
 from app.services.telegram_assistant import (
     AssistantOutOfScopeError,
     OUT_OF_SCOPE_REPLY,
@@ -296,18 +297,30 @@ def create_weekly_analytics_summary():
             {"error": "AI assistance disabled", "message": "AI assistance is currently unavailable"},
             503,
         )
+    generation_mode = "ai_assisted"
     try:
         result = run_weekly_summary_ai(user_id=g.current_user["user_id"])
+        narrative = result.narrative
+        snapshot = result.snapshot
     except (
         AIBudgetExceededError,
         AIConfigurationError,
         AIServiceUnavailableError,
         AIInvalidResponseError,
     ) as error:
-        return _ai_error_response(error)
+        current_app.logger.warning(
+            "weekly_summary_fallback request_id=%s error_type=%s",
+            str(getattr(g, "request_id", "unavailable")),
+            type(error).__name__,
+        )
+        narrative, snapshot = build_weekly_data_summary(
+            user_id=g.current_user["user_id"]
+        )
+        generation_mode = "data_summary"
     return _private_json({
-        "narrative": result.narrative.model_dump(mode="json"),
-        "period": result.snapshot["currentWeek"]["period"],
-        "data": result.snapshot,
+        "narrative": narrative.model_dump(mode="json"),
+        "period": snapshot["currentWeek"]["period"],
+        "data": snapshot,
+        "generationMode": generation_mode,
         "delivery": "preview_only",
     })

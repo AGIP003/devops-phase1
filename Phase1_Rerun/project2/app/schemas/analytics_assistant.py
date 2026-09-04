@@ -49,6 +49,9 @@ class AnalyticsAnswer(BaseModel):
 class WeeklyFinanceNarrative(BaseModel):
     headline: str = Field(min_length=1, max_length=140)
     summary: str = Field(min_length=1, max_length=900)
-    observations: list[str] = Field(min_length=1, max_length=5)
+    # A quiet or newly created account may have nothing defensible to call an
+    # observation. An empty list is more truthful than forcing the model to
+    # invent one merely to satisfy the response schema.
+    observations: list[str] = Field(default_factory=list, max_length=5)
     options: list[str] = Field(default_factory=list, max_length=4)
     caveats: list[str] = Field(default_factory=list, max_length=4)

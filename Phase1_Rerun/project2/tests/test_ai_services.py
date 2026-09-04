@@ -11,6 +11,7 @@ from app.schemas import (
     ReceiptParseResult,
     TelegramAssistantResponse,
     TransactionParseResult,
+    WeeklyFinanceNarrative,
 )
 from app.services import (
     ai_budget_service,
@@ -71,6 +72,125 @@ def response_with(extraction, *, status="completed"):
             input_tokens_details=SimpleNamespace(cached_tokens=25),
         ),
     )
+
+
+def test_weekly_narrative_accepts_sparse_but_honest_evidence():
+    narrative = WeeklyFinanceNarrative.model_validate({
+        "headline": "No recorded activity this week",
+        "summary": "There is not enough recorded activity for a comparison.",
+        "observations": [],
+        "options": [],
+        "caveats": ["Only recorded transactions are included."],
+    })
+
+    assert narrative.observations == []
+    assert narrative.options == []
+
+
+def test_weekly_data_summary_handles_an_empty_week(ai_app, monkeypatch):
+    snapshots = iter([
+        {
+            "period": {
+                "key": "week",
+                "start": "2026-08-31",
+                "end": "2026-09-06",
+                "currency": "KES",
+            },
+            "income": "0.00",
+            "recordedExpenses": "0.00",
+            "confirmedFees": "0.00",
+            "estimatedFees": "0.00",
+            "totalExpenses": "0.00",
+            "net": "0.00",
+            "transactionCount": 0,
+            "topExpenseCategories": [],
+        },
+        {
+            "period": {
+                "key": "week",
+                "start": "2026-08-24",
+                "end": "2026-08-30",
+                "currency": "KES",
+            },
+            "income": "0.00",
+            "recordedExpenses": "0.00",
+            "confirmedFees": "0.00",
+            "estimatedFees": "0.00",
+            "totalExpenses": "0.00",
+            "net": "0.00",
+            "transactionCount": 0,
+            "topExpenseCategories": [],
+        },
+    ])
+    monkeypatch.setattr(
+        finance_assistant,
+        "build_calendar_cashflow",
+        lambda *args, **kwargs: next(snapshots),
+    )
+
+    with ai_app.app_context():
+        narrative, snapshot = finance_assistant.build_weekly_data_summary(
+            user_id=42,
+        )
+
+    assert narrative.headline == "No transactions recorded this week"
+    assert narrative.observations == []
+    assert snapshot["currentWeek"]["income"] == "0.00"
+
+
+def test_weekly_data_summary_reviews_one_transaction_without_claiming_a_pattern(
+    ai_app,
+    monkeypatch,
+):
+    current = {
+        "period": {
+            "key": "week",
+            "start": "2026-08-31",
+            "end": "2026-09-06",
+            "currency": "KES",
+        },
+        "income": "0.00",
+        "recordedExpenses": "564.00",
+        "confirmedFees": "10.00",
+        "estimatedFees": "0.00",
+        "totalExpenses": "574.00",
+        "net": "-574.00",
+        "transactionCount": 1,
+        "topExpenseCategories": [
+            {
+                "category": "Utilities",
+                "amount": "564.00",
+                "transactionCount": 1,
+            }
+        ],
+    }
+    previous = {
+        **current,
+        "period": {
+            **current["period"],
+            "start": "2026-08-24",
+            "end": "2026-08-30",
+        },
+        "recordedExpenses": "0.00",
+        "confirmedFees": "0.00",
+        "totalExpenses": "0.00",
+        "net": "0.00",
+        "transactionCount": 0,
+        "topExpenseCategories": [],
+    }
+    snapshots = iter([current, previous])
+    monkeypatch.setattr(
+        finance_assistant,
+        "build_calendar_cashflow",
+        lambda *args, **kwargs: next(snapshots),
+    )
+
+    with ai_app.app_context():
+        narrative, _ = finance_assistant.build_weekly_data_summary(user_id=42)
+
+    assert narrative.headline == "One transaction recorded this week"
+    assert "Across 1 recorded transaction" in narrative.summary
+    assert "not enough to establish a spending pattern" in narrative.caveats[0]
 
 
 @pytest.fixture()

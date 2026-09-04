@@ -5,8 +5,12 @@ from app.schemas import (
     AnalyticsAnswer,
     AnalyticsQuestionPlan,
     TelegramAssistantResponse,
+    WeeklyFinanceNarrative,
 )
-from app.services.ai_support import AIServiceUnavailableError
+from app.services.ai_support import (
+    AIInvalidResponseError,
+    AIServiceUnavailableError,
+)
 
 
 pytestmark = pytest.mark.external
@@ -201,4 +205,54 @@ def test_analytics_question_returns_only_bounded_tool_evidence(
     assert payload["data"]["totalCount"] == 2
     assert captured["question"].startswith("How often")
     assert isinstance(captured["user_id"], int)
+    assert response.headers["Cache-Control"] == "private, no-store"
+
+
+@pytest.mark.critical
+def test_weekly_summary_falls_back_to_verified_data(
+    client,
+    register_user,
+    monkeypatch,
+    enabled_ai,
+):
+    from app import ai_routes
+
+    owner = register_user("weekly-owner", "weekly-owner@example.com")
+    narrative = WeeklyFinanceNarrative(
+        headline="No recorded cash-flow activity this week",
+        summary="The current week contains no recorded income or expenses.",
+        observations=[],
+        options=["Check whether this week's transactions are recorded."],
+        caveats=["Only recorded transactions are included."],
+    )
+    snapshot = {
+        "currentWeek": {
+            "period": {
+                "key": "week",
+                "start": "2026-08-31",
+                "end": "2026-09-06",
+                "currency": "KES",
+            },
+        },
+        "previousWeek": {},
+    }
+
+    def invalid_ai(*args, **kwargs):
+        raise AIInvalidResponseError("AI returned an invalid weekly summary")
+
+    monkeypatch.setattr(ai_routes, "run_weekly_summary_ai", invalid_ai)
+    monkeypatch.setattr(
+        ai_routes,
+        "build_weekly_data_summary",
+        lambda **kwargs: (narrative, snapshot),
+    )
+
+    response = client.post(
+        "/api/ai/analytics/weekly-summary",
+        headers=authorization(owner["token"]),
+    )
+
+    assert response.status_code == 200, response.get_json()
+    assert response.get_json()["generationMode"] == "data_summary"
+    assert response.get_json()["narrative"]["observations"] == []
     assert response.headers["Cache-Control"] == "private, no-store"

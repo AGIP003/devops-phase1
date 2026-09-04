@@ -457,7 +457,7 @@ def build_calendar_cashflow(
 ):
     """Build a compact calendar-aligned cash-flow snapshot for AI tools."""
     start, end, _ = resolve_trend_period(period, anchor=anchor)
-    totals, _, categories, _ = _transaction_aggregates(user_id, start, end)
+    totals, _, categories, daily = _transaction_aggregates(user_id, start, end)
     income = totals.get("income", ZERO)
     spending = totals.get("expense", ZERO)
     fees = _provider_fee_summary(user_id, start, end)
@@ -475,6 +475,9 @@ def build_calendar_cashflow(
         "estimatedFees": _money(fees["estimated"]),
         "totalExpenses": _money(expenses),
         "net": _money(income - expenses),
+        "transactionCount": sum(
+            item["transactionCount"] for item in daily
+        ),
         "topExpenseCategories": categories[:5],
     }
 

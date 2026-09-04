@@ -5,6 +5,7 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
+from decimal import Decimal
 from hashlib import sha256
 from time import perf_counter
 
@@ -72,10 +73,15 @@ Rules:
 
 WEEKLY_PROMPT = """
 Write an opt-in weekly personal-finance review from the supplied verified JSON.
-Compare the current and previous week, distinguish confirmed from estimated
-fees, and give practical options without shame or certainty. Do not provide
-investment, legal or tax instructions. Do not claim any automatic change was
-made. If data is sparse, make that limitation prominent.
+Adapt the review to the evidence available:
+- With zero recorded transactions, say so clearly and do not invent a trend.
+- With one recorded transaction, summarize it without calling it a pattern.
+- With several transactions, compare the current and previous week when the
+  supplied data supports that comparison.
+Distinguish confirmed from estimated fees, and give practical options without
+shame or certainty. Do not provide investment, legal or tax instructions. Do
+not claim any automatic change was made. Empty observations, options, and
+caveats arrays are valid; never invent an item merely to fill a list.
 """.strip()
 
 
@@ -92,6 +98,104 @@ class AIWeeklySummaryResult:
     narrative: WeeklyFinanceNarrative
     snapshot: dict[str, object]
     usage: AIUsageMetadata
+
+
+def _weekly_snapshot(
+    user_id: int,
+    *,
+    today: date | None = None,
+) -> dict[str, object]:
+    """Return the same ownership-scoped evidence for AI and local summaries."""
+
+    anchor = today or date.today()
+    current = build_calendar_cashflow(user_id, "week", anchor=anchor)
+    current_start = date.fromisoformat(current["period"]["start"])
+    previous = build_calendar_cashflow(
+        user_id,
+        "week",
+        anchor=current_start - timedelta(days=1),
+    )
+    return {"currentWeek": current, "previousWeek": previous}
+
+
+def build_weekly_data_summary(
+    *,
+    user_id: int,
+    today: date | None = None,
+) -> tuple[WeeklyFinanceNarrative, dict[str, object]]:
+    """Build a useful non-AI review when the optional provider cannot help."""
+
+    snapshot = _weekly_snapshot(user_id, today=today)
+    current = snapshot["currentWeek"]
+    previous = snapshot["previousWeek"]
+    income = current["income"]
+    expenses = current["totalExpenses"]
+    net = current["net"]
+    transaction_count = int(current.get("transactionCount", 0))
+
+    if transaction_count == 0:
+        narrative = WeeklyFinanceNarrative(
+            headline="No transactions recorded this week",
+            summary=(
+                "There is not enough recorded activity to review yet. If you "
+                "made transactions this week, add or import them and try again."
+            ),
+            observations=[],
+            options=[],
+            caveats=["This summary includes only transactions recorded in the app."],
+        )
+        return narrative, snapshot
+
+    transaction_word = (
+        "transaction" if transaction_count == 1 else "transactions"
+    )
+    summary = (
+        f"Across {transaction_count} recorded {transaction_word}, income was "
+        f"KES {income}, total expenses were KES {expenses}, and net cash flow "
+        f"was KES {net}."
+    )
+
+    if transaction_count == 1:
+        observations = []
+        categories = current.get("topExpenseCategories") or []
+        if categories:
+            top_category = categories[0]
+            observations.append(
+                f"The recorded expense was KES {top_category['amount']} in "
+                f"{top_category['category']}."
+            )
+        narrative = WeeklyFinanceNarrative(
+            headline="One transaction recorded this week",
+            summary=summary,
+            observations=observations,
+            options=[],
+            caveats=[
+                "One transaction is not enough to establish a spending pattern.",
+                "This review includes only transactions recorded in the app.",
+            ],
+        )
+        return narrative, snapshot
+
+    current_expenses = Decimal(expenses)
+    previous_expenses = Decimal(previous["totalExpenses"])
+    if current_expenses > previous_expenses:
+        comparison = "Recorded expenses are higher than the previous week."
+    elif current_expenses < previous_expenses:
+        comparison = "Recorded expenses are lower than the previous week."
+    else:
+        comparison = "Recorded expenses match the previous week."
+
+    narrative = WeeklyFinanceNarrative(
+        headline=f"A review of {transaction_count} transactions this week",
+        summary=summary,
+        observations=[comparison],
+        options=[],
+        caveats=[
+            "This summary includes only transactions recorded in the app.",
+            "Estimated fees are not provider-confirmed charges.",
+        ],
+    )
+    return narrative, snapshot
 
 
 def normalize_finance_question(value: str) -> str:
@@ -221,15 +325,7 @@ def build_weekly_finance_summary(
     user_id: int,
     today: date | None = None,
 ) -> AIWeeklySummaryResult:
-    anchor = today or date.today()
-    current = build_calendar_cashflow(user_id, "week", anchor=anchor)
-    current_start = date.fromisoformat(current["period"]["start"])
-    previous = build_calendar_cashflow(
-        user_id,
-        "week",
-        anchor=current_start - timedelta(days=1),
-    )
-    snapshot = {"currentWeek": current, "previousWeek": previous}
+    snapshot = _weekly_snapshot(user_id, today=today)
     model = get_ai_model()
     client = create_openai_client()
     try:
@@ -251,10 +347,21 @@ def build_weekly_finance_summary(
             "AI weekly summary is temporarily unavailable"
         ) from error
     except (ValidationError, ValueError) as error:
+        reason = type(error).__name__
+        if isinstance(error, ValidationError):
+            issues = error.errors(include_input=False, include_url=False)
+            safe_locations = [
+                ".".join(str(part) for part in issue.get("loc", ()))
+                + ":"
+                + str(issue.get("type", "unknown"))
+                for issue in issues[:5]
+            ]
+            if safe_locations:
+                reason = "ValidationError[" + ",".join(safe_locations) + "]"
         log_ai_invalid_response(
             logger,
             operation="weekly_summary",
-            reason=type(error).__name__,
+            reason=reason,
         )
         raise AIInvalidResponseError(
             "AI returned an invalid weekly summary"

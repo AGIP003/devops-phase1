@@ -616,7 +616,10 @@ function Analytics() {
     setAiError("");
     try {
       const response = await api.post("/ai/analytics/weekly-summary");
-      setWeeklySummary(response.data.narrative);
+      setWeeklySummary({
+        ...response.data.narrative,
+        generationMode: response.data.generationMode || "ai_assisted",
+      });
     } catch (requestError) {
       setAiError(
         requestError.response?.data?.message
@@ -1154,11 +1157,19 @@ function Analytics() {
               )}
               {weeklySummary && (
                 <div className="analytics-ai-answer weekly">
-                  <span className="analytics-ai-label"><Sparkles size={13} /> AI-assisted weekly review</span>
+                  <span className="analytics-ai-label">
+                    <Sparkles size={13} />
+                    Weekly review
+                  </span>
                   <strong>{weeklySummary.headline}</strong>
                   <p>{weeklySummary.summary}</p>
                   {(weeklySummary.observations || []).map((item) => <p key={item}>• {item}</p>)}
                   {(weeklySummary.options || []).map((item) => <small key={item}>Option: {item}</small>)}
+                  <small>
+                    {weeklySummary.generationMode === "ai_assisted"
+                      ? "AI-assisted explanation based on your recorded data."
+                      : "Prepared directly from your recorded data."}
+                  </small>
                   <small>Preview only. Nothing is sent automatically.</small>
                 </div>
               )}

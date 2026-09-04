@@ -127,9 +127,8 @@ describe("Analytics", () => {
     expect(screen.getByText("KES 40000.00 across 8 transactions")).toBeInTheDocument();
     expect(screen.getAllByText("3 transactions reviewed").length).toBeGreaterThan(0);
     expect(screen.getByText(/Calculated from your records/i)).toBeInTheDocument();
-    const insights = screen.getByRole("heading", { name: "What deserves attention" }).closest("section");
-    const assistant = screen.getByRole("heading", { name: "Ask about your finances" }).closest("section");
-    expect(insights.compareDocumentPosition(assistant) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open financial assistant" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Ask about your finances" })).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /monthly income, expenses and net/i })).toBeInTheDocument();
     const calendar = screen.getByRole("img", { name: /daily income and expense calendar for 2026-08/i });
     expect(calendar).toHaveAttribute("data-calendar-days", "31");
@@ -212,6 +211,7 @@ describe("Analytics", () => {
       })
       .mockResolvedValueOnce({
         data: {
+          generationMode: "data_summary",
           narrative: {
             headline: "A quieter spending week",
             summary: "Recorded outflow decreased.",
@@ -223,6 +223,9 @@ describe("Analytics", () => {
       });
     render(<Analytics />);
     await screen.findByRole("heading", { name: "Analytics" });
+
+    await user.click(screen.getByRole("button", { name: "Open financial assistant" }));
+    expect(screen.getByRole("dialog", { name: "Ask about your finances" })).toBeInTheDocument();
 
     await user.type(
       screen.getByRole("textbox", { name: "Question about your finances" }),
@@ -237,6 +240,8 @@ describe("Analytics", () => {
 
     await user.click(screen.getByRole("button", { name: "Preview weekly review" }));
     expect(await screen.findByText("A quieter spending week")).toBeInTheDocument();
+    expect(screen.getByText("Weekly review")).toBeInTheDocument();
+    expect(screen.getByText("Prepared directly from your recorded data.")).toBeInTheDocument();
     expect(screen.getByText("Preview only. Nothing is sent automatically.")).toBeInTheDocument();
   });
 
@@ -247,10 +252,26 @@ describe("Analytics", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Explain with AI" })[0]);
 
+    expect(screen.getByRole("dialog", { name: "Ask about your finances" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Question about your finances" })).toHaveValue(
       "How much did I spend on Housing in this period, and where could I adjust?",
     );
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("closes the assistant drawer with Escape and restores focus to its edge shortcut", async () => {
+    const user = userEvent.setup();
+    render(<Analytics />);
+    await screen.findByRole("heading", { name: "Analytics" });
+
+    const trigger = screen.getByRole("button", { name: "Open financial assistant" });
+    await user.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Ask about your finances" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog", { name: "Ask about your finances" })).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it("drills into matching records and lets the user hide and restore an insight", async () => {
