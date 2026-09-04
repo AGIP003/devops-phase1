@@ -205,3 +205,22 @@ def test_parses_buy_goods_without_exposing_till_or_phone():
     assert result.counterparty == "SAMPLE MERCHANT LTD"
     assert result.description == "Paid SAMPLE MERCHANT LTD"
     assert result.provider_transaction_type == "buy_goods"
+
+
+def test_paybill_ignores_changing_provider_promotion_after_financial_core():
+    message = (
+        "UI1IU4R9BT Confirmed. Ksh20.00 sent to SAFARICOM POSTPAID "
+        "BUNDLES for account SAFARICOM DATA BUNDLES on 1/9/26 at "
+        "9:21 AM New M-PESA balance is Ksh0.00. Transaction cost, "
+        "Ksh0.00. See all your balances now https://saf.cx/example"
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.external_reference == "UI1IU4R9BT"
+    assert result.amount == Decimal("20.00")
+    assert result.fee == Decimal("0.00")
+    assert result.counterparty == "SAFARICOM POSTPAID BUNDLES"
+    assert result.provider_transaction_type == "data_bundle"
+    assert "SAFARICOM DATA BUNDLES" not in result.description
+    assert "saf.cx" not in result.description

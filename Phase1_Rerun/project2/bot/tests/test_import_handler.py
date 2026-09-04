@@ -227,6 +227,8 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
             "fee": "0.00",
             "paymentMethod": "m-pesa",
             "suggestedCategory": "airtime",
+            "parserStrategy": "ai",
+            "previewToken": "signed-preview-token",
         },
     )
 
@@ -237,6 +239,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
         category,
         transaction_date=None,
         remember_alias=None,
+        preview_token=None,
     ):
         captured_import.update({
             "token": token,
@@ -245,6 +248,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
             "category": category,
             "remember_alias": remember_alias,
             "transaction_date": transaction_date,
+            "preview_token": preview_token,
         })
         return {
             "data": {
@@ -314,6 +318,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     assert captured_import["description"] == "Weekly data bundle"
     assert captured_import["category"] == "airtime"
     assert captured_import["remember_alias"] == "weekly data bundle"
+    assert captured_import["preview_token"] == "signed-preview-token"
     assert "pending_import" not in context.user_data
     assert "import_access_token" not in context.user_data
 

@@ -79,10 +79,7 @@ PAYBILL_PATTERN = re.compile(
     r"(?P<date>\d{1,2}/\d{1,2}/\d{2})\s+at\s+"
     r"(?P<time>\d{1,2}:\d{2}\s*[AP]M)\.?\s*"
     r"New M-PESA balance is Ksh\s*(?P<balance>\d[\d,]*(?:\.\d{1,2})?)\.\s*"
-    r"Transaction cost,\s*Ksh\s*(?P<fee>\d[\d,]*(?:\.\d{1,2})?)\."
-    r"(?:\s*Amount you can transact within the day is\s+"
-    r"\d[\d,]*(?:\.\d{1,2})?\.)?"
-    r"(?:\s*Download My OneApp on https?://\S+)?$",
+    r"Transaction cost,\s*Ksh\s*(?P<fee>\d[\d,]*(?:\.\d{1,2})?)\.",
     re.IGNORECASE,
 )
 
@@ -171,13 +168,21 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             provider_transaction_type="received_money",
         )
 
-    paybill_match = PAYBILL_PATTERN.fullmatch(clean_message)
+    # Provider promotions change independently of the financial record. Match
+    # the stable transaction core and deliberately ignore anything after the
+    # reported fee.
+    paybill_match = PAYBILL_PATTERN.match(clean_message)
 
     if paybill_match is not None:
         counterparty = _normalize_counterparty(paybill_match["counterparty"])
+        account_reference = paybill_match["account_reference"]
         provider_transaction_type = (
             "data_bundle"
-            if re.search(r"\bdata\s+bundles?\b", counterparty, re.IGNORECASE)
+            if re.search(
+                r"\bdata\s+bundles?\b",
+                f"{counterparty} {account_reference}",
+                re.IGNORECASE,
+            )
             else "paybill"
         )
 

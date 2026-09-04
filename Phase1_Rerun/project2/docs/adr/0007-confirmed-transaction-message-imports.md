@@ -30,16 +30,21 @@ Choose option 3.
   returns to normal welcome handling.
 - No parsed message becomes a financial instruction until the user supplies a
   description, chooses a category and confirms the final preview.
-- Regex performs deterministic fact extraction. Full-pattern matching prevents
-  partial messages from being accepted as complete transactions.
+- Regex performs deterministic fact extraction. Rules require a complete stable
+  financial core; changing provider adverts after that core are ignored so a
+  promotion cannot become transaction data.
 - A user-written description and selected category are mandatory. The parser's
   merchant text is context, not the user's intent.
 - Data bundles and airtime are suggested as the `airtime` category.
 - User aliases and deterministic rules run before any future AI categorizer.
   The user must explicitly choose **Save & remember** before an alias is stored.
-- Future AI receives only a minimized description, generalized merchant label,
-  direction and candidate categories—not raw SMS, balances, references, phone
-  numbers or account numbers. Its answer remains a suggestion.
+- If a completed provider-looking message does not match a reviewed regex, the
+  bounded AI fallback receives a minimized message—not wallet balances, links,
+  phone numbers or account identifiers. Its typed result remains a suggestion.
+- A successful AI preview is signed, bound to the authenticated user and the
+  exact source-message fingerprint, and expires after ten minutes. Confirmation
+  reuses that validated result without paying for a second AI call. It cannot
+  bypass the ordinary description, category, ownership or duplicate checks.
 - `transaction_imports` stores provider, reference, fingerprint, original time,
   subtype, currency and fee. Raw messages and resulting wallet balances are not
   persisted.
@@ -63,8 +68,10 @@ later serve statement imports without moving financial rules into Telegram.
 
 The fingerprint uses a purpose-derived HMAC key and never exposes the source SMS.
 Provider reference uniqueness remains the stable guard if the application secret
-is rotated. Message formats can still change; unsupported messages fail closed
-and require a reviewed parser fixture before support is expanded.
+is rotated. Safe structural telemetry can reveal recurring unsupported formats,
+but raw messages and financial values are never logged. A format becomes a new
+deterministic rule only after anonymized regression tests and review; model output
+never generates executable regex automatically.
 
 ## Revisit when
 

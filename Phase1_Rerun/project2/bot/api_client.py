@@ -154,6 +154,7 @@ def import_transaction_message(
     category,
     transaction_date=None,
     remember_alias=None,
+    preview_token=None,
 ):
     payload = {
         "message": message,
@@ -164,6 +165,8 @@ def import_transaction_message(
         payload["rememberAlias"] = remember_alias
     if transaction_date:
         payload["date"] = transaction_date
+    if preview_token:
+        payload["previewToken"] = preview_token
 
     response = requests.post(
         f"{API_BASE}/transaction-imports",

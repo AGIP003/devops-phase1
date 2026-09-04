@@ -239,8 +239,13 @@ async def _start_import(
     counterparty_line = f"\nMerchant/person: {counterparty}" if counterparty else ""
     occurred_at = preview.get("occurredAt")
     when_line = occurred_at or "Not included by provider — date required"
+    recognition_line = (
+        "🔎 Message interpreted with AI — check every field"
+        if preview.get("parserStrategy") == "ai"
+        else "✅ Provider message recognized"
+    )
     await update.message.reply_text(
-        "✅ Provider message recognized\n\n"
+        f"{recognition_line}\n\n"
         f"Provider: {_provider_label(preview['provider'])}\n"
         f"Amount: {preview['currency']} {preview['amount']}\n"
         f"Type: {preview['direction'].title()}\n"
@@ -483,6 +488,7 @@ async def import_save_callback(
             pending["category"],
             transaction_date=pending.get("transaction_date"),
             remember_alias=remember_alias,
+            preview_token=pending["preview"].get("previewToken"),
         )
     except requests.RequestException:
         await query.edit_message_text(

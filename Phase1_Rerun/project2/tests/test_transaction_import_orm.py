@@ -1,10 +1,19 @@
+from decimal import Decimal
+
 from sqlalchemy import func, select
 
 from app.extensions import db
+from app.importers.contracts import (
+    ParsedTransactionMessage,
+    TransactionDirection,
+)
 from app.models.payment_method import PaymentMethod
 from app.models.telegram_preferences import TelegramUserPreferences
 from app.models.transaction import Transaction
 from app.models.transaction_import import TransactionImport
+from app.schemas import ProviderImportParseResult
+from app.services.ai_support import AIUsageMetadata
+from app.services.provider_import_ai import AIProviderImportResult
 
 
 def authorization(token: str) -> dict[str, str]:
@@ -313,3 +322,177 @@ def test_fuliza_notice_is_previewed_and_saved_without_counting_principal_as_spen
     assert cash_flow["recordedExpenses"] == "0.00"
     assert cash_flow["financingCharges"] == "10.10"
     assert cash_flow["expenses"] == "10.10"
+
+
+def test_ai_fallback_preview_can_be_confirmed_and_saved_once(
+    app,
+    client,
+    register_user,
+    monkeypatch,
+):
+    from app import routes
+
+    seed_provider_payment_methods(app)
+    owner = register_user("ai-import-owner", "ai-import-owner@example.com")
+    headers = authorization(owner["token"])
+    raw_message = (
+        "Z3QRSOZ29C6 Confirmed. Ksh 700 completed to SAMPLE MERCHANT "
+        "on 03/09/26 at 02:19 PM. Fee: Ksh 12.00. Bal: Ksh 17000.5."
+    )
+    extraction = ProviderImportParseResult.model_validate({
+        "can_parse": True,
+        "reason": None,
+        "transaction": {
+            "provider": "airtel_money",
+            "external_reference": "Z3QRSOZ29C6",
+            "occurred_at": "2026-09-03T14:19:00+03:00",
+            "amount": "700.00",
+            "currency": "KES",
+            "direction": "expense",
+            "description": "Paid SAMPLE MERCHANT",
+            "counterparty": "SAMPLE MERCHANT",
+            "fee": "12.00",
+            "provider_transaction_type": "merchant_payment",
+            "confidence": 0.82,
+            "needs_review": True,
+        },
+    })
+    ai_result = AIProviderImportResult(
+        extraction=extraction,
+        parsed=ParsedTransactionMessage(
+            provider="airtel_money",
+            external_reference="Z3QRSOZ29C6",
+            occurred_at=extraction.transaction.occurred_at,
+            amount=extraction.transaction.amount,
+            currency="KES",
+            direction=TransactionDirection.EXPENSE,
+            description="Paid SAMPLE MERCHANT",
+            counterparty="SAMPLE MERCHANT",
+            fee=Decimal("12.00"),
+            provider_transaction_type="merchant_payment",
+        ),
+        format_signature="airtel:confirmed:fee:balance",
+        usage=AIUsageMetadata(
+            model="gpt-5.6-luna",
+            latency_ms=10,
+            input_tokens=100,
+            cached_input_tokens=0,
+            output_tokens=30,
+            estimated_cost_usd=Decimal("0.0001"),
+        ),
+    )
+    monkeypatch.setattr(routes, "run_provider_import_ai", lambda message: ai_result)
+    monkeypatch.setitem(app.config, "AI_FALLBACK_ENABLED", True)
+
+    preview = client.post(
+        "/api/transaction-imports/preview",
+        headers=headers,
+        json={"message": raw_message},
+    )
+
+    assert preview.status_code == 200, preview.get_json()
+    preview_payload = preview.get_json()
+    assert preview_payload["parserStrategy"] == "ai"
+    assert preview_payload["needsReview"] is True
+    assert preview_payload["previewToken"]
+
+    save_payload = {
+        "message": raw_message,
+        "previewToken": preview_payload["previewToken"],
+        "description": "Equipment payment",
+        "category": "food",
+    }
+    saved = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json=save_payload,
+    )
+
+    assert saved.status_code == 201, saved.get_json()
+    assert saved.get_json()["import"]["fee"] == "12.00"
+
+    duplicate = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json=save_payload,
+    )
+    assert duplicate.status_code == 409
+
+
+def test_ai_preview_token_rejects_a_changed_provider_message(
+    app,
+    client,
+    register_user,
+    monkeypatch,
+):
+    from app import routes
+
+    owner = register_user("bound-preview", "bound-preview@example.com")
+    headers = authorization(owner["token"])
+    raw_message = (
+        "Z3QRSOZ29C6 Confirmed. Ksh 700 completed to SAMPLE MERCHANT "
+        "on 03/09/26 at 02:19 PM. Fee: Ksh 12.00. Bal: Ksh 17000.5."
+    )
+    extraction = ProviderImportParseResult.model_validate({
+        "can_parse": True,
+        "reason": None,
+        "transaction": {
+            "provider": "airtel_money",
+            "external_reference": "Z3QRSOZ29C6",
+            "occurred_at": "2026-09-03T14:19:00+03:00",
+            "amount": "700.00",
+            "currency": "KES",
+            "direction": "expense",
+            "description": "Paid SAMPLE MERCHANT",
+            "counterparty": "SAMPLE MERCHANT",
+            "fee": "12.00",
+            "provider_transaction_type": "merchant_payment",
+            "confidence": 0.82,
+            "needs_review": True,
+        },
+    })
+    ai_result = AIProviderImportResult(
+        extraction=extraction,
+        parsed=ParsedTransactionMessage(
+            provider="airtel_money",
+            external_reference="Z3QRSOZ29C6",
+            occurred_at=extraction.transaction.occurred_at,
+            amount=extraction.transaction.amount,
+            currency="KES",
+            direction=TransactionDirection.EXPENSE,
+            description="Paid SAMPLE MERCHANT",
+            counterparty="SAMPLE MERCHANT",
+            fee=Decimal("12.00"),
+            provider_transaction_type="merchant_payment",
+        ),
+        format_signature="airtel:confirmed:fee:balance",
+        usage=AIUsageMetadata(
+            model="gpt-5.6-luna",
+            latency_ms=10,
+            input_tokens=100,
+            cached_input_tokens=0,
+            output_tokens=30,
+            estimated_cost_usd=Decimal("0.0001"),
+        ),
+    )
+    monkeypatch.setattr(routes, "run_provider_import_ai", lambda message: ai_result)
+    monkeypatch.setitem(app.config, "AI_FALLBACK_ENABLED", True)
+    preview = client.post(
+        "/api/transaction-imports/preview",
+        headers=headers,
+        json={"message": raw_message},
+    ).get_json()
+
+    changed = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": raw_message.replace("Ksh 700", "Ksh 900"),
+            "previewToken": preview["previewToken"],
+            "description": "Equipment payment",
+            "category": "shopping",
+        },
+    )
+
+    assert changed.status_code == 400
+    assert "does not match" in changed.get_json()["message"]

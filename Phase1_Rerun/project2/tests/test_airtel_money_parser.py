@@ -158,6 +158,26 @@ def test_parses_airtel_paybill_with_colon_after_fee_label():
     )
 
 
+def test_parses_confirmed_successful_merchant_payment():
+    message = (
+        "Q3QRSOZ29C6 Confirmed. Ksh 564 successfully paid to SAMPLE "
+        "PAYMENT C2B on 03/09/26 at 02:19 PM. Fee: Ksh 10.00. "
+        "Bal: Ksh 17700.5."
+    )
+
+    result = parse_airtel_money_message(message)
+
+    assert result.provider == "airtel_money"
+    assert result.external_reference == "Q3QRSOZ29C6"
+    assert result.amount == Decimal("564")
+    assert result.fee == Decimal("10.00")
+    assert result.counterparty == "SAMPLE PAYMENT C2B"
+    assert result.provider_transaction_type == "merchant_payment"
+    assert result.occurred_at == datetime(
+        2026, 9, 3, 14, 19, tzinfo=NAIROBI_TIMEZONE
+    )
+
+
 def test_rejects_unknown_airtel_message():
     with pytest.raises(AirtelMoneyMessageParseError):
         parse_airtel_money_message("Your Airtel balance is available")

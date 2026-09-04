@@ -1,7 +1,7 @@
 import os
 from datetime import date
 
-from flask import request, jsonify, abort, g
+from flask import abort, current_app, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
 from app.middleware import login_required, admin_required
@@ -41,6 +41,21 @@ from app.services.transaction_import_service import (
     import_transaction_message_for_user,
     payment_method_for_provider,
 )
+from app.services.transaction_import_preview import (
+    InvalidImportPreviewError,
+    create_ai_import_preview_token,
+    load_ai_import_preview_token,
+)
+from app.services.ai_budget_service import (
+    AIBudgetExceededError,
+    run_provider_import_ai,
+)
+from app.services.ai_support import (
+    AIConfigurationError,
+    AIInvalidResponseError,
+    AIServiceUnavailableError,
+)
+from app.services.provider_import_ai import is_provider_message_candidate
 from app.services.user_service import delete_user as delete_user_record, get_user_by_id
 from app.services.forex_service import ForexUnavailableError, get_current_forex_rates
 from app.services.analytics_service import (
@@ -663,10 +678,57 @@ def register_routes(app):
         if len(raw_message) > 4000:
             abort(400, description="Provider message is too long")
 
+        parser_strategy = "regex"
+        preview_token = None
+        confidence = None
+        needs_review = False
         try:
             parsed = parse_financial_message(raw_message)
         except UnsupportedFinancialMessageError as error:
-            abort(400, description=str(error))
+            if (
+                not current_app.config["AI_FALLBACK_ENABLED"]
+                or not is_provider_message_candidate(raw_message)
+            ):
+                abort(400, description=str(error))
+            try:
+                ai_result = run_provider_import_ai(raw_message)
+            except AIBudgetExceededError as ai_error:
+                abort(429, description=str(ai_error))
+            except (
+                AIConfigurationError,
+                AIServiceUnavailableError,
+            ):
+                abort(
+                    503,
+                    description="Provider-message assistance is temporarily unavailable",
+                )
+            except AIInvalidResponseError:
+                abort(422, description="That provider message could not be read safely")
+
+            if not ai_result.extraction.can_parse or ai_result.parsed is None:
+                abort(
+                    400,
+                    description=(
+                        ai_result.extraction.reason
+                        or "That provider message could not be read safely"
+                    ),
+                )
+            parsed = ai_result.parsed
+            parser_strategy = "ai"
+            confidence = ai_result.extraction.transaction.confidence
+            needs_review = True
+            preview_token = create_ai_import_preview_token(
+                user_id=g.current_user["user_id"],
+                raw_message=raw_message,
+                result=ai_result,
+            )
+            current_app.logger.info(
+                "provider_import_ai_fallback request_id=%s "
+                "format_signature=%s provider=%s needs_review=true",
+                str(getattr(g, "request_id", "unavailable")),
+                ai_result.format_signature,
+                parsed.provider,
+            )
 
         if isinstance(parsed, ParsedFulizaNotice):
             response = jsonify({
@@ -736,6 +798,10 @@ def register_routes(app):
                 else None
             ),
             "suggestedCategory": suggested_category,
+            "parserStrategy": parser_strategy,
+            "needsReview": needs_review,
+            "confidence": confidence,
+            "previewToken": preview_token,
             "message": (
                 None
                 if importable
@@ -759,7 +825,15 @@ def register_routes(app):
             abort(400, description="Provider message is too long")
 
         try:
-            parsed = parse_financial_message(raw_message)
+            preview_token = data.get("previewToken")
+            if preview_token is not None:
+                parsed = load_ai_import_preview_token(
+                    user_id=g.current_user["user_id"],
+                    raw_message=raw_message,
+                    token=preview_token,
+                )
+            else:
+                parsed = parse_financial_message(raw_message)
             if not isinstance(parsed, ParsedTransactionMessage):
                 raise TransactionMessageNotImportableError(
                     "Fuliza notices are informational and are not saved as transactions."
@@ -803,6 +877,8 @@ def register_routes(app):
                 remember_alias=remember_alias,
             )
         except UnsupportedFinancialMessageError as error:
+            abort(400, description=str(error))
+        except InvalidImportPreviewError as error:
             abort(400, description=str(error))
         except TransactionMessageNotImportableError as error:
             abort(400, description=str(error))

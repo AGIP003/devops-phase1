@@ -4,12 +4,15 @@
 
 1. A linked user pastes one complete M-Pesa or Airtel Money message. `/import`
    followed by the message remains available as an explicit alternative.
-2. The API parses it and returns a privacy-minimized preview.
+2. The API tries a deterministic parser first. If the text looks like a
+   completed provider message but no reviewed pattern matches, a minimized copy
+   can use the bounded AI fallback.
 3. The bot requires the user's description and category choice.
 4. The bot shows a final preview with **Save once**, **Save & remember**, and
    **Cancel**.
-5. The API reparses the source and atomically stores the transaction, provenance
-   and optional user alias.
+5. The API either reparses a deterministic message or verifies the AI result's
+   signed, user-bound preview token. It then atomically stores the transaction,
+   provenance and optional user alias.
 6. Temporary raw message and JWT state expire after ten minutes and are cleared
    on completion or cancellation.
 
@@ -63,7 +66,27 @@ Confirmation request:
 
 `date` is required only when the provider message omits its transaction date.
 `rememberAlias` is optional and only sent after explicit user confirmation. A
-repeat import returns HTTP `409` and does not create a second transaction.
+repeat import returns HTTP `409` and does not create a second transaction. An
+AI-assisted preview also returns an opaque `previewToken`; clients must return
+that token unchanged when the user confirms. It expires after ten minutes and
+cannot be reused with a different message or by a different user.
+
+## Parser maintenance
+
+- Reviewed regex handles known provider formats without an AI call.
+- Regex matches the stable financial record and ignores changing provider
+  promotions after that record. It must not treat an advert or URL as a
+  merchant or account value.
+- AI is a fallback for a completed provider-looking message, not a replacement
+  for deterministic parsing. It receives a minimized message with balances,
+  links, phone numbers and account identifiers removed.
+- Safe telemetry records only structural markers such as
+  `airtel:confirmed:successful:paid_to:fee:balance`. It never records the raw
+  message, reference, amount, account, phone number or merchant.
+- A repeated new shape is promoted to deterministic support by adding
+  anonymized regression examples, writing a reviewed parser rule, running the
+  old and new tests, and deploying it. The application does not generate or
+  execute regex from model output.
 
 ## Privacy inventory
 
@@ -81,6 +104,8 @@ Not persisted:
 - Wallet balance or available limit
 - Phone, account, agent or PayBill identifiers extracted only to match a format
 - Telegram JWT after the short conversation finishes
+- Raw provider text inside an AI preview token (the token contains only the
+  validated fields and a keyed message fingerprint)
 
 Request logging must remain metadata-only; never add request bodies to Flask or
 Telegram logs.
@@ -103,7 +128,9 @@ python -m pytest -q \
   tests/test_transaction_import_orm.py \
   tests/test_mpesa_parser.py \
   tests/test_airtel_money_parser.py \
-  tests/test_fuliza_parser.py
+  tests/test_fuliza_parser.py \
+  tests/test_provider_import_ai.py \
+  bot/tests/test_import_handler.py
 ```
 
 Linux+ field note: local PostgreSQL commonly uses a Unix-domain socket such as

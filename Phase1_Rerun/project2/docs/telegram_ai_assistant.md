@@ -9,8 +9,10 @@ database writes remain application responsibilities.
 Message routing follows this order:
 
 1. Telegram commands use their existing deterministic handlers.
-2. M-Pesa and Airtel Money messages use the strict regex import pipeline. This
-   preserves provider references and duplicate detection.
+2. M-Pesa and Airtel Money messages try the reviewed regex pipeline first. A
+   completed provider-looking message can use a minimized, typed AI fallback
+   when its format is new. Both paths preserve provider references and duplicate
+   detection, and both require the same user confirmation.
 3. Receipt photos use the validated image and receipt-preview pipeline.
 4. Other text is sent to the bounded Telegram assistant.
 
@@ -19,6 +21,12 @@ help question, general finance-education question or unsupported request. A
 balance intent invokes the existing database-backed handler. An AI transaction
 is only a preview: the user can change category or payment method and must press
 Save before the backend receives a create request.
+
+Ordinary answers are formatted for a narrow Telegram screen with short,
+separated paragraphs. Analytics answers show their database evidence under
+**From your records** and limitations under **Keep in mind**. This formatting
+layer changes presentation only; it does not reinterpret model output or grant
+the assistant additional actions.
 
 ## Trust and privacy boundaries
 

@@ -18,6 +18,10 @@ from app.schemas.analytics_assistant import (
     AnalyticsToolName,
     WeeklyFinanceNarrative,
 )
+from app.schemas.provider_import import (
+    ProviderImportParseResult,
+    ProviderImportSuggestion,
+)
 
 __all__ = [
     "TransactionKind",
@@ -32,4 +36,6 @@ __all__ = [
     "AnalyticsQuestionPlan",
     "AnalyticsToolName",
     "WeeklyFinanceNarrative",
+    "ProviderImportParseResult",
+    "ProviderImportSuggestion",
 ]

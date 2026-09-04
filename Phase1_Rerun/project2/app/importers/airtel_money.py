@@ -77,6 +77,17 @@ PAYBILL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+SUCCESSFUL_PAYMENT_PATTERN = re.compile(
+    rf"^(?P<reference>[A-Z0-9]{{11}})\s+Confirmed\.\s*"
+    rf"Ksh\s*(?P<amount>{MONEY_PATTERN})\s+successfully paid to\s+"
+    r"(?P<counterparty>.+?)\s+on\s+"
+    rf"(?P<date>\d{{1,2}}/\d{{1,2}}/\d{{2,4}})\s+at\s+"
+    rf"(?P<time>\d{{1,2}}:\d{{2}}\s*[AP]M)\.\s*"
+    rf"Fee:\s*Ksh\s*(?P<fee>{MONEY_PATTERN})\.\s*"
+    rf"Bal:\s*Ksh\s*(?P<balance>{MONEY_PATTERN})\.",
+    re.IGNORECASE,
+)
+
 
 class AirtelMoneyMessageParseError(ValueError):
     pass
@@ -197,6 +208,26 @@ def parse_airtel_money_message(message: str) -> ParsedTransactionMessage:
             resulting_balance=_parse_money(paybill_match["balance"]),
             provider_transaction_type="paybill",
             network_reference=paybill_match["network_reference"].upper(),
+        )
+
+    successful_payment_match = SUCCESSFUL_PAYMENT_PATTERN.match(clean_message)
+
+    if successful_payment_match is not None:
+        counterparty = _normalize_counterparty(
+            successful_payment_match["counterparty"]
+        )
+        return ParsedTransactionMessage(
+            provider="airtel_money",
+            external_reference=successful_payment_match["reference"].upper(),
+            occurred_at=_parse_occurred_at(successful_payment_match),
+            amount=_parse_money(successful_payment_match["amount"]),
+            currency="KES",
+            direction=TransactionDirection.EXPENSE,
+            description=f"Paid {counterparty}",
+            counterparty=counterparty,
+            fee=_parse_money(successful_payment_match["fee"]),
+            resulting_balance=_parse_money(successful_payment_match["balance"]),
+            provider_transaction_type="merchant_payment",
         )
 
     raise AirtelMoneyMessageParseError(

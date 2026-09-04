@@ -41,7 +41,7 @@ def _normalized_message(message: str) -> str:
     return re.sub(r"\s+", " ", message.strip()).casefold()
 
 
-def _message_fingerprint(provider: str, message: str) -> str:
+def message_fingerprint(provider: str, message: str) -> str:
     """Create a non-reversible duplicate key without storing the raw SMS.
 
     A purpose label separates this use of the application secret from JWT
@@ -92,7 +92,7 @@ def import_transaction_message_for_user(
             "Transfers need account-to-account tracking and cannot be imported yet."
         )
 
-    fingerprint = _message_fingerprint(parsed.provider, raw_message)
+    fingerprint = message_fingerprint(parsed.provider, raw_message)
     existing = _find_existing_import(user_id, parsed, fingerprint)
     if existing is not None:
         raise DuplicateTransactionImportError(existing.transaction_id)

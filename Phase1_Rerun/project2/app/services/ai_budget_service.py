@@ -26,6 +26,10 @@ from app.services.receipt_parser import (
     AIReceiptParseResult,
     parse_receipt_image,
 )
+from app.services.provider_import_ai import (
+    AIProviderImportResult,
+    parse_provider_message_with_ai,
+)
 from app.services.telegram_assistant import (
     AITelegramAssistantResult,
     AssistantOutOfScopeError,
@@ -232,6 +236,29 @@ def run_transaction_ai(text: str) -> AITransactionParseResult:
 
     complete_reservation(reservation, result.usage)
     _log_ai_completion("transaction", result.usage)
+    return result
+
+
+def run_provider_import_ai(text: str) -> AIProviderImportResult:
+    """Run the bounded fallback used only after provider regexes fail."""
+
+    get_ai_model()
+    get_openai_api_key()
+    reservation = reserve_daily_budget("transaction")
+    try:
+        result = parse_provider_message_with_ai(text)
+    except Exception as error:
+        _log_ai_failure("provider_import", error)
+        try:
+            fail_reservation(reservation)
+        except Exception:
+            current_app.logger.exception(
+                "AI provider-import budget reconciliation failed"
+            )
+        raise
+
+    complete_reservation(reservation, result.usage)
+    _log_ai_completion("provider_import", result.usage)
     return result
 
 
