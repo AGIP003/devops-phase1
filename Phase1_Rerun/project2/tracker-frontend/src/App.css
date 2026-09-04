@@ -629,7 +629,7 @@ body.auth-screen {
 }
 
 .auth-page {
-  align-items: center;
+  align-items: flex-start;
   background: var(--page-background);
 
   border: 0;
@@ -639,7 +639,8 @@ body.auth-screen {
   justify-content: center;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: clamp(1rem, 5vw, 3rem);
   position: relative;
   text-align: left;
@@ -679,6 +680,7 @@ body.auth-screen {
   display: grid;
   gap: 1rem;
   max-width: 430px;
+  margin-block: auto;
   min-width: 0;
   padding: clamp(1.1rem, 4vw, 1.55rem);
   position: relative;
@@ -859,6 +861,33 @@ body.auth-screen {
 .auth-switch a {
   color: var(--accent);
   font-weight: 800;
+}
+
+.auth-feature-notice {
+  background: #f4f1e7;
+  border: 1px solid #ded7bd;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text-main);
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.85rem 0.9rem;
+}
+
+.auth-feature-notice strong {
+  font-size: 0.92rem;
+}
+
+.auth-feature-notice span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.auth-disabled-section {
+  display: grid;
+  gap: 1rem;
+  opacity: 0.55;
 }
 
 .auth-preview-link {

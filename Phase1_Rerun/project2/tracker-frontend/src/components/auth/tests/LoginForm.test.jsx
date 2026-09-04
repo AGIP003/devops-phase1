@@ -61,6 +61,14 @@ describe('LoginForm', () => {
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
   });
 
+  it('links to the dedicated password-recovery page', () => {
+    renderLogin();
+
+    expect(
+      screen.getByRole('link', { name: /forgot password/i }),
+    ).toHaveAttribute('href', '/forgot-password');
+  });
+
   it('validates empty password login without calling the API', async () => {
     const user = userEvent.setup();
     renderLogin();

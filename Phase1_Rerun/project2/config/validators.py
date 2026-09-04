@@ -7,13 +7,15 @@ REQUIRED_VARS = [
     "DATABASE_URL",
     "SECRET_KEY",
     "JWT_SECRET_KEY",
-    "MAIL_USERNAME",
-    "MAIL_APP_PASSWORD",
     "GOOGLE_CLIENT_ID",
 ] 
  
 def validate_environment(required_vars=None):
-    required = required_vars or REQUIRED_VARS
+    required = list(required_vars or REQUIRED_VARS)
+
+    if get_env_bool("PASSWORD_RESET_ENABLED", False):
+        required.extend(["MAIL_USERNAME", "MAIL_APP_PASSWORD"])
+
     missing = [name for name in required if not os.getenv(name)]
     
     if os.getenv("FLASK_ENV", "development").lower() in {"production", "prod"}:

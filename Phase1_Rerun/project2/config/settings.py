@@ -110,6 +110,10 @@ class BaseConfig:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_APP_PASSWORD")
     MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME
+    PASSWORD_RESET_ENABLED = get_env_bool(
+        "PASSWORD_RESET_ENABLED",
+        False,
+    )
 
     # SQLAlchemy
     SQLALCHEMY_DATABASE_URI = None
@@ -175,6 +179,7 @@ class TestingConfig(BaseConfig):
     GOOGLE_CLIENT_ID = "test-client.apps.googleusercontent.com"
     OPENAI_API_KEY = None
     AI_FALLBACK_ENABLED = False
+    PASSWORD_RESET_ENABLED = True
 
 
 class ProductionConfig(BaseConfig):

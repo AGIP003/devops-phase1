@@ -247,6 +247,12 @@ def update_profile():
 @auth_bp.route('/password_reset_request', methods=['POST'])
 @limiter.limit("5 per hour")
 def password_reset_request():
+    if not current_app.config.get("PASSWORD_RESET_ENABLED", False):
+        abort(
+            503,
+            description="Password reset is temporarily unavailable",
+        )
+
     data =request.get_json()
 
     if data is None:
