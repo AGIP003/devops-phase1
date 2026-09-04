@@ -24,6 +24,66 @@ from bot.transaction_parser import (
 
 
 AI_TRANSACTION_TTL_SECONDS = 10 * 60
+_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
+_LIST_ITEM = re.compile(r"^(?:[-*•]|\d+[.)])\s+")
+
+
+def _format_mobile_paragraphs(value: str) -> str:
+    """Make validated AI text readable on a narrow Telegram screen.
+
+    The formatter changes spacing only. It does not reinterpret, summarize, or
+    add financial claims to the model's answer.
+    """
+
+    source_blocks = re.split(r"\n\s*\n", value.strip())
+    formatted_blocks = []
+
+    for source_block in source_blocks:
+        lines = [
+            " ".join(line.split())
+            for line in source_block.splitlines()
+            if line.strip()
+        ]
+        if not lines:
+            continue
+        if any(_LIST_ITEM.match(line) for line in lines):
+            formatted_blocks.append("\n".join(lines))
+            continue
+
+        paragraph = " ".join(lines)
+        formatted_blocks.extend(
+            sentence.strip()
+            for sentence in _SENTENCE_BOUNDARY.split(paragraph)
+            if sentence.strip()
+        )
+
+    return "\n\n".join(formatted_blocks)
+
+
+def _format_ai_reply(result: dict) -> str:
+    sections = [_format_mobile_paragraphs(result["reply"])]
+
+    evidence = [
+        " ".join(str(item).split())
+        for item in result.get("evidence") or []
+        if str(item).strip()
+    ]
+    if evidence:
+        sections.append(
+            "From your records\n" + "\n".join(f"• {item}" for item in evidence)
+        )
+
+    caveats = [
+        " ".join(str(item).split())
+        for item in result.get("caveats") or []
+        if str(item).strip()
+    ]
+    if caveats:
+        sections.append(
+            "Keep in mind\n" + "\n".join(f"• {item}" for item in caveats)
+        )
+
+    return "\n\n".join(section for section in sections if section)
 
 
 def _clear_pending_ai_transaction(
@@ -192,7 +252,7 @@ async def assistant_message_handler(
         return ConversationHandler.END
 
     if intent != "transaction":
-        await message.reply_text(result["reply"])
+        await message.reply_text(_format_ai_reply(result))
         return ConversationHandler.END
 
     transaction = result["transaction"]

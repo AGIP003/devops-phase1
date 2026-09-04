@@ -70,7 +70,10 @@ def test_finance_question_returns_bounded_ai_reply(monkeypatch):
         "request_telegram_assistant",
         lambda token, text: {
             "intent": "finance_education",
-            "reply": "An emergency fund covers unexpected essential costs.",
+            "reply": (
+                "An emergency fund covers unexpected essential costs. "
+                "Build it gradually and keep it accessible."
+            ),
             "transaction": None,
         },
     )
@@ -85,6 +88,55 @@ def test_finance_question_returns_bounded_ai_reply(monkeypatch):
 
     assert state == ConversationHandler.END
     assert "unexpected essential costs" in message.replies[-1][0]
+    assert message.replies[-1][0] == (
+        "An emergency fund covers unexpected essential costs.\n\n"
+        "Build it gradually and keep it accessible."
+    )
+
+
+def test_analytics_reply_separates_evidence_and_caveats(monkeypatch):
+    async def run_immediately(function, *args, **kwargs):
+        return function(*args, **kwargs)
+
+    monkeypatch.setattr(assistant.asyncio, "to_thread", run_immediately)
+    monkeypatch.setattr(
+        assistant,
+        "get_telegram_session",
+        lambda telegram_id: {"linked": True, "token": "short-lived-token"},
+    )
+    monkeypatch.setattr(
+        assistant,
+        "request_telegram_assistant",
+        lambda token, text: {
+            "intent": "analytics",
+            "reply": "Airtime appeared twice this month. Review both entries.",
+            "transaction": None,
+            "evidence": [
+                "2 matching transactions",
+                "KES 150.00 recorded",
+            ],
+            "caveats": ["Only transactions recorded in the app are included."],
+        },
+    )
+
+    message = FakeMessage("How often did I buy airtime this month?")
+    state = asyncio.run(
+        assistant.assistant_message_handler(
+            _update(message),
+            SimpleNamespace(user_data={}),
+        )
+    )
+
+    assert state == ConversationHandler.END
+    assert message.replies[-1][0] == (
+        "Airtime appeared twice this month.\n\n"
+        "Review both entries.\n\n"
+        "From your records\n"
+        "• 2 matching transactions\n"
+        "• KES 150.00 recorded\n\n"
+        "Keep in mind\n"
+        "• Only transactions recorded in the app are included."
+    )
 
 
 def test_ai_transaction_requires_review_before_save(monkeypatch):

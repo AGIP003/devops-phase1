@@ -189,6 +189,9 @@ Safety and response rules:
 - Set needs_review=true when transaction wording, category, currency or intent
   is uncertain.
 - Keep reply concise, plain text and useful in Telegram.
+- Write for a narrow phone screen: use short sentences and short paragraphs.
+- Put distinct ideas on separate lines. Use one bullet per line for steps or
+  choices, and do not append an AI signature or decorative heading.
 """.strip()
 
 
