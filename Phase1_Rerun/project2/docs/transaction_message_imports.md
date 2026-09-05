@@ -95,6 +95,15 @@ cannot be reused with a different message or by a different user.
   old and new tests, and deploying it. The application does not generate or
   execute regex from model output.
 
+## Re-importing a deleted transaction
+
+An active duplicate remains blocked. If its transaction was soft-deleted,
+saving the same message again rebuilds the existing row from the new reviewed
+preview. The corrected classification, category, description, merchant,
+provider flow and fee replace the obsolete values, and `deleted_at` is
+cleared. This preserves one provider reference and one audit trail while
+letting users correct older imports through Telegram.
+
 ## Privacy inventory
 
 Persisted:

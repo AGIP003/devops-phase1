@@ -904,7 +904,7 @@ def register_routes(app):
                     remember_alias = None
                 elif len(remember_alias) > 100:
                     abort(400, description="Remembered alias is too long")
-            transaction, import_record = import_transaction_message_for_user(
+            transaction, import_record, restored = import_transaction_message_for_user(
                 user_id=g.current_user["user_id"],
                 raw_message=raw_message,
                 parsed=parsed,
@@ -948,6 +948,7 @@ def register_routes(app):
                 ),
             },
             "status": "success",
+            "restored": restored,
             "rememberedAlias": remember_alias,
         })
         response.headers["Cache-Control"] = "private, no-store"

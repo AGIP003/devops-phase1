@@ -594,14 +594,20 @@ async def import_save_callback(
         return ConversationHandler.END
 
     saved = result["data"]
+    restored = result.get("restored", False)
     remembered = result.get("rememberedAlias")
     remembered_line = (
         f"\nRemembered: “{remembered}” → {saved['category']}"
         if remembered
         else ""
     )
+    success_heading = (
+        "✅ Re-added with your corrected details"
+        if restored
+        else "✅ Imported safely"
+    )
     await query.edit_message_text(
-        "✅ Imported safely\n\n"
+        f"{success_heading}\n\n"
         f"Amount: KES {saved['amount']}\n"
         f"Date: {saved['date']}\n"
         f"Description: {saved['description']}\n"

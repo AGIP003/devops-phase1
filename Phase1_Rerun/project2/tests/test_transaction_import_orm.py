@@ -8,6 +8,7 @@ from app.importers.contracts import (
     ProviderFlowDirection,
     TransactionClassification,
 )
+from app.models.category import Category
 from app.models.payment_method import PaymentMethod
 from app.models.telegram_preferences import TelegramUserPreferences
 from app.models.transaction import Transaction
@@ -246,6 +247,92 @@ def test_duplicate_message_is_rejected_without_second_transaction(
             select(func.count(Transaction.id)).where(Transaction.user_id == user_id)
         )
         assert count == 1
+
+
+def test_reimport_rebuilds_soft_deleted_transaction_with_corrected_type_and_fee(
+    app,
+    client,
+    register_user,
+    internal_user_id,
+):
+    """A corrected re-import reuses provenance instead of creating a duplicate."""
+    seed_provider_payment_methods(app)
+    owner = register_user("restore-owner", "restore-owner@example.com")
+    user_id = internal_user_id(owner)
+    headers = authorization(owner["token"])
+    message = sample_airtel_wallet_transfer_message()
+
+    first = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": message,
+            "description": "Originally classified incorrectly",
+            "type": "expense",
+            "category": "loan",
+        },
+    )
+    assert first.status_code == 201, first.get_json()
+    transaction_id = first.get_json()["data"]["id"]
+
+    with app.app_context():
+        transaction = db.session.get(Transaction, transaction_id)
+        legacy_income = Category(
+            user_id=user_id,
+            name="Other Income",
+            type="income",
+        )
+        db.session.add(legacy_income)
+        transaction.category = legacy_income
+        transaction.soft_delete()
+
+        # Simulate an older parser that missed the reported fee and direction.
+        transaction.import_record.fee = None
+        transaction.import_record.fee_source = "unknown"
+        transaction.import_record.provider_flow = "money_in"
+        db.session.commit()
+
+    reimported = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": message,
+            "description": "Moved to my M-Pesa wallet",
+            "type": "transfer",
+            "category": "internal transfer",
+        },
+    )
+
+    assert reimported.status_code == 201, reimported.get_json()
+    payload = reimported.get_json()
+    assert payload["restored"] is True
+    assert payload["data"]["id"] == transaction_id
+    assert payload["data"]["type"] == "transfer"
+    assert payload["data"]["category"] == "Internal Transfer"
+    assert payload["data"]["description"] == "moved to my m-pesa wallet"
+    assert payload["data"]["provider_fee"] == "105.00"
+    assert payload["data"]["provider_flow"] == "money_out"
+
+    summary = client.get(
+        "/api/analytics/summary?period=30-days",
+        headers=headers,
+    )
+    assert summary.status_code == 200, summary.get_json()
+    cash_flow = summary.get_json()["cashFlow"]
+    assert cash_flow["income"] == "0.00"
+    assert cash_flow["recordedExpenses"] == "0.00"
+    assert cash_flow["transactionFees"] == "105.00"
+    assert cash_flow["expenses"] == "105.00"
+
+    with app.app_context():
+        transaction = db.session.get(Transaction, transaction_id)
+        assert transaction.deleted_at is None
+        assert transaction.category.type == "transfer"
+        assert transaction.import_record.fee == Decimal("105.00")
+        assert transaction.import_record.fee_source == "provider_reported"
+        assert transaction.import_record.provider_flow == "money_out"
+        assert db.session.scalar(select(func.count(Transaction.id))) == 1
+        assert db.session.scalar(select(func.count(TransactionImport.id))) == 1
 
 
 def test_same_message_is_scoped_to_each_user(

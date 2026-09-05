@@ -6,12 +6,16 @@ from datetime import date
 from flask import current_app
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.importers.contracts import ParsedTransactionMessage
 from app.models.transaction_import import TransactionImport
 from app.models.telegram_preferences import TelegramUserPreferences
-from app.services.transaction_service import build_transaction_for_user
+from app.services.transaction_service import (
+    build_transaction_for_user,
+    rebuild_soft_deleted_transaction_for_user,
+)
 
 
 class TransactionMessageNotImportableError(ValueError):
@@ -60,7 +64,9 @@ def message_fingerprint(provider: str, message: str) -> str:
 
 def _find_existing_import(user_id: int, parsed: ParsedTransactionMessage, fingerprint: str) -> TransactionImport | None:
     return db.session.scalar(
-        select(TransactionImport).where(
+        select(TransactionImport)
+        .options(joinedload(TransactionImport.transaction))
+        .where(
             TransactionImport.user_id == user_id,
             or_(
                 (
@@ -74,6 +80,46 @@ def _find_existing_import(user_id: int, parsed: ParsedTransactionMessage, finger
             ),
         )
     )
+
+
+def _apply_import_provenance(
+    import_record: TransactionImport,
+    *,
+    parsed: ParsedTransactionMessage,
+    fingerprint: str,
+) -> None:
+    """Refresh non-sensitive provider facts from the newly parsed message."""
+    import_record.provider = parsed.provider
+    import_record.external_reference = parsed.external_reference
+    import_record.message_fingerprint = fingerprint
+    import_record.occurred_at = parsed.occurred_at
+    import_record.provider_transaction_type = (
+        parsed.provider_transaction_type or "unknown"
+    )
+    import_record.provider_flow = parsed.flow_direction.value
+    import_record.currency_code = parsed.currency
+    import_record.fee = parsed.fee
+    import_record.fee_source = (
+        "provider_reported" if parsed.fee is not None else "unknown"
+    )
+    import_record.original_estimated_fee = None
+    import_record.fee_tariff_version = None
+
+
+def _remember_category_alias(
+    user_id: int,
+    remember_alias: str | None,
+    category_name: str,
+) -> None:
+    if not remember_alias:
+        return
+    preferences = db.session.get(TelegramUserPreferences, user_id)
+    if preferences is None:
+        preferences = TelegramUserPreferences(user_id=user_id)
+        db.session.add(preferences)
+    aliases = dict(preferences.category_aliases or {})
+    aliases[remember_alias] = category_name
+    preferences.category_aliases = aliases
 
 
 def import_transaction_message_for_user(
@@ -90,52 +136,51 @@ def import_transaction_message_for_user(
 
     fingerprint = message_fingerprint(parsed.provider, raw_message)
     existing = _find_existing_import(user_id, parsed, fingerprint)
-    if existing is not None:
+    if existing is not None and existing.transaction.deleted_at is None:
         raise DuplicateTransactionImportError(existing.transaction_id)
 
     try:
-        transaction = build_transaction_for_user(
-            user_id=user_id,
-            category_name=category_name,
-            transaction_type=transaction_type,
-            payment_method_name=payment_method_for_provider(parsed.provider),
-            amount=parsed.amount,
-            transaction_date=transaction_date,
-            description=description,
-            merchant_name=parsed.counterparty,
-        )
-        db.session.flush()
+        restored = existing is not None
+        if existing is None:
+            transaction = build_transaction_for_user(
+                user_id=user_id,
+                category_name=category_name,
+                transaction_type=transaction_type,
+                payment_method_name=payment_method_for_provider(parsed.provider),
+                amount=parsed.amount,
+                transaction_date=transaction_date,
+                description=description,
+                merchant_name=parsed.counterparty,
+            )
+            db.session.flush()
+            import_record = TransactionImport(
+                user_id=user_id,
+                transaction_id=transaction.id,
+            )
+            db.session.add(import_record)
+        else:
+            import_record = existing
+            transaction = rebuild_soft_deleted_transaction_for_user(
+                existing.transaction,
+                user_id=user_id,
+                category_name=category_name,
+                transaction_type=transaction_type,
+                payment_method_name=payment_method_for_provider(parsed.provider),
+                amount=parsed.amount,
+                transaction_date=transaction_date,
+                description=description,
+                merchant_name=parsed.counterparty,
+            )
 
-        import_record = TransactionImport(
-            user_id=user_id,
-            transaction_id=transaction.id,
-            provider=parsed.provider,
-            external_reference=parsed.external_reference,
-            message_fingerprint=fingerprint,
-            occurred_at=parsed.occurred_at,
-            provider_transaction_type=parsed.provider_transaction_type or "unknown",
-            provider_flow=parsed.flow_direction.value,
-            currency_code=parsed.currency,
-            fee=parsed.fee,
-            fee_source=(
-                "provider_reported"
-                if parsed.fee is not None
-                else "unknown"
-            ),
+        _apply_import_provenance(
+            import_record,
+            parsed=parsed,
+            fingerprint=fingerprint,
         )
-        db.session.add(import_record)
-
-        if remember_alias:
-            preferences = db.session.get(TelegramUserPreferences, user_id)
-            if preferences is None:
-                preferences = TelegramUserPreferences(user_id=user_id)
-                db.session.add(preferences)
-            aliases = dict(preferences.category_aliases or {})
-            aliases[remember_alias] = category_name
-            preferences.category_aliases = aliases
+        _remember_category_alias(user_id, remember_alias, category_name)
 
         db.session.commit()
-        return transaction, import_record
+        return transaction, import_record, restored
 
     except IntegrityError as error:
         db.session.rollback()

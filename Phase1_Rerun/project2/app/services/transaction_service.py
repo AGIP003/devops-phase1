@@ -107,6 +107,48 @@ def build_transaction_for_user(
     db.session.add(transaction)
     return transaction
 
+
+def rebuild_soft_deleted_transaction_for_user(
+    transaction: Transaction,
+    *,
+    user_id: int,
+    category_name: str,
+    transaction_type: str,
+    payment_method_name: str,
+    amount: Decimal,
+    transaction_date: date,
+    description: str,
+    merchant_name: str | None = None,
+) -> Transaction:
+    """Replace a deleted imported transaction without creating a duplicate.
+
+    The caller owns the commit so the transaction row and its provider-import
+    provenance can be restored as one ACID operation.
+    """
+    if transaction.user_id != user_id:
+        raise ValueError("Transaction does not belong to this user")
+    if transaction.deleted_at is None:
+        raise ValueError("Only a deleted transaction can be rebuilt")
+
+    payment_method = _get_payment_method_by_name(payment_method_name)
+    if payment_method is None:
+        raise ValueError(
+            f"Payment method '{payment_method_name}' not found"
+        )
+
+    transaction.category = get_or_create_category(
+        name=category_name,
+        type=transaction_type,
+        user_id=user_id,
+    )
+    transaction.payment_method = payment_method
+    transaction.amount = amount
+    transaction.date = transaction_date
+    transaction.description = description
+    transaction.merchant_name = normalize_merchant_name(merchant_name)
+    transaction.deleted_at = None
+    return transaction
+
 def create_transaction_for_user(
     user_id: int,
     category_name: str,

@@ -338,6 +338,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     assert captured_import["transaction_type"] == "expense"
     assert captured_import["remember_alias"] == "weekly data bundle"
     assert captured_import["preview_token"] == "signed-preview-token"
+    assert "Imported safely" in save_query.edits[-1][0]
     assert "pending_import" not in context.user_data
     assert "import_access_token" not in context.user_data
 
