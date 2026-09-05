@@ -78,6 +78,10 @@ def clean_database(request):
 
     app = request.getfixturevalue("app")
     with app.app_context():
+        # TRUNCATE resets primary-key sequences. Discard the previous test's
+        # identity map first so SQLAlchemy cannot confuse a newly reused ID
+        # with an ORM object whose database row was just removed.
+        db.session.remove()
         assert_safe_test_database()
         table_names = ", ".join(DATABASE_TABLES)
 
@@ -88,10 +92,11 @@ def clean_database(request):
             )
         )
         db.session.commit()
+        db.session.remove()
 
         yield
 
-        db.session.rollback()
+        db.session.remove()
         assert_safe_test_database()
 
         db.session.execute(
@@ -101,6 +106,7 @@ def clean_database(request):
             )
         )
         db.session.commit()
+        db.session.remove()
 
 
 @pytest.fixture()

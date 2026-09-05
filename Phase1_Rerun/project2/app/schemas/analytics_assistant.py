@@ -20,12 +20,22 @@ class AnalyticsQuestionPlan(BaseModel):
     """Strict read-only operation chosen from a user's finance question."""
 
     tool: AnalyticsToolName
-    period: str = Field(pattern=r"^(week|month|year)$")
+    period: str = Field(pattern=r"^(week|month|year|all)$")
+    # Zero means the current calendar period, -1 the previous period, and so
+    # on. Keeping this explicit prevents "last month" from being answered with
+    # this month's records merely because both questions use a monthly grain.
+    offset: int = Field(default=0, ge=-120, le=0)
     query: str | None = Field(default=None, max_length=100)
     reduction_percent: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="after")
     def validate_tool_arguments(self):
+        if self.period == "all" and self.offset != 0:
+            raise ValueError("All-time analytics cannot use a period offset")
+        if self.tool == AnalyticsToolName.COMPARE_PERIODS and self.period == "all":
+            raise ValueError("An all-time range has no previous comparison period")
+        if self.tool == AnalyticsToolName.COMPARE_PERIODS and self.offset == -120:
+            raise ValueError("The previous comparison would exceed the history limit")
         if self.tool in {
             AnalyticsToolName.SEARCH_SPENDING,
             AnalyticsToolName.WHAT_IF,

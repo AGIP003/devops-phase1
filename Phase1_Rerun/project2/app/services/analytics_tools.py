@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from app.schemas import AnalyticsQuestionPlan, AnalyticsToolName
@@ -8,13 +8,7 @@ from app.services.analytics_service import (
     build_analytics_summary,
     build_calendar_cashflow,
     build_description_trend,
-    resolve_trend_period,
 )
-
-
-def _previous_anchor(period: str, anchor: date) -> date:
-    start, _, _ = resolve_trend_period(period, anchor=anchor)
-    return start - timedelta(days=1)
 
 
 def execute_analytics_tool(
@@ -32,13 +26,18 @@ def execute_analytics_tool(
             plan.query or "",
             plan.period,
             anchor=anchor,
+            offset=plan.offset,
         )
 
     if plan.tool == AnalyticsToolName.CASHFLOW_SUMMARY:
-        return build_calendar_cashflow(user_id, plan.period, anchor=anchor)
+        return build_calendar_cashflow(
+            user_id, plan.period, anchor=anchor, offset=plan.offset
+        )
 
     if plan.tool == AnalyticsToolName.FEE_SUMMARY:
-        snapshot = build_calendar_cashflow(user_id, plan.period, anchor=anchor)
+        snapshot = build_calendar_cashflow(
+            user_id, plan.period, anchor=anchor, offset=plan.offset
+        )
         return {
             "period": snapshot["period"],
             "confirmedFees": snapshot["confirmedFees"],
@@ -50,11 +49,16 @@ def execute_analytics_tool(
         }
 
     if plan.tool == AnalyticsToolName.COMPARE_PERIODS:
-        current = build_calendar_cashflow(user_id, plan.period, anchor=anchor)
+        if plan.period == "all":
+            raise ValueError("All-time results do not have a previous period")
+        current = build_calendar_cashflow(
+            user_id, plan.period, anchor=anchor, offset=plan.offset
+        )
         previous = build_calendar_cashflow(
             user_id,
             plan.period,
-            anchor=_previous_anchor(plan.period, anchor),
+            anchor=anchor,
+            offset=plan.offset - 1,
         )
         return {"current": current, "previous": previous}
 
@@ -64,6 +68,7 @@ def execute_analytics_tool(
             plan.query or "",
             plan.period,
             anchor=anchor,
+            offset=plan.offset,
         )
         current = Decimal(trend["totalAmount"])
         reduction = Decimal(plan.reduction_percent or 0) / Decimal("100")

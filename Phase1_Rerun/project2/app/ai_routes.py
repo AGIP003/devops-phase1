@@ -283,6 +283,7 @@ def answer_analytics_question():
         "caveats": result.answer.caveats,
         "operation": result.plan.tool.value,
         "period": result.plan.period,
+        "periodOffset": result.plan.offset,
         "data": result.tool_result,
     })
 

@@ -48,6 +48,13 @@ changing the API or financial calculations.
 - Network response size grows with summary buckets, not raw transaction count.
 - Several small queries are executed per request. This is safer than a
   row-multiplying join but must be monitored as traffic grows.
+- Free-text descriptions and merchant names remain separate dimensions:
+  category answers “where,” description answers “what for,” and merchant
+  answers “who.” Only normalized aggregates are returned; raw rows stay behind
+  the authenticated transaction endpoint.
+- Calendar offsets represent “last week/month/year” explicitly. They are not
+  treated as rolling windows, and all-time queries carry recorded-history
+  coverage so an empty result is not overstated.
 - Monthly equivalents use documented annualization assumptions.
 - Currency values other than KES are excluded from combined commitment and goal
   totals until conversion-at-measurement is designed.
@@ -57,6 +64,8 @@ changing the API or financial calculations.
 ## Revisit when
 
 - Analytics latency approaches the application's slow-request threshold.
+- Aggregate-query count or PostgreSQL load becomes material; at that point,
+  measure before adding short-lived caching or precomputed read models.
 - Query volume materially affects PostgreSQL CPU or connection capacity.
 - Users commonly have enough history that monthly or daily result buckets need
   pagination or pre-aggregation.

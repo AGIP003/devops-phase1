@@ -33,9 +33,13 @@ const CHART_COLORS = {
 };
 
 const SEARCH_PERIODS = [
-  ["week", "Week"],
-  ["month", "Month"],
-  ["year", "Year"],
+  ["week:0", "This week"],
+  ["week:-1", "Last week"],
+  ["month:0", "This month"],
+  ["month:-1", "Last month"],
+  ["year:0", "This year"],
+  ["year:-1", "Last year"],
+  ["all:0", "All recorded history"],
 ];
 
 function useCompactCalendar() {
@@ -132,7 +136,7 @@ function Analytics() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [trendQuery, setTrendQuery] = useState("");
-  const [trendPeriod, setTrendPeriod] = useState("month");
+  const [trendWindow, setTrendWindow] = useState("month:0");
   const [trendMetric, setTrendMetric] = useState("amount");
   const [trend, setTrend] = useState(null);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -576,8 +580,9 @@ function Analytics() {
     setTrendLoading(true);
     setTrendError("");
     try {
+      const [trendPeriod, trendOffset] = trendWindow.split(":");
       const response = await api.get("/analytics/description-trend", {
-        params: { query, period: trendPeriod },
+        params: { query, period: trendPeriod, offset: Number(trendOffset) },
       });
       setTrend(response.data);
     } catch (requestError) {
@@ -778,16 +783,19 @@ function Analytics() {
       return {
         ...item,
         label: "Data insight",
-        metric: "Review",
-        supporting: item.explanation,
-        comparison: "A new signal was found in the selected period",
-        caveat: "Check the underlying records before acting on this finding.",
+        metric: item.metric || "Review",
+        supporting: item.supporting || item.explanation,
+        comparison: item.comparison || "A new signal was found in the selected period",
+        caveat: item.caveat || "Check the underlying records before acting on this finding.",
         actionLabel: "See transactions",
         review: {
+          query: item.query,
           from: summary?.period?.start,
           to: summary?.period?.end,
         },
-        question: `Explain this finding: ${item.title}`,
+        question: item.query
+          ? `Explain my recorded spending involving ${item.query} in this period.`
+          : `Explain this finding: ${item.title}`,
       };
     });
   const visibleInsightCards = insightCards.filter(
@@ -801,6 +809,7 @@ function Analytics() {
     }
     if (card.review) {
       const params = new URLSearchParams();
+      if (card.review.query) params.set("query", card.review.query);
       if (card.review.category) params.set("category", card.review.category);
       if (card.review.from) params.set("from", card.review.from);
       if (card.review.to) params.set("to", card.review.to);
@@ -978,7 +987,7 @@ function Analytics() {
               <Search size={17} aria-hidden="true" />
               <input value={trendQuery} onChange={(event) => setTrendQuery(event.target.value)} placeholder="Try airtime, sugarcane, supermarket…" maxLength={100} />
             </label>
-            <select aria-label="Search period" value={trendPeriod} onChange={(event) => setTrendPeriod(event.target.value)}>
+            <select aria-label="Search period" value={trendWindow} onChange={(event) => setTrendWindow(event.target.value)}>
               {SEARCH_PERIODS.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
             <button type="submit" className="analytics-refresh-button" disabled={trendLoading}>
@@ -997,7 +1006,41 @@ function Analytics() {
                 </div>
               </div>
               {trend.totalCount > 0
-                ? <EChart option={trendOption} ariaLabel={`Spending trend for ${trend.query}`} />
+                ? <>
+                    <EChart option={trendOption} ariaLabel={`Spending trend for ${trend.query}`} />
+                    <div className="analytics-match-breakdown" aria-label="Matching descriptions and recipients">
+                      {(trend.topMerchants || []).length > 0 && (
+                        <section>
+                          <h3>People and businesses</h3>
+                          {(trend.topMerchants || []).map((item) => (
+                            <div key={item.merchant}>
+                              <span>{item.merchant}</span>
+                              <strong>{formatCurrency(item.amount)}</strong>
+                              <small>{item.count} transaction{item.count === 1 ? "" : "s"}</small>
+                            </div>
+                          ))}
+                        </section>
+                      )}
+                      {(trend.topDescriptions || []).length > 0 && (
+                        <section>
+                          <h3>What you wrote</h3>
+                          {(trend.topDescriptions || []).map((item) => (
+                            <div key={item.description}>
+                              <span>{item.description}</span>
+                              <strong>{formatCurrency(item.amount)}</strong>
+                              <small>{item.count} transaction{item.count === 1 ? "" : "s"}</small>
+                            </div>
+                          ))}
+                        </section>
+                      )}
+                    </div>
+                    <p className="analytics-coverage-note">
+                      Records available: {trend.recordedHistory?.firstTransactionDate || "none yet"}
+                      {trend.recordedHistory?.lastTransactionDate
+                        ? ` to ${trend.recordedHistory.lastTransactionDate}`
+                        : ""}.
+                    </p>
+                  </>
                 : <div className="analytics-chart-empty"><span>No owned transactions matched that description or merchant.</span></div>}
             </>
           )}

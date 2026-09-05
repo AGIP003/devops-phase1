@@ -42,8 +42,9 @@ actual finance tools inside its own trust boundary:
 - **Fuliza principal is financing, not new spending.** A purchase is recorded
   when the money is spent; drawing or repaying the principal does not create a
   second expense. Explicit access or maintenance fees are expenses.
-- Description-trend search matches any transaction description or merchant. It
-  is not specialized for a particular product such as airtime or sugarcane.
+- Description-trend search matches category, description, or merchant. Category
+  answers “where,” description answers “what for,” and merchant answers “who.”
+  It is not specialized for a product such as airtime or sugarcane.
 
 The reviewed catalog now supports standard non-fuel M-PESA Buy Goods plus
 Airtel on-net, other-network, withdrawal and Paybill/wallet-to-bank bands.
@@ -61,7 +62,7 @@ All endpoints derive ownership from the JWT and return private, non-cacheable
 responses.
 
 - `GET /api/analytics/summary?period=12-months`
-- `GET /api/analytics/description-trend?query=airtime&period=month`
+- `GET /api/analytics/description-trend?query=airtime&period=month&offset=0`
 - `GET /api/fees/summary`
 - `GET /api/fees/tariffs`
 - `POST /api/fees/estimate`
@@ -70,8 +71,10 @@ responses.
 - `POST /api/ai/analytics/questions`
 - `POST /api/ai/analytics/weekly-summary`
 
-Supported search grains are calendar week (Monday to Sunday), calendar month
-(daily bars), and calendar year (monthly bars). The fee-edit endpoint does not
+Supported search windows are calendar week (Monday to Sunday), calendar month
+(daily bars), calendar year (monthly bars), and all recorded history. Negative
+offsets select earlier calendar periods; `month&offset=-1` is last month. The
+fee-edit endpoint does not
 allow a provider-reported fee to be overwritten. Editing an estimate changes
 its source to `user_confirmed` while retaining `original_estimated_fee` and the
 tariff version for auditability.
@@ -79,13 +82,19 @@ tariff version for auditability.
 The weekly endpoint is an on-demand preview. Automatic Telegram or email
 delivery is deliberately absent until the user has an explicit opt-in setting
 and a reviewed scheduler/worker deployment. Previewing is not consent to send.
+The preview uses the current and previous calendar week plus a compact 30-day
+planning context containing goals, debts, commitments, upcoming payments and
+deterministic signals. With no weekly transactions it still reports recorded
+plans, while clearly saying that spending comparisons are unavailable.
 
 ## Privacy and failure behaviour
 
 - Raw provider SMS messages are parsed in memory and are not persisted.
 - Stored provenance uses an HMAC fingerprint plus the minimum parsed fields.
-- Wallet balances, phone numbers, account numbers, raw descriptions and raw
-  transaction rows are not sent to the model for analytics answers.
+- Wallet balances, phone numbers, account numbers and raw transaction rows are
+  not sent to the model for analytics answers. A bounded search may send its top
+  matching description and merchant aggregates because those labels are needed
+  to answer “what?” and “who?”; unrelated history is excluded.
 - The AI request uses an opaque HMAC safety identifier, `store=False`, strict
   Pydantic output schemas, output-token limits and per-user cost/rate limits.
 - A finance question reserves more of the daily AI budget than a one-call bot

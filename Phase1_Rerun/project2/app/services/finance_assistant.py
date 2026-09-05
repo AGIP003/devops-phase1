@@ -29,7 +29,7 @@ from app.services.ai_support import (
     log_ai_invalid_response,
     log_ai_provider_failure,
 )
-from app.services.analytics_service import build_calendar_cashflow
+from app.services.analytics_service import build_analytics_summary, build_calendar_cashflow
 from app.services.analytics_tools import execute_analytics_tool
 
 
@@ -50,8 +50,13 @@ Operations:
 - get_debt_position: recorded debt balance, repayments and fees.
 - run_what_if_scenario: illustrate reducing one searched spending area.
 
-Interpret "this week", "this month" and "this year" as week, month and year.
-Use month when no period is stated. Preserve the user's search wording in query.
+Interpret "this week", "this month" and "this year" with offset 0. Interpret
+"last week", "last month" and "last year" with offset -1. Use successively
+smaller negative offsets for earlier calendar periods. Use period=all and
+offset=0 for "ever", "all time" or "since I started". A calendar month is not
+a rolling 30-day period. Use month with offset 0 when no period is stated.
+Preserve the user's search wording in query, including a merchant or person's
+name; merchant totals are valid spending searches.
 This plan only reads data; it must never create, edit or delete anything.
 """.strip()
 
@@ -65,6 +70,11 @@ Rules:
 - State the date range used.
 - For an empty match, say no matching recorded transactions were found; do not
   claim the user never made that purchase.
+- Use topDescriptions and topMerchants when they directly answer what the user
+  bought or who received the money. Do not broaden beyond the supplied matches.
+- If the requested period predates recordedHistory, answer with that coverage
+  limitation. If some evidence exists, explain it before suggesting that more
+  consistent recording will improve comparisons.
 - Present options and trade-offs, not commands or guaranteed outcomes.
 - Do not provide investment, legal or tax instructions.
 - Do not claim that anything was saved or changed.
@@ -82,6 +92,8 @@ Distinguish confirmed from estimated fees, and give practical options without
 shame or certainty. Do not provide investment, legal or tax instructions. Do
 not claim any automatic change was made. Empty observations, options, and
 caveats arrays are valid; never invent an item merely to fill a list.
+Use the supplied top descriptions and merchants to make the review concrete,
+but do not call a repeated label a habit unless several records support it.
 """.strip()
 
 
@@ -115,7 +127,20 @@ def _weekly_snapshot(
         "week",
         anchor=current_start - timedelta(days=1),
     )
-    return {"currentWeek": current, "previousWeek": previous}
+    wider = build_analytics_summary(user_id, "30-days", today=anchor)
+    planning_context = {
+        "commitments": wider["commitments"],
+        "goals": wider["goals"],
+        "debts": wider["debts"],
+        "upcoming": wider["upcoming"],
+        "signals": wider["adjustmentOpportunities"][:6],
+        "recordedHistory": wider["recordedHistory"],
+    }
+    return {
+        "currentWeek": current,
+        "previousWeek": previous,
+        "planningContext": planning_context,
+    }
 
 
 def build_weekly_data_summary(
@@ -134,14 +159,31 @@ def build_weekly_data_summary(
     transaction_count = int(current.get("transactionCount", 0))
 
     if transaction_count == 0:
+        planning = snapshot["planningContext"]
+        observations = []
+        commitments = planning["commitments"]
+        if Decimal(commitments["totalMonthlyCommitted"]) > Decimal("0"):
+            observations.append(
+                "Recorded monthly commitments total KES "
+                f"{commitments['totalMonthlyCommitted']}."
+            )
+        goals = planning["goals"]
+        if goals["activeCount"]:
+            observations.append(
+                f"{goals['activeCount']} active goal"
+                f"{'s' if goals['activeCount'] != 1 else ''} still need KES "
+                f"{goals['remaining']}."
+            )
         narrative = WeeklyFinanceNarrative(
             headline="No transactions recorded this week",
             summary=(
-                "There is not enough recorded activity to review yet. If you "
-                "made transactions this week, add or import them and try again."
+                "There is no transaction activity to compare this week. The "
+                "review still includes any goals and commitments already recorded."
             ),
-            observations=[],
-            options=[],
+            observations=observations,
+            options=[
+                "Add or import this week's transactions to unlock spending comparisons."
+            ],
             caveats=["This summary includes only transactions recorded in the app."],
         )
         return narrative, snapshot
@@ -185,10 +227,28 @@ def build_weekly_data_summary(
     else:
         comparison = "Recorded expenses match the previous week."
 
+    descriptions = current.get("topDescriptions") or []
+    merchants = current.get("topMerchants") or []
+    observations = [comparison]
+    if descriptions:
+        leading = descriptions[0]
+        observations.append(
+            f"{leading['description']} accounted for KES {leading['amount']} "
+            f"across {leading['count']} recorded purchase"
+            f"{'s' if leading['count'] != 1 else ''}."
+        )
+    elif merchants:
+        leading = merchants[0]
+        observations.append(
+            f"Payments involving {leading['merchant']} totalled KES "
+            f"{leading['amount']} across {leading['count']} recorded purchase"
+            f"{'s' if leading['count'] != 1 else ''}."
+        )
+
     narrative = WeeklyFinanceNarrative(
         headline=f"A review of {transaction_count} transactions this week",
         summary=summary,
-        observations=[comparison],
+        observations=observations,
         options=[],
         caveats=[
             "This summary includes only transactions recorded in the app.",

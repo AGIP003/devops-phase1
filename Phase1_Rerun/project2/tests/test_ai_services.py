@@ -87,6 +87,28 @@ def test_weekly_narrative_accepts_sparse_but_honest_evidence():
     assert narrative.options == []
 
 
+def test_analytics_plan_distinguishes_last_month_from_this_month():
+    plan = AnalyticsQuestionPlan.model_validate({
+        "tool": "search_spending",
+        "period": "month",
+        "offset": -1,
+        "query": "Pamela Wandera",
+    })
+
+    assert plan.offset == -1
+    assert plan.query == "Pamela Wandera"
+
+
+def test_all_time_analytics_rejects_a_period_offset():
+    with pytest.raises(ValueError, match="All-time analytics"):
+        AnalyticsQuestionPlan.model_validate({
+            "tool": "search_spending",
+            "period": "all",
+            "offset": -1,
+            "query": "airtime",
+        })
+
+
 def test_weekly_data_summary_handles_an_empty_week(ai_app, monkeypatch):
     snapshots = iter([
         {
@@ -127,6 +149,18 @@ def test_weekly_data_summary_handles_an_empty_week(ai_app, monkeypatch):
         "build_calendar_cashflow",
         lambda *args, **kwargs: next(snapshots),
     )
+    monkeypatch.setattr(
+        finance_assistant,
+        "build_analytics_summary",
+        lambda *args, **kwargs: {
+            "commitments": {"totalMonthlyCommitted": "1200.00"},
+            "goals": {"activeCount": 1, "remaining": "5000.00"},
+            "debts": {},
+            "upcoming": [],
+            "adjustmentOpportunities": [],
+            "recordedHistory": {"transactionCount": 0},
+        },
+    )
 
     with ai_app.app_context():
         narrative, snapshot = finance_assistant.build_weekly_data_summary(
@@ -134,7 +168,8 @@ def test_weekly_data_summary_handles_an_empty_week(ai_app, monkeypatch):
         )
 
     assert narrative.headline == "No transactions recorded this week"
-    assert narrative.observations == []
+    assert "monthly commitments total" in narrative.observations[0]
+    assert "active goal" in narrative.observations[1]
     assert snapshot["currentWeek"]["income"] == "0.00"
 
 
@@ -183,6 +218,18 @@ def test_weekly_data_summary_reviews_one_transaction_without_claiming_a_pattern(
         finance_assistant,
         "build_calendar_cashflow",
         lambda *args, **kwargs: next(snapshots),
+    )
+    monkeypatch.setattr(
+        finance_assistant,
+        "build_analytics_summary",
+        lambda *args, **kwargs: {
+            "commitments": {"totalMonthlyCommitted": "0.00"},
+            "goals": {"activeCount": 0, "remaining": "0.00"},
+            "debts": {},
+            "upcoming": [],
+            "adjustmentOpportunities": [],
+            "recordedHistory": {"transactionCount": 1},
+        },
     )
 
     with ai_app.app_context():

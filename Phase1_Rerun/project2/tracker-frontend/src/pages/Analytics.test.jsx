@@ -178,6 +178,12 @@ describe("Analytics", () => {
             totalCount: 2,
             totalAmount: "350.00",
             series: [{ bucket: "2026-08-18", count: 2, amount: "350.00" }],
+            topMerchants: [{ merchant: "Safaricom", count: 2, amount: "350.00" }],
+            topDescriptions: [{ description: "Airtime top up", count: 2, amount: "350.00" }],
+            recordedHistory: {
+              firstTransactionDate: "2026-05-01",
+              lastTransactionDate: "2026-08-18",
+            },
           },
         });
       }
@@ -191,11 +197,13 @@ describe("Analytics", () => {
 
     expect(await screen.findByText("“airtime”")).toBeInTheDocument();
     expect(screen.getByText("2 matches · KES 350.00")).toBeInTheDocument();
+    expect(screen.getByText("Safaricom")).toBeInTheDocument();
+    expect(screen.getByText("Airtime top up")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /spending trend for airtime/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Frequency" }));
     expect(api.get).toHaveBeenCalledWith(
       "/analytics/description-trend",
-      { params: { query: "airtime", period: "month" } },
+      { params: { query: "airtime", period: "month", offset: 0 } },
     );
   });
 

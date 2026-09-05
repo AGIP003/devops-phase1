@@ -222,9 +222,134 @@ def test_description_trend_is_generic_owned_and_ignores_soft_deleted_rows(
     assert len(payload["series"]) >= 28
     assert response.headers["Cache-Control"] == "private, no-store"
     assert merchant_match["merchant_name"] == "Sugarcane Corner"
+    assert payload["topMerchants"][0]["merchant"] == "Sugarcane Corner"
+    assert payload["topDescriptions"][0]["description"] == "evening sugarcane"
+    assert payload["recordedHistory"]["transactionCount"] == 2
 
     invalid = client.get(
         "/api/analytics/description-trend?query=x&period=month",
         headers=owner_headers,
     )
     assert invalid.status_code == 400
+
+
+def test_description_trend_supports_last_month_and_merchant_questions(
+    client,
+    register_user,
+    payment_method,
+):
+    owner = register_user("history-owner", "history-owner@example.com")
+    other = register_user("history-other", "history-other@example.com")
+    owner_headers = authorization(owner["token"])
+
+    current = date.today()
+    first_this_month = current.replace(day=1)
+    last_month_end = first_this_month - timedelta(days=1)
+    last_month_day = last_month_end.replace(day=min(12, last_month_end.day))
+
+    create_transaction(
+        client,
+        owner_headers,
+        amount="1800.00",
+        category="Food",
+        kind="expense",
+        description="Materials contribution",
+        merchant_name="Pamela Wandera",
+        occurred_on=last_month_day,
+    )
+    create_transaction(
+        client,
+        owner_headers,
+        amount="900.00",
+        category="Food",
+        kind="expense",
+        description="Current month transfer",
+        merchant_name="Pamela Wandera",
+        occurred_on=current,
+    )
+    create_transaction(
+        client,
+        authorization(other["token"]),
+        amount="99000.00",
+        category="Food",
+        kind="expense",
+        merchant_name="Pamela Wandera",
+        occurred_on=last_month_day,
+    )
+
+    response = client.get(
+        "/api/analytics/description-trend"
+        "?query=Pamela%20Wandera&period=month&offset=-1",
+        headers=owner_headers,
+    )
+
+    assert response.status_code == 200, response.get_json()
+    payload = response.get_json()
+    assert payload["period"]["offset"] == -1
+    assert payload["period"]["end"] == last_month_end.isoformat()
+    assert payload["totalCount"] == 1
+    assert payload["totalAmount"] == "1800.00"
+    assert payload["topMerchants"] == [{
+        "merchant": "Pamela Wandera",
+        "count": 1,
+        "amount": "1800.00",
+        "firstDate": last_month_day.isoformat(),
+        "lastDate": last_month_day.isoformat(),
+    }]
+
+
+def test_summary_surfaces_explainable_patterns_without_crossing_ownership(
+    client,
+    register_user,
+    payment_method,
+):
+    owner = register_user("signal-owner", "signal-owner@example.com")
+    other = register_user("signal-other", "signal-other@example.com")
+    owner_headers = authorization(owner["token"])
+
+    for index, amount in enumerate(("100.00", "150.00", "200.00", "250.00", "300.00")):
+        create_transaction(
+            client,
+            owner_headers,
+            amount=amount,
+            category="Food",
+            kind="expense",
+            description="Lunch at work",
+            merchant_name="Corner Cafe",
+            occurred_on=date.today() - timedelta(days=index % 2),
+        )
+    create_transaction(
+        client,
+        owner_headers,
+        amount="3000.00",
+        category="Other expense",
+        kind="expense",
+        description="Office chair",
+        merchant_name="Furniture Store",
+    )
+    create_transaction(
+        client,
+        authorization(other["token"]),
+        amount="99000.00",
+        category="Food",
+        kind="expense",
+        description="Private lunch",
+        merchant_name="Corner Cafe",
+    )
+
+    response = client.get(
+        "/api/analytics/summary?period=30-days",
+        headers=owner_headers,
+    )
+
+    assert response.status_code == 200, response.get_json()
+    payload = response.get_json()
+    assert payload["recordedHistory"]["transactionCount"] == 6
+    assert payload["expenseDetails"]["topMerchants"][0]["merchant"] == "Furniture Store"
+    assert {item["type"] for item in payload["adjustmentOpportunities"]} >= {
+        "small_spend_pattern",
+        "recurring_candidate",
+        "unusual_purchase",
+        "change_driver",
+        "spending_rhythm",
+    }

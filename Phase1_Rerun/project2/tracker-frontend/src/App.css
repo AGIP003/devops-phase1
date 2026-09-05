@@ -10202,6 +10202,63 @@ body.public-screen {
   color: #69746b;
 }
 
+.analytics-match-breakdown {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  margin-top: 0.75rem;
+}
+
+.analytics-match-breakdown section {
+  border: 1px solid #e2e7df;
+  border-radius: 12px;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.analytics-match-breakdown h3 {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.045em;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.analytics-match-breakdown section > div {
+  align-items: baseline;
+  display: grid;
+  gap: 0.15rem 0.55rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.45rem 0;
+}
+
+.analytics-match-breakdown section > div + div {
+  border-top: 1px solid #edf0eb;
+}
+
+.analytics-match-breakdown span {
+  font-size: 0.78rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.analytics-match-breakdown strong {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.analytics-match-breakdown small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  grid-column: 1 / -1;
+}
+
+.analytics-coverage-note {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  margin: 0.7rem 0 0;
+}
+
 .analytics-metric-toggle {
   display: inline-flex;
   padding: 0.2rem;

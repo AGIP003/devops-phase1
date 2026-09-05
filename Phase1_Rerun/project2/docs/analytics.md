@@ -26,7 +26,9 @@ summary of sensitive financial information.
 | Monthly debt payments | Active KES debt schedules normalized to a monthly equivalent. One-time schedules are excluded. |
 | Required goal contribution | Remaining KES goal balance divided by estimated months until its target date. |
 | Recorded debt fees | Debt ledger entries whose type is `fee` inside the selected period. These increase debt balance and are not automatically cash expenses. |
-| Transaction fees | Unavailable until transactions explicitly represent them. The API returns `null` and the coverage flag is `false`. |
+| Transaction fees | Provider-reported, user-confirmed, or clearly labelled estimated fees attached to imported transactions. |
+| Description | The user's specific reason for a transaction: what the money was for. |
+| Merchant | The person or business involved: who received the money. |
 
 Weekly values use `52 / 12`; quarterly values use `1 / 3`; termly values assume
 three occurrences per year; yearly values use `1 / 12`; custom intervals use
@@ -40,6 +42,10 @@ three occurrences per year; yearly values use `1 / 12`; custom intervals use
 - `debts`: current active balance, period repayments, fees and schedules.
 - `goals`: target, saved balance, progress and required monthly contribution.
 - `monthlyTrend`, `expenseCategories`, `dailyActivity`: chart-ready aggregates.
+- `expenseDetails`: top descriptions, merchants, small-purchase totals,
+  repeated-label candidates and weekday totals.
+- `recordedHistory`: first and last active transaction dates plus coverage
+  counts, so an empty result is not mistaken for proof that an event never happened.
 - `upcoming`: the next eight KES commitments or debt payments.
 - `adjustmentOpportunities`: deterministic review flags with visible evidence.
 - `coverage`: which source domains are implemented.
@@ -47,11 +53,28 @@ three occurrences per year; yearly values use `1 / 12`; custom intervals use
 
 ## Adjustment rules
 
-The first implementation uses deterministic rules rather than AI. It flags a
-category when it represents at least 30% of period expenses, reports recorded
-debt fees, and flags estimated monthly commitments at or above 60% of average
-monthly income. The language asks users to review evidence; it does not instruct
-them to cancel a service or make a financial decision.
+The rules run before AI. They can flag category concentration, a change from the
+previous equal-length period, purchases at or below KES 500 accumulating across
+three or more records, a repeated merchant/description candidate, a purchase at
+least twice the user's historical average after five records, the highest-spend
+weekday, goal contribution pressure, recorded debt fees and several upcoming
+payments. These are explainable review signals—not predictions, diagnoses, or
+automatic changes. Repeated wording is explicitly not treated as proof of a bill.
+
+## Search windows and merchant questions
+
+Description/merchant search supports `week`, `month`, `year`, and `all`.
+`offset=0` means the current calendar period and `offset=-1` means the previous
+calendar period. Thus “last month” is the previous named month, not a rolling
+30-day window. The response includes aggregated top descriptions, merchants and
+categories, but not raw transaction rows.
+
+```http
+GET /api/analytics/description-trend?query=Pamela%20Wandera&period=month&offset=-1
+```
+
+All queries derive `user_id` from the validated JWT and exclude soft-deleted
+transactions. A merchant name is not an authorization key.
 
 ## Calendar
 

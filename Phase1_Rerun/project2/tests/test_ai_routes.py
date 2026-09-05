@@ -202,6 +202,7 @@ def test_analytics_question_returns_only_bounded_tool_evidence(
     assert response.status_code == 200, response.get_json()
     payload = response.get_json()
     assert payload["operation"] == "search_spending"
+    assert payload["periodOffset"] == 0
     assert payload["data"]["totalCount"] == 2
     assert captured["question"].startswith("How often")
     assert isinstance(captured["user_id"], int)
