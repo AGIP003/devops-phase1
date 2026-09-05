@@ -124,13 +124,16 @@ jobs:
             --env FLASK_ENV=testing \
             --env SECRET_KEY=ci-only-flask-session-secret-32-bytes \
             --env TEST_DATABASE_URL=postgresql://postgres:postgres@database.invalid:5432/finance_tracker_test \
+            --env "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
             --env WEB_CONCURRENCY=1 \
             moneytiq-ci:${{ github.sha }}
 
-      - name: Verify container serves HTTP
+      - name: Verify container serves expected release
         run: |
           for attempt in {1..20}; do
-            if curl --fail --silent http://127.0.0.1:5000/health; then
+            if response="$(curl --fail --silent http://127.0.0.1:5000/health)"; then
+              HEALTH_RESPONSE="$response" python -c \
+                'import json, os, sys; payload=json.loads(os.environ["HEALTH_RESPONSE"]); expected=os.environ["GITHUB_SHA"]; actual=payload.get("release"); actual == expected or sys.exit(f"Expected release {expected}, got {actual}"); print(f"Healthy release: {actual}")'
               exit 0
             fi
             sleep 1

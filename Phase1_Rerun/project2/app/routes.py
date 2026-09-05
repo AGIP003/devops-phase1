@@ -132,9 +132,12 @@ def register_routes(app):
 
     @app.route('/health', methods=['GET'])
     def health_check():
+        release = os.getenv("RAILWAY_GIT_COMMIT_SHA") or "local"
+
         return {
             "status" : "ok",
-            "environment": os.getenv("FLASK_ENV", "development")
+            "environment": os.getenv("FLASK_ENV", "development"),
+            "release": release,
         }, 200
 
     @app.route("/api/analytics/summary", methods=["GET"])
@@ -160,19 +163,22 @@ def register_routes(app):
         """Return a calendar-aligned trend for an owned expense search."""
         query = request.args.get("query", "")
         period = request.args.get("period", "month")
+        offset_text = request.args.get("offset", "0")
         anchor_text = request.args.get("anchor")
         try:
             anchor = date.fromisoformat(anchor_text) if anchor_text else None
+            offset = int(offset_text)
             result = build_description_trend(
                 g.current_user["user_id"],
                 query,
                 period,
                 anchor=anchor,
+                offset=offset,
             )
         except (AnalyticsPeriodError, AnalyticsSearchError) as error:
             abort(400, description=str(error))
         except (TypeError, ValueError) as error:
-            abort(400, description=f"Invalid analytics anchor date: {error}")
+            abort(400, description=f"Invalid analytics date or offset: {error}")
 
         response = jsonify(result)
         response.headers["Cache-Control"] = "private, no-store"
