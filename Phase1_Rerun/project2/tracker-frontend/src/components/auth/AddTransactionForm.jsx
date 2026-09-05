@@ -30,7 +30,7 @@ function AddTransactionForm({ onSuccess }) {
 
     function validateForm() {
         if(!formData.type) {
-            return 'Please select a transaction type (Income or Expense)'
+            return 'Please select income, expense, or transfer'
         }
         if (!formData.amount.trim() || !formData.category.trim() || !formData.payment_method.trim() || !formData.date.trim() || !formData.description.trim()) {
             return 'Kindly fill in the missing field';
@@ -68,7 +68,8 @@ function AddTransactionForm({ onSuccess }) {
 
     const categoryOptions = {
         income: ["salary", "business", "freelance", "loan", "investments", "gifts", "other income", "debts paid" ],
-        expense: ["rent", "utilities", "food", "transport", "airtime", "groceries", "loan", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+        expense: ["rent", "utilities", "food", "transport", "airtime", "groceries", "loan", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"],
+        transfer: ["internal transfer"],
     }
 
     const currentCategories = formData.type ? categoryOptions[formData.type] : [];
@@ -125,6 +126,7 @@ function AddTransactionForm({ onSuccess }) {
                     <option value="">Select type</option>
                     <option value="income">Income</option>
                     <option value="expense">Expense</option>
+                    <option value="transfer">Transfer</option>
                   </select>
                 </label>
                 <label className="transaction-field">
@@ -137,7 +139,7 @@ function AddTransactionForm({ onSuccess }) {
                     required
                   >
 
-                  <option value="">{formData.type ? "Select category" : "Select income/expense type first"}</option>
+                  <option value="">{formData.type ? "Select category" : "Select a type first"}</option>
                   {currentCategories.map((cat) => (
                     <option key={cat} value={cat.toLowerCase()}>
                       {cat}

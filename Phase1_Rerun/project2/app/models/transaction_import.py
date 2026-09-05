@@ -29,6 +29,10 @@ class TransactionImport(TimeStampMixin, Base):
             "'estimated_tariff', 'user_confirmed')",
             name="ck_transaction_imports_fee_source",
         ),
+        CheckConstraint(
+            "provider_flow IN ('money_in', 'money_out')",
+            name="ck_transaction_imports_provider_flow",
+        ),
         UniqueConstraint(
             "transaction_id",
             name="uq_transaction_imports_transaction_id",
@@ -68,6 +72,7 @@ class TransactionImport(TimeStampMixin, Base):
         String(40),
         nullable=False,
     )
+    provider_flow: Mapped[str] = mapped_column(String(16), nullable=False)
     currency_code: Mapped[str] = mapped_column(String(3), nullable=False)
     fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     fee_source: Mapped[str] = mapped_column(

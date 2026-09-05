@@ -7,13 +7,17 @@
 2. The API tries a deterministic parser first. If the text looks like a
    completed provider message but no reviewed pattern matches, a minimized copy
    can use the bounded AI fallback.
-3. The bot requires the user's description and category choice.
-4. The bot shows a final preview with **Save once**, **Save & remember**, and
+3. The bot shows the provider-observed movement separately from its suggested
+   reporting type. Ambiguous sends, receipts, PayBills and AI results require
+   the user to choose income, expense or transfer.
+4. The bot requires the user's description and category choice. Transfers use
+   the dedicated `Internal Transfer` category.
+5. The bot shows a final preview with **Save once**, **Save & remember**, and
    **Cancel**.
-5. The API either reparses a deterministic message or verifies the AI result's
+6. The API either reparses a deterministic message or verifies the AI result's
    signed, user-bound preview token. It then atomically stores the transaction,
    provenance and optional user alias.
-6. Temporary raw message and JWT state expire after ten minutes and are cleared
+7. Temporary raw message and JWT state expire after ten minutes and are cleared
    on completion or cancellation.
 
 Supported Airtel Money messages include outgoing and incoming transfers,
@@ -27,8 +31,9 @@ Supported M-Pesa messages include outgoing and incoming transfers, PayBill,
 Buy Goods, airtime, cash withdrawal, and KCB M-Pesa loan repayment notices.
 Loan repayment is recorded as an expense with provider subtype
 `loan_repayment`; it does not introduce a separate transaction direction.
-Withdrawals are recognized as transfers but are not importable until the app
-has an account-to-account transfer model.
+Withdrawals are recognized as transfers. Transfers remain visible in the
+transaction list but stay outside income and expense analytics. Any explicit
+provider fee is still included in expenses.
 
 The description answers “what was this for?” Provider wording only answers “what
 did the payment rail report?” Keeping them separate avoids treating every payment
@@ -58,13 +63,15 @@ Confirmation request:
 {
   "message": "COMPLETE PROVIDER MESSAGE",
   "description": "Weekly data bundle",
+  "type": "expense",
   "category": "airtime",
   "date": "2026-08-20",
   "rememberAlias": "weekly data bundle"
 }
 ```
 
-`date` is required only when the provider message omits its transaction date.
+`type` is required when the preview marks classification as required. `date` is
+required only when the provider message omits its transaction date.
 `rememberAlias` is optional and only sent after explicit user confirmation. A
 repeat import returns HTTP `409` and does not create a second transaction. An
 AI-assisted preview also returns an opaque `previewToken`; clients must return
@@ -119,7 +126,7 @@ FLASK_ENV=testing SQLALCHEMY_ECHO=false flask db upgrade head
 FLASK_ENV=testing SQLALCHEMY_ECHO=false flask db current
 ```
 
-Expected head: `a4c7e2f91b30`.
+Expected head: `e9b1f0a4c673`.
 
 Run focused tests:
 

@@ -5,7 +5,8 @@ from sqlalchemy import func, select
 from app.extensions import db
 from app.importers.contracts import (
     ParsedTransactionMessage,
-    TransactionDirection,
+    ProviderFlowDirection,
+    TransactionClassification,
 )
 from app.models.payment_method import PaymentMethod
 from app.models.telegram_preferences import TelegramUserPreferences
@@ -41,6 +42,14 @@ def sample_airtel_topup_for_line_message() -> str:
         "29148245185 Successful. Airtime top up for line 101784609 "
         "of Ksh 20 is successful. Bal: Ksh 520.5. To check your "
         "airtime balance, dial *131#"
+    )
+
+
+def sample_airtel_wallet_transfer_message() -> str:
+    return (
+        "Y3QV334AMGX. Ksh 17,500 sent to SAMPLE PERSON 703602692 "
+        "on 05/09/26 at 11:20 PM. Fee: Ksh 105. Bal: Ksh 95.5. "
+        "MPESA ID: UI5IU5CE3F"
     )
 
 
@@ -197,6 +206,7 @@ def test_import_saves_original_date_fee_and_explicit_alias_atomically(
 
         assert import_record is not None
         assert import_record.transaction_id == payload["data"]["id"]
+        assert import_record.provider_flow == "money_out"
         assert import_record.fee_source == "provider_reported"
         assert len(import_record.message_fingerprint) == 64
         assert not hasattr(import_record, "raw_message")
@@ -265,6 +275,70 @@ def test_same_message_is_scoped_to_each_user(
 
     assert first.status_code == 201
     assert second.status_code == 201
+
+
+def test_ambiguous_wallet_movement_requires_classification_and_transfer_fee_counts(
+    app,
+    client,
+    register_user,
+):
+    seed_provider_payment_methods(app)
+    owner = register_user("transfer-owner", "transfer-owner@example.com")
+    headers = authorization(owner["token"])
+    message = sample_airtel_wallet_transfer_message()
+
+    preview = client.post(
+        "/api/transaction-imports/preview",
+        headers=headers,
+        json={"message": message},
+    )
+
+    assert preview.status_code == 200, preview.get_json()
+    preview_data = preview.get_json()
+    assert preview_data["flowDirection"] == "money_out"
+    assert preview_data["suggestedType"] == "expense"
+    assert preview_data["requiresClassification"] is True
+
+    missing_choice = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": message,
+            "description": "Moved to my M-Pesa wallet",
+            "category": "internal transfer",
+        },
+    )
+    assert missing_choice.status_code == 400
+    assert "choose whether" in missing_choice.get_json()["message"].lower()
+
+    saved = client.post(
+        "/api/transaction-imports",
+        headers=headers,
+        json={
+            "message": message,
+            "description": "Moved to my M-Pesa wallet",
+            "type": "transfer",
+            "category": "internal transfer",
+        },
+    )
+    assert saved.status_code == 201, saved.get_json()
+    assert saved.get_json()["data"]["type"] == "transfer"
+    assert saved.get_json()["data"]["provider_flow"] == "money_out"
+
+    summary = client.get(
+        "/api/analytics/summary?period=30-days",
+        headers=headers,
+    )
+    assert summary.status_code == 200, summary.get_json()
+    cash_flow = summary.get_json()["cashFlow"]
+    assert cash_flow["income"] == "0.00"
+    assert cash_flow["recordedExpenses"] == "0.00"
+    assert cash_flow["transactionFees"] == "105.00"
+    assert cash_flow["expenses"] == "105.00"
+
+    with app.app_context():
+        import_record = db.session.scalar(select(TransactionImport))
+        assert import_record.provider_flow == "money_out"
 
 
 def test_fuliza_notice_is_previewed_and_saved_without_counting_principal_as_spending(
@@ -348,7 +422,7 @@ def test_ai_fallback_preview_can_be_confirmed_and_saved_once(
             "occurred_at": "2026-09-03T14:19:00+03:00",
             "amount": "700.00",
             "currency": "KES",
-            "direction": "expense",
+            "flow_direction": "money_out",
             "description": "Paid SAMPLE MERCHANT",
             "counterparty": "SAMPLE MERCHANT",
             "fee": "12.00",
@@ -365,7 +439,8 @@ def test_ai_fallback_preview_can_be_confirmed_and_saved_once(
             occurred_at=extraction.transaction.occurred_at,
             amount=extraction.transaction.amount,
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description="Paid SAMPLE MERCHANT",
             counterparty="SAMPLE MERCHANT",
             fee=Decimal("12.00"),
@@ -401,6 +476,7 @@ def test_ai_fallback_preview_can_be_confirmed_and_saved_once(
         "previewToken": preview_payload["previewToken"],
         "description": "Equipment payment",
         "category": "food",
+        "type": "expense",
     }
     saved = client.post(
         "/api/transaction-imports",
@@ -442,7 +518,7 @@ def test_ai_preview_token_rejects_a_changed_provider_message(
             "occurred_at": "2026-09-03T14:19:00+03:00",
             "amount": "700.00",
             "currency": "KES",
-            "direction": "expense",
+            "flow_direction": "money_out",
             "description": "Paid SAMPLE MERCHANT",
             "counterparty": "SAMPLE MERCHANT",
             "fee": "12.00",
@@ -459,7 +535,8 @@ def test_ai_preview_token_rejects_a_changed_provider_message(
             occurred_at=extraction.transaction.occurred_at,
             amount=extraction.transaction.amount,
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description="Paid SAMPLE MERCHANT",
             counterparty="SAMPLE MERCHANT",
             fee=Decimal("12.00"),

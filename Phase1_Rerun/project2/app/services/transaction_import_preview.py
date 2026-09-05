@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from app.importers.contracts import (
     ParsedTransactionMessage,
-    TransactionDirection,
+    TransactionClassification,
 )
 from app.schemas import ProviderImportSuggestion
 from app.services.provider_import_ai import AIProviderImportResult
@@ -106,7 +106,12 @@ def load_ai_import_preview_token(
         occurred_at=suggestion.occurred_at,
         amount=suggestion.amount,
         currency=suggestion.currency,
-        direction=TransactionDirection(suggestion.direction.value),
+        flow_direction=suggestion.flow_direction,
+        suggested_classification=(
+            TransactionClassification.INCOME
+            if suggestion.flow_direction.value == "money_in"
+            else TransactionClassification.EXPENSE
+        ),
         description=suggestion.description,
         counterparty=suggestion.counterparty,
         fee=suggestion.fee,

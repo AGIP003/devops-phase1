@@ -8,7 +8,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.importers.contracts import ParsedTransactionMessage, TransactionDirection
+from app.importers.contracts import ParsedTransactionMessage
 from app.models.transaction_import import TransactionImport
 from app.models.telegram_preferences import TelegramUserPreferences
 from app.services.transaction_service import build_transaction_for_user
@@ -83,14 +83,10 @@ def import_transaction_message_for_user(
     transaction_date: date,
     description: str,
     category_name: str,
+    transaction_type: str,
     remember_alias: str | None = None,
 ):
     """Parse and save the transaction plus provenance as one ACID operation."""
-
-    if parsed.direction is TransactionDirection.TRANSFER:
-        raise TransactionMessageNotImportableError(
-            "Transfers need account-to-account tracking and cannot be imported yet."
-        )
 
     fingerprint = message_fingerprint(parsed.provider, raw_message)
     existing = _find_existing_import(user_id, parsed, fingerprint)
@@ -101,7 +97,7 @@ def import_transaction_message_for_user(
         transaction = build_transaction_for_user(
             user_id=user_id,
             category_name=category_name,
-            transaction_type=parsed.direction.value,
+            transaction_type=transaction_type,
             payment_method_name=payment_method_for_provider(parsed.provider),
             amount=parsed.amount,
             transaction_date=transaction_date,
@@ -118,6 +114,7 @@ def import_transaction_message_for_user(
             message_fingerprint=fingerprint,
             occurred_at=parsed.occurred_at,
             provider_transaction_type=parsed.provider_transaction_type or "unknown",
+            provider_flow=parsed.flow_direction.value,
             currency_code=parsed.currency,
             fee=parsed.fee,
             fee_source=(

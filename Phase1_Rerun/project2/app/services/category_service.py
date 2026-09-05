@@ -40,14 +40,15 @@ def get_or_create_category(
     user_id: int | None = None
 ) -> Category:
     """
-    Find existing category by name+user_id or create it.
+    Find an existing category by name, type and user, or create it.
     flush() gets the id without committing — caller controls the transaction.
     """
     clean_name = normalize_category_name(name)
 
     stmt = select(Category).where(
         Category.name == clean_name,
-        Category.user_id == user_id
+        Category.user_id == user_id,
+        Category.type == type,
     )
     existing = db.session.execute(stmt).scalar_one_or_none()
 

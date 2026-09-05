@@ -108,7 +108,7 @@ def test_ai_provider_import_returns_validated_import_evidence(
             "occurred_at": "2026-09-03T14:19:00+03:00",
             "amount": "564.00",
             "currency": "KES",
-            "direction": "expense",
+            "flow_direction": "money_out",
             "description": "Paid SAMPLE PAYMENT C2B",
             "counterparty": "SAMPLE PAYMENT C2B",
             "fee": "10.00",
@@ -138,6 +138,7 @@ def test_ai_provider_import_returns_validated_import_evidence(
 
     assert result.parsed is not None
     assert result.parsed.amount == Decimal("564.00")
+    assert result.parsed.flow_direction is provider_import_ai.ProviderFlowDirection.MONEY_OUT
     assert result.parsed.resulting_balance is None
     assert result.extraction.transaction.needs_review is True
     assert fake_client.responses.request["store"] is False
@@ -157,7 +158,7 @@ def test_ai_provider_import_rejects_reference_not_present_in_message(
             "occurred_at": "2026-09-03T14:19:00+03:00",
             "amount": "564.00",
             "currency": "KES",
-            "direction": "expense",
+            "flow_direction": "money_out",
             "description": "Paid SAMPLE PAYMENT C2B",
             "counterparty": "SAMPLE PAYMENT C2B",
             "fee": "10.00",
@@ -185,4 +186,83 @@ def test_ai_provider_import_rejects_reference_not_present_in_message(
         provider_import_ai.parse_provider_message_with_ai(
             "Q3QRSOZ29C6 Confirmed. Ksh 564 completed to SAMPLE PAYMENT "
             "on 03/09/26 at 02:19 PM. Fee: Ksh 10.00."
+        )
+
+
+def test_ai_provider_import_rejects_counterparty_as_message_provider(
+    ai_app,
+    monkeypatch,
+):
+    extraction = ProviderImportParseResult.model_validate({
+        "can_parse": True,
+        "reason": None,
+        "transaction": {
+            "provider": "airtel_money",
+            "external_reference": "UI5IU5CE3F",
+            "occurred_at": "2026-09-05T23:21:00+03:00",
+            "amount": "17500.00",
+            "currency": "KES",
+            "flow_direction": "money_in",
+            "description": "Received from another wallet",
+            "counterparty": "SAMPLE WALLET",
+            "fee": None,
+            "provider_transaction_type": "received_money",
+            "confidence": 0.89,
+            "needs_review": True,
+        },
+    })
+    monkeypatch.setattr(
+        provider_import_ai,
+        "create_openai_client",
+        lambda: FakeClient(_response_with(extraction)),
+    )
+    monkeypatch.setattr(provider_import_ai, "get_ai_model", lambda: "gpt-5.6-luna")
+
+    with ai_app.app_context(), pytest.raises(
+        provider_import_ai.AIInvalidResponseError,
+        match="provider that conflicts",
+    ):
+        provider_import_ai.parse_provider_message_with_ai(
+            "UI5IU5CE3F Confirmed. You have received Ksh17,500.00 from "
+            "AIRTEL MONEY - SAMPLE USER 101784609 on 5/9/26 at 11:21 PM "
+            "New M-PESA balance is Ksh17,500.00."
+        )
+
+
+def test_ai_provider_import_rejects_flow_opposite_to_explicit_wording(
+    ai_app,
+    monkeypatch,
+):
+    extraction = ProviderImportParseResult.model_validate({
+        "can_parse": True,
+        "reason": None,
+        "transaction": {
+            "provider": "airtel_money",
+            "external_reference": "Q3QRSOZ29C6",
+            "occurred_at": "2026-09-03T14:19:00+03:00",
+            "amount": "564.00",
+            "currency": "KES",
+            "flow_direction": "money_in",
+            "description": "Paid SAMPLE STORE",
+            "counterparty": "SAMPLE STORE",
+            "fee": "10.00",
+            "provider_transaction_type": "merchant_payment",
+            "confidence": 0.91,
+            "needs_review": True,
+        },
+    })
+    monkeypatch.setattr(
+        provider_import_ai,
+        "create_openai_client",
+        lambda: FakeClient(_response_with(extraction)),
+    )
+    monkeypatch.setattr(provider_import_ai, "get_ai_model", lambda: "gpt-5.6-luna")
+
+    with ai_app.app_context(), pytest.raises(
+        provider_import_ai.AIInvalidResponseError,
+        match="direction that conflicts",
+    ):
+        provider_import_ai.parse_provider_message_with_ai(
+            "Q3QRSOZ29C6 Confirmed. Ksh 564 successfully paid to SAMPLE "
+            "STORE on 03/09/26 at 02:19 PM. Fee: Ksh 10.00."
         )

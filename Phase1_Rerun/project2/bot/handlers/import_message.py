@@ -20,7 +20,13 @@ from bot.handlers.assistant import assistant_message_handler
 from bot.handlers.welcome import welcome_handler
 
 
-IMPORT_DESCRIPTION, IMPORT_DATE, IMPORT_CATEGORY, IMPORT_CONFIRM = range(4)
+(
+    IMPORT_DESCRIPTION,
+    IMPORT_DATE,
+    IMPORT_CLASSIFICATION,
+    IMPORT_CATEGORY,
+    IMPORT_CONFIRM,
+) = range(5)
 IMPORT_TTL_SECONDS = 10 * 60
 PROVIDER_MESSAGE_PREFIX = re.compile(
     r"^\s*(?:TID:\s*)?[A-Z0-9]{10,11}"
@@ -63,6 +69,27 @@ def _categories_keyboard(transaction_type: str, suggestions: list[str]):
         ])
     rows.append([InlineKeyboardButton("Cancel", callback_data="importcancel")])
     return InlineKeyboardMarkup(rows)
+
+
+def _classification_keyboard(flow_direction: str):
+    if flow_direction == "money_in":
+        primary = InlineKeyboardButton(
+            "Count as income",
+            callback_data="importtype|income",
+        )
+    else:
+        primary = InlineKeyboardButton(
+            "Count as expense",
+            callback_data="importtype|expense",
+        )
+    return InlineKeyboardMarkup([
+        [primary],
+        [InlineKeyboardButton(
+            "Moved between my accounts",
+            callback_data="importtype|transfer",
+        )],
+        [InlineKeyboardButton("Cancel", callback_data="importcancel")],
+    ])
 
 
 def _confirmation_keyboard(can_remember: bool):
@@ -248,7 +275,8 @@ async def _start_import(
         f"{recognition_line}\n\n"
         f"Provider: {_provider_label(preview['provider'])}\n"
         f"Amount: {preview['currency']} {preview['amount']}\n"
-        f"Type: {preview['direction'].title()}\n"
+        f"Movement: {preview['flowDirection'].replace('_', ' ').title()}\n"
+        f"Suggested: {preview['suggestedType'].title()}\n"
         f"When: {when_line}"
         f"{counterparty_line}{fee_line}\n\n"
         "What was this transaction for? Your description is required."
@@ -285,7 +313,7 @@ async def import_description_handler(
         )
         return IMPORT_DATE
 
-    return await _request_import_category(update.message, pending)
+    return await _request_classification_or_category(update.message, pending)
 
 
 async def import_date_handler(
@@ -314,16 +342,73 @@ async def import_date_handler(
     pending["transaction_date"] = transaction_date.isoformat()
     if pending["preview"].get("kind") == "fuliza_notice":
         return await _request_financing_confirmation(update.message, pending)
-    return await _request_import_category(update.message, pending)
+    return await _request_classification_or_category(update.message, pending)
+
+
+async def _request_classification_or_category(message, pending):
+    preview = pending["preview"]
+    if preview.get("requiresClassification"):
+        await message.reply_text(
+            "How should this movement count in your reports?\n\n"
+            "Choose income or expense only when it genuinely changed your "
+            "money. Choose transfer when you moved it between accounts you use.",
+            reply_markup=_classification_keyboard(preview["flowDirection"]),
+        )
+        return IMPORT_CLASSIFICATION
+
+    pending["transaction_type"] = preview["suggestedType"]
+    return await _request_import_category(message, pending)
+
+
+async def import_classification_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    query = update.callback_query
+    await query.answer()
+    pending = _pending_import(context)
+    if pending is None:
+        await query.edit_message_text(
+            "This import expired. Paste the provider SMS again."
+        )
+        return ConversationHandler.END
+
+    transaction_type = query.data.split("|", 1)[1]
+    flow_direction = pending["preview"]["flowDirection"]
+    allowed = (
+        {"income", "transfer"}
+        if flow_direction == "money_in"
+        else {"expense", "transfer"}
+    )
+    if transaction_type not in allowed:
+        await query.edit_message_text(
+            "That classification does not match the movement."
+        )
+        _clear_pending_import(context)
+        return ConversationHandler.END
+
+    pending["transaction_type"] = transaction_type
+    await query.edit_message_text(
+        f"This will count as {transaction_type.replace('_', ' ')}."
+    )
+    return await _request_import_category(query.message, pending)
 
 
 async def _request_import_category(message, pending):
     preview = pending["preview"]
+    transaction_type = pending["transaction_type"]
+    if transaction_type == "transfer":
+        pending["category"] = "internal transfer"
+        pending["remember_alias"] = None
+        text, keyboard = _import_confirmation_view(pending)
+        await message.reply_text(text, reply_markup=keyboard)
+        return IMPORT_CONFIRM
+
     description = pending["description"]
     normalized_description = " ".join(description.casefold().split())
     remembered_category = pending["aliases"].get(normalized_description)
 
-    if remembered_category in CATEGORIES[preview["direction"]]:
+    if remembered_category in CATEGORIES[transaction_type]:
         pending["category"] = remembered_category
         pending["remember_alias"] = None
         text, keyboard = _import_confirmation_view(
@@ -337,7 +422,7 @@ async def _request_import_category(message, pending):
 
     await message.reply_text(
         "Choose the category. Suggestions appear first, but you have the final say:",
-        reply_markup=_categories_keyboard(preview["direction"], suggestions),
+        reply_markup=_categories_keyboard(transaction_type, suggestions),
     )
     return IMPORT_CATEGORY
 
@@ -357,7 +442,7 @@ def _import_category_suggestions(pending):
     ranked = category_candidates(
         search_text,
         pending["aliases"],
-        forced_type=preview["direction"],
+        forced_type=pending["transaction_type"],
     )
     suggestions = [category for _, _, category in ranked]
     provider_suggestion = preview.get("suggestedCategory")
@@ -373,7 +458,11 @@ def _import_confirmation_view(pending, *, remembered_alias=None):
     fee = preview.get("fee")
     fee_line = f"\nProvider fee: KES {fee}" if fee is not None else ""
 
-    if remembered_alias:
+    if pending["transaction_type"] == "transfer":
+        category_note = "\nTransfers stay outside income and spending totals."
+        remember_line = ""
+        can_remember = False
+    elif remembered_alias:
         category_note = (
             f"\nRemembered category: {category.title()} "
             f"for “{remembered_alias}”."
@@ -404,6 +493,7 @@ def _import_confirmation_view(pending, *, remembered_alias=None):
         f"Amount: {preview['currency']} {preview['amount']}\n"
         f"Date: {transaction_date}\n"
         f"Description: {description}\n"
+        f"Count as: {pending['transaction_type'].title()}\n"
         f"Category: {category.title()}\n"
         f"Payment: {preview['paymentMethod']}"
         f"{fee_line}{category_note}{remember_line}"
@@ -425,7 +515,7 @@ async def import_category_callback(
         return ConversationHandler.END
 
     category = query.data.split("|", 1)[1]
-    if category not in CATEGORIES[pending["preview"]["direction"]]:
+    if category not in CATEGORIES[pending["transaction_type"]]:
         await query.edit_message_text("That category is not valid.")
         _clear_pending_import(context)
         return ConversationHandler.END
@@ -456,7 +546,7 @@ async def import_change_category_callback(
     suggestions = _import_category_suggestions(pending)
     await query.edit_message_text(
         "Choose a different category:",
-        reply_markup=_categories_keyboard(preview["direction"], suggestions),
+        reply_markup=_categories_keyboard(pending["transaction_type"], suggestions),
     )
     return IMPORT_CATEGORY
 
@@ -486,6 +576,7 @@ async def import_save_callback(
             pending["raw_message"],
             pending["description"],
             pending["category"],
+            pending["transaction_type"],
             transaction_date=pending.get("transaction_date"),
             remember_alias=remember_alias,
             preview_token=pending["preview"].get("previewToken"),
@@ -514,6 +605,7 @@ async def import_save_callback(
         f"Amount: KES {saved['amount']}\n"
         f"Date: {saved['date']}\n"
         f"Description: {saved['description']}\n"
+        f"Counted as: {saved['type'].title()}\n"
         f"Category: {saved['category']}\n"
         f"Payment: {saved['payment_method']}"
         f"{remembered_line}"

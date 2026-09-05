@@ -158,6 +158,7 @@ def update_transaction_for_user(
                 transaction_date,
                 description,
                 category_name,
+                transaction_type,
                 payment_method_name,
                 merchant_name,
             )
@@ -179,6 +180,16 @@ def update_transaction_for_user(
 
         if merchant_supplied:
             transaction.merchant_name = normalize_merchant_name(merchant_name)
+
+        if (
+            transaction_type is not None
+            and category_name is None
+            and transaction.category is not None
+            and transaction.category.type != transaction_type
+        ):
+            raise ValueError(
+                "Choose a category when changing the transaction type"
+            )
 
         if category_name is not None:
             if transaction_type is None:

@@ -54,6 +54,9 @@ def transaction_to_dict(transaction: Transaction) -> dict[str, object]:
             if import_record and import_record.original_estimated_fee is not None
             else None
         ),
+        "provider_flow": (
+            import_record.provider_flow if import_record else None
+        ),
     }
 
 

@@ -122,6 +122,7 @@ def _add_imported_fee(
         external_reference=reference,
         message_fingerprint=reference.ljust(64, "0"),
         provider_transaction_type="send_money",
+        provider_flow="money_out",
         currency_code="KES",
         fee=Decimal(fee) if fee is not None else None,
         fee_source=fee_source,

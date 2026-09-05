@@ -38,6 +38,9 @@ ALLOWED_TRANSACTION_CATEGORIES = {
         "black tax",
         "other expense",
     ),
+    "transfer": (
+        "internal transfer",
+    ),
 }
 
 class ValidationError(Exception):
@@ -147,7 +150,7 @@ def validate_transaction_type(txn_type):
     - User can only choose from the allowed or listed types
     """
 
-    allowed_type = {"income", "expense"}
+    allowed_type = {"income", "expense", "transfer"}
     clean_type = str(txn_type or "").strip().lower()
 
     if clean_type not in allowed_type:
@@ -175,6 +178,5 @@ def validate_payment_method(payment_method):
     
     logger.debug(f"Validated payment method: {clean_pm}")
     return clean_pm
-
 
 

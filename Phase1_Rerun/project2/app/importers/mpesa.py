@@ -5,13 +5,14 @@ from zoneinfo import ZoneInfo
 
 from app.importers.contracts import (
     ParsedTransactionMessage,
-    TransactionDirection,
+    ProviderFlowDirection,
+    TransactionClassification,
 )
 
 
 NAIROBI_TIMEZONE = ZoneInfo("Africa/Nairobi")
 
-PHONE_TOKEN = r"(?:\+?254\d{9}|0[\d*]{9})"
+PHONE_TOKEN = r"(?:\+?254\d{9}|0[\d*]{9}|\d{5,9})"
 OPTIONAL_DAILY_LIMIT = (
     r"(?:\s*Amount you can transact within the day is\s+"
     r"\d[\d,]*(?:\.\d{1,2})?\.)?"
@@ -41,8 +42,8 @@ RECEIVED_MONEY_PATTERN = re.compile(
     r"(?P<date>\d{1,2}/\d{1,2}/\d{2})\s+at\s+"
     r"(?P<time>\d{1,2}:\d{2}\s+[AP]M)\.?\s+"
     r"New M-PESA balance is Ksh(?P<balance>[\d,]+\.\d{2})\."
-    + OPTIONAL_ONE_APP_LINK
-    + r"$",
+    # Promotional copy changes frequently and is not financial evidence.
+    r"(?:\s+.*)?$",
     re.IGNORECASE,
 )
 
@@ -142,7 +143,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(sent_match),
             amount=_parse_money(sent_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description=f"Sent to {counterparty}",
             counterparty=counterparty,
             fee=_parse_money(sent_match["fee"]),
@@ -160,7 +162,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(received_match),
             amount=_parse_money(received_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.INCOME,
+            flow_direction=ProviderFlowDirection.MONEY_IN,
+            suggested_classification=TransactionClassification.INCOME,
             description=f"Received from {counterparty}",
             counterparty=counterparty,
             fee=None,
@@ -192,7 +195,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(paybill_match),
             amount=_parse_money(paybill_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description=f"Paid {counterparty}",
             counterparty=counterparty,
             fee=_parse_money(paybill_match["fee"]),
@@ -211,7 +215,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(buy_goods_match),
             amount=_parse_money(buy_goods_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description=f"Paid {counterparty}",
             counterparty=counterparty,
             fee=_parse_money(buy_goods_match["fee"]),
@@ -232,7 +237,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(loan_repayment_match),
             amount=_parse_money(loan_repayment_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description=f"{counterparty} loan repayment",
             counterparty=counterparty,
             fee=None,
@@ -249,7 +255,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(airtime_match),
             amount=_parse_money(airtime_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.EXPENSE,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.EXPENSE,
             description="Safaricom airtime",
             counterparty="Safaricom",
             fee=_parse_money(airtime_match["fee"]),
@@ -270,7 +277,8 @@ def parse_mpesa_message(message: str) -> ParsedTransactionMessage:
             occurred_at=_parse_occurred_at(withdrawal_match),
             amount=_parse_money(withdrawal_match["amount"]),
             currency="KES",
-            direction=TransactionDirection.TRANSFER,
+            flow_direction=ProviderFlowDirection.MONEY_OUT,
+            suggested_classification=TransactionClassification.TRANSFER,
             description=f"Cash withdrawal at {counterparty}",
             counterparty=counterparty,
             fee=_parse_money(withdrawal_match["fee"]),

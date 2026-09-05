@@ -25,6 +25,7 @@ from bot.handlers.help import help_handler
 from bot.handlers.assistant import assistant_transaction_callback
 from bot.handlers.import_message import (
     IMPORT_CATEGORY,
+    IMPORT_CLASSIFICATION,
     IMPORT_CONFIRM,
     IMPORT_DATE,
     IMPORT_DESCRIPTION,
@@ -32,6 +33,7 @@ from bot.handlers.import_message import (
     cancel_import_command,
     automatic_import_handler,
     import_category_callback,
+    import_classification_callback,
     import_change_category_callback,
     import_description_handler,
     import_financing_callback,
@@ -177,6 +179,16 @@ def main():
                     CallbackQueryHandler(
                         import_category_callback,
                         pattern=r"^importcat\|",
+                    ),
+                    CallbackQueryHandler(
+                        cancel_import_callback,
+                        pattern=r"^importcancel$",
+                    ),
+                ],
+                IMPORT_CLASSIFICATION: [
+                    CallbackQueryHandler(
+                        import_classification_callback,
+                        pattern=r"^importtype\|(?:income|expense|transfer)$",
                     ),
                     CallbackQueryHandler(
                         cancel_import_callback,

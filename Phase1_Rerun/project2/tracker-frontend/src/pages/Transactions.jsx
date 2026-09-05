@@ -57,12 +57,14 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
         handleSubmit,
         watch,
         reset,
+        setValue,
         formState: { errors, isSubmitting, isDirty }
     } = useForm();
 
     const categoryOptions = {
         income: ["salary", "business", "freelance", "loan", "investments", "gifts", "debts paid", "other income"],
-        expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+        expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"],
+        transfer: ["internal transfer"],
     };
     const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
     const selectedType = watch("type");
@@ -87,6 +89,7 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
                         data.date = parsedDate.toISOString().split('T')[0];
                     }
                 }
+                data.category = data.category?.toLowerCase() || "";
 
                 reset(data);
             } catch (err) {
@@ -169,9 +172,16 @@ function TransactionEditDrawer({ transactionId, onClose, onSaved }) {
 
                         <label className="transaction-field">
                             <span>Type</span>
-                            <select {...register("type", { required: "Type is required" })}>
+                            <select {...register("type", {
+                                required: "Type is required",
+                                onChange: () => setValue("category", "", {
+                                    shouldDirty: true,
+                                    shouldValidate: true,
+                                }),
+                            })}>
                                 <option value="expense">Expense</option>
                                 <option value="income">Income</option>
+                                <option value="transfer">Transfer</option>
                             </select>
                             {errors.type && <span className="error">{errors.type.message}</span>}
                         </label>
@@ -479,6 +489,7 @@ function Transaction() {
                         <option value="all">All</option>
                         <option value="income">Income</option>
                         <option value="expense">Expense</option>
+                        <option value="transfer">Transfer</option>
                     </FilterSelect>
                     <FilterSelect
                         value={filterCategory}
@@ -601,7 +612,7 @@ function Transaction() {
                                             )}
                                         </td>
                                         <td className={`amount-cell amount-${tx.type}`} data-label="Amount">
-                                            {tx.type === 'expense' ? '-' : '+'}
+                                            {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : '↔ '}
                                             {formatCurrency(Number(tx.amount || 0))}
                                         </td>
                                         <td className="actions-cell" data-label="Actions">

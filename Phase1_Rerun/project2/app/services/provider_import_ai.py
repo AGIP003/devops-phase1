@@ -16,7 +16,8 @@ from pydantic import ValidationError
 
 from app.importers.contracts import (
     ParsedTransactionMessage,
-    TransactionDirection,
+    ProviderFlowDirection,
+    TransactionClassification,
 )
 from app.schemas import ProviderImportParseResult
 from app.services.ai_support import (
@@ -46,7 +47,7 @@ provider message. The input has already had unnecessary sensitive fields
 removed.
 
 Rules:
-- Never invent a reference, amount, provider, direction, date, fee, merchant,
+- Never invent a reference, amount, provider, flow direction, date, fee, merchant,
   or transaction type.
 - provider must be mpesa or airtel_money.
 - currency must be KES.
@@ -56,7 +57,8 @@ Rules:
 - fee is null when the provider did not state one.
 - Do not include phone numbers, account numbers, wallet balances, links, or
   daily limits in description or counterparty.
-- Use income only for money received and expense only for money paid or sent.
+- flow_direction must be money_in only for money received and money_out only
+  for money paid, purchased, topped up, repaid, or sent.
 - Reject failed, pending, reversed, ambiguous, withdrawal, transfer-between-
   account, financing, and loan-notice messages with can_parse=false.
 - Use a short generic snake_case provider_transaction_type.
@@ -103,6 +105,31 @@ def safe_format_signature(message: str) -> str:
     )
     markers.extend(label for label, pattern in checks if re.search(pattern, clean))
     return ":".join(markers)
+
+
+def _provider_from_reference(reference: str) -> str:
+    """Infer the SMS issuer from formats already enforced by our parsers."""
+
+    if len(reference) == 10:
+        return "mpesa"
+    if len(reference) == 11:
+        return "airtel_money"
+    raise AIInvalidResponseError("Unsupported provider reference format")
+
+
+def _explicit_flow_from_message(message: str) -> ProviderFlowDirection | None:
+    """Read only explicit movement verbs; return None rather than guessing."""
+
+    clean = " ".join(message.casefold().split())
+    if re.search(r"\b(?:have\s+)?received\b.+\bfrom\b", clean):
+        return ProviderFlowDirection.MONEY_IN
+    if re.search(
+        r"\b(?:sent\s+to|paid\s+to|successfully\s+paid\s+to|"
+        r"purchase(?:d)?|top\s+up|loan\s+repayment)\b",
+        clean,
+    ):
+        return ProviderFlowDirection.MONEY_OUT
+    return None
 
 
 def minimize_provider_message(message: str) -> str:
@@ -238,13 +265,44 @@ def parse_provider_message_with_ai(message: str) -> AIProviderImportResult:
             raise AIInvalidResponseError(
                 "AI returned a mismatched provider reference"
             )
+        expected_provider = _provider_from_reference(source_reference)
+        if suggestion.provider != expected_provider:
+            log_ai_invalid_response(
+                logger,
+                operation="provider_import_parse",
+                reason="provider_mismatch",
+                provider_request_id=getattr(response, "_request_id", None),
+            )
+            raise AIInvalidResponseError(
+                "AI returned a provider that conflicts with the message format"
+            )
+        explicit_flow = _explicit_flow_from_message(message)
+        if (
+            explicit_flow is not None
+            and suggestion.flow_direction is not explicit_flow
+        ):
+            log_ai_invalid_response(
+                logger,
+                operation="provider_import_parse",
+                reason="flow_mismatch",
+                provider_request_id=getattr(response, "_request_id", None),
+            )
+            raise AIInvalidResponseError(
+                "AI returned a direction that conflicts with the provider wording"
+            )
+        suggested_classification = (
+            TransactionClassification.INCOME
+            if suggestion.flow_direction is ProviderFlowDirection.MONEY_IN
+            else TransactionClassification.EXPENSE
+        )
         parsed = ParsedTransactionMessage(
             provider=suggestion.provider,
             external_reference=suggestion.external_reference,
             occurred_at=suggestion.occurred_at,
             amount=suggestion.amount,
             currency=suggestion.currency,
-            direction=TransactionDirection(suggestion.direction.value),
+            flow_direction=suggestion.flow_direction,
+            suggested_classification=suggested_classification,
             description=suggestion.description,
             counterparty=suggestion.counterparty,
             fee=suggestion.fee,

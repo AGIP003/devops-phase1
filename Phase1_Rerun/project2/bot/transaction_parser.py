@@ -13,6 +13,7 @@ CATEGORIES = {
         "education", "vacations", "tools/software", "personal care", "taxes",
         "black tax", "other expense",
     ],
+    "transfer": ["internal transfer"],
 }
 
 PAYMENT_METHODS = [
@@ -56,6 +57,7 @@ CATEGORY_KEYWORDS = {
     "taxes": ["tax", "kra"],
     "black tax": ["black tax", "family support"],
     "loan": ["loan"],
+    "internal transfer": ["transfer", "moved between accounts", "own account"],
 }
 
 AMOUNT_PATTERN = re.compile(

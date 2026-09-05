@@ -34,7 +34,7 @@ from app.importers import (
     UnsupportedFinancialMessageError,
     parse_financial_message,
 )
-from app.importers.contracts import TransactionDirection
+from app.importers.contracts import ProviderFlowDirection
 from app.services.transaction_import_service import (
     DuplicateTransactionImportError,
     TransactionMessageNotImportableError,
@@ -775,7 +775,12 @@ def register_routes(app):
 
         if not isinstance(parsed, ParsedTransactionMessage):
             abort(400, description="Unsupported financial message")
-        importable = parsed.direction is not TransactionDirection.TRANSFER
+        importable = True
+        requires_classification = (
+            parser_strategy == "ai"
+            or parsed.provider_transaction_type
+            in {"send_money", "received_money", "paybill"}
+        )
         suggested_category = (
             "airtime"
             if parsed.provider_transaction_type
@@ -787,7 +792,12 @@ def register_routes(app):
             "importable": importable,
             "provider": parsed.provider,
             "providerTransactionType": parsed.provider_transaction_type,
-            "direction": parsed.direction.value,
+            "flowDirection": parsed.flow_direction.value,
+            "suggestedType": parsed.suggested_classification.value,
+            # Kept temporarily for older clients while they migrate to the
+            # explicit flow/suggestion fields.
+            "direction": parsed.suggested_classification.value,
+            "requiresClassification": requires_classification,
             "amount": str(parsed.amount),
             "currency": parsed.currency,
             "occurredAt": (
@@ -798,21 +808,13 @@ def register_routes(app):
             "requiresDate": parsed.occurred_at is None,
             "counterparty": parsed.counterparty,
             "fee": str(parsed.fee) if parsed.fee is not None else None,
-            "paymentMethod": (
-                payment_method_for_provider(parsed.provider)
-                if importable
-                else None
-            ),
+            "paymentMethod": payment_method_for_provider(parsed.provider),
             "suggestedCategory": suggested_category,
             "parserStrategy": parser_strategy,
             "needsReview": needs_review,
             "confidence": confidence,
             "previewToken": preview_token,
-            "message": (
-                None
-                if importable
-                else "Cash withdrawals need account-to-account tracking first."
-            ),
+            "message": None,
         })
         response.headers["Cache-Control"] = "private, no-store"
         return response, 200
@@ -844,11 +846,6 @@ def register_routes(app):
                 raise TransactionMessageNotImportableError(
                     "Fuliza notices are informational and are not saved as transactions."
                 )
-            if parsed.direction is TransactionDirection.TRANSFER:
-                raise TransactionMessageNotImportableError(
-                    "Transfers need account-to-account tracking and cannot be imported yet."
-                )
-
             validate_amount(parsed.amount)
             transaction_date = validate_date(
                 parsed.occurred_at.date().isoformat()
@@ -858,8 +855,42 @@ def register_routes(app):
             description = validate_description(data.get("description"))
             if not description:
                 abort(400, description="Describe what this transaction was for")
+            requires_classification = (
+                preview_token is not None
+                or parsed.provider_transaction_type
+                in {"send_money", "received_money", "paybill"}
+            )
+            supplied_type = data.get("type")
+            if requires_classification and supplied_type is None:
+                abort(
+                    400,
+                    description=(
+                        "Choose whether this is income, an expense, or a transfer"
+                    ),
+                )
+            transaction_type = validate_transaction_type(
+                supplied_type or parsed.suggested_classification.value
+            )
+            allowed_types = (
+                {"income", "transfer"}
+                if parsed.flow_direction is ProviderFlowDirection.MONEY_IN
+                else {"expense", "transfer"}
+            )
+            if transaction_type not in allowed_types:
+                movement = (
+                    "money received"
+                    if parsed.flow_direction is ProviderFlowDirection.MONEY_IN
+                    else "money sent or paid"
+                )
+                abort(
+                    400,
+                    description=(
+                        f"{movement.title()} can only be classified as "
+                        f"{', '.join(sorted(allowed_types))}"
+                    ),
+                )
             category_name = validate_category(
-                parsed.direction.value,
+                transaction_type,
                 data.get("category"),
             )
             remember_alias = data.get("rememberAlias")
@@ -880,6 +911,7 @@ def register_routes(app):
                 transaction_date=transaction_date,
                 description=description,
                 category_name=category_name,
+                transaction_type=transaction_type,
                 remember_alias=remember_alias,
             )
         except UnsupportedFinancialMessageError as error:

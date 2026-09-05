@@ -329,7 +329,7 @@ function Dashboard() {
                                     </span>
 
                                     <span className={`recent-amount recent-amount-${tx.type}`}>
-                                        {tx.type === 'expense' ? '-' : '+'}
+                                        {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : '↔ '}
                                         {currencyFormatter.format(Number(tx.amount || 0))}
                                     </span>
                                 </div>

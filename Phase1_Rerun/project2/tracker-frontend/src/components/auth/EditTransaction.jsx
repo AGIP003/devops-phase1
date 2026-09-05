@@ -13,12 +13,14 @@ function EditTransaction() {
         handleSubmit,
         watch,
         reset,
+        setValue,
         formState: { errors, isSubmitting, isDirty}
     } = useForm()
 
     const categoryOptions = {
       income: ["salary", "business", "freelance", "loan", "investments", "gifts", "debts paid", "other income"],
-      expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"]
+      expense: ["rent", "utilities", "food", "transport", "groceries", "loan", "airtime", "medical", "subscriptions", "entertainment", "electricity", "education", "vacations", "tools/software", "personal care", "taxes", "black tax", "other expense"],
+      transfer: ["internal transfer"],
     };
     const paymentMethods = ["cash", "m-pesa", "airtel money", "t-kash", "equitel", "bank transfer", "debit card", "credit card", "paypal"];
     const selectedType = watch("type");
@@ -40,6 +42,7 @@ function EditTransaction() {
                     data.date =parsedDate.toISOString().split('T')[0];
                     }
                 }
+                data.category = data.category?.toLowerCase() || "";
                 console.log('Fetched transaction:', data)
                 reset(data); //sets all fields and resets the "Dirty" state - form knows the user has not changed anything
             
@@ -82,9 +85,16 @@ function EditTransaction() {
                         {/* Type (income/expense) */}
                         <div className="form-field">
                           <label htmlFor="edit-type">Type</label>
-                          <select id="edit-type" {...register("type", { required: "Type is required" })}>
+                          <select id="edit-type" {...register("type", {
+                            required: "Type is required",
+                            onChange: () => setValue("category", "", {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            }),
+                          })}>
                             <option value="expense">Expense</option>
                             <option value="income">Income</option>
+                            <option value="transfer">Transfer</option>
                           </select>
                           {errors.type && <span className="error">{errors.type.message}</span>}
                         </div>

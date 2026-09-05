@@ -23,6 +23,7 @@ class FakeCallbackQuery:
     def __init__(self, data):
         self.data = data
         self.edits = []
+        self.message = FakeMessage()
 
     async def answer(self):
         return None
@@ -159,6 +160,9 @@ def test_missing_provider_date_is_required_before_category_selection():
                 "preview": {
                     "requiresDate": True,
                     "direction": "expense",
+                    "flowDirection": "money_out",
+                    "suggestedType": "expense",
+                    "requiresClassification": False,
                     "counterparty": "Airtel subscriber",
                     "providerTransactionType": "airtime_topup",
                     "suggestedCategory": "airtime",
@@ -220,6 +224,9 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
             "provider": "mpesa",
             "providerTransactionType": "data_bundle",
             "direction": "expense",
+            "flowDirection": "money_out",
+            "suggestedType": "expense",
+            "requiresClassification": True,
             "amount": "50.00",
             "currency": "KES",
             "occurredAt": "2026-08-17T10:23:00+03:00",
@@ -237,6 +244,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
         message,
         description,
         category,
+        transaction_type,
         transaction_date=None,
         remember_alias=None,
         preview_token=None,
@@ -246,6 +254,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
             "message": message,
             "description": description,
             "category": category,
+            "transaction_type": transaction_type,
             "remember_alias": remember_alias,
             "transaction_date": transaction_date,
             "preview_token": preview_token,
@@ -256,6 +265,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
                 "date": "2026-08-17",
                 "description": "weekly data bundle",
                 "category": "Airtime",
+                "type": "expense",
                 "payment_method": "m-pesa",
             },
             "rememberedAlias": "weekly data bundle",
@@ -288,8 +298,16 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     state = asyncio.run(
         import_message.import_description_handler(description_update, context)
     )
+    assert state == import_message.IMPORT_CLASSIFICATION
+    classification_query = FakeCallbackQuery("importtype|expense")
+    state = asyncio.run(
+        import_message.import_classification_callback(
+            SimpleNamespace(callback_query=classification_query),
+            context,
+        )
+    )
     assert state == import_message.IMPORT_CATEGORY
-    keyboard = description_update.message.replies[-1][1]["reply_markup"]
+    keyboard = classification_query.message.replies[-1][1]["reply_markup"]
     assert keyboard.inline_keyboard[0][0].text == "Airtime"
 
     category_query = FakeCallbackQuery("importcat|airtime")
@@ -317,6 +335,7 @@ def test_import_requires_description_and_clears_sensitive_state(monkeypatch):
     assert state == ConversationHandler.END
     assert captured_import["description"] == "Weekly data bundle"
     assert captured_import["category"] == "airtime"
+    assert captured_import["transaction_type"] == "expense"
     assert captured_import["remember_alias"] == "weekly data bundle"
     assert captured_import["preview_token"] == "signed-preview-token"
     assert "pending_import" not in context.user_data
@@ -332,6 +351,9 @@ def test_remembered_sms_description_skips_repeated_category_question():
                 "preview": {
                     "requiresDate": False,
                     "direction": "expense",
+                    "flowDirection": "money_out",
+                    "suggestedType": "expense",
+                    "requiresClassification": False,
                     "amount": "50.00",
                     "currency": "KES",
                     "occurredAt": "2026-08-20T12:00:00+03:00",
@@ -373,8 +395,11 @@ def test_remembered_sms_category_can_be_corrected():
             "pending_import": {
                 "started_at": import_message.time.monotonic(),
                 "description": "airtime",
+                "transaction_type": "expense",
                 "preview": {
                     "direction": "expense",
+                    "flowDirection": "money_out",
+                    "suggestedType": "expense",
                     "counterparty": "Safaricom",
                     "providerTransactionType": "airtime",
                     "suggestedCategory": "airtime",
@@ -394,6 +419,43 @@ def test_remembered_sms_category_can_be_corrected():
     assert state == import_message.IMPORT_CATEGORY
     assert "Choose a different category" in query.edits[-1][0]
     assert query.edits[-1][1]["reply_markup"].inline_keyboard
+
+
+def test_ambiguous_money_in_can_be_classified_as_transfer():
+    query = FakeCallbackQuery("importtype|transfer")
+    context = SimpleNamespace(
+        user_data={
+            "pending_import": {
+                "started_at": import_message.time.monotonic(),
+                "description": "Moved from my other wallet",
+                "preview": {
+                    "flowDirection": "money_in",
+                    "suggestedType": "income",
+                    "amount": "17500.00",
+                    "currency": "KES",
+                    "occurredAt": "2026-09-05T23:21:00+03:00",
+                    "paymentMethod": "m-pesa",
+                    "fee": None,
+                },
+                "aliases": {},
+            }
+        }
+    )
+
+    state = asyncio.run(
+        import_message.import_classification_callback(
+            SimpleNamespace(callback_query=query),
+            context,
+        )
+    )
+
+    pending = context.user_data["pending_import"]
+    assert state == import_message.IMPORT_CONFIRM
+    assert pending["transaction_type"] == "transfer"
+    assert pending["category"] == "internal transfer"
+    confirmation = query.message.replies[-1]
+    assert "Count as: Transfer" in confirmation[0]
+    assert "outside income and spending totals" in confirmation[0]
 
 
 def test_fuliza_uses_separate_confirmation_and_never_requests_category(monkeypatch):

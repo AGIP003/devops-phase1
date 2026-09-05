@@ -8,7 +8,10 @@ from app.importers.airtel_money import (
     AirtelMoneyMessageParseError,
     parse_airtel_money_message,
 )
-from app.importers.contracts import TransactionDirection
+from app.importers.contracts import (
+    ProviderFlowDirection,
+    TransactionClassification,
+)
 
 
 pytestmark = pytest.mark.no_database
@@ -30,7 +33,8 @@ def test_parses_airtel_outgoing_transfer_and_cross_network_reference():
     assert result.external_reference == "A3PNEVBMONW"
     assert result.network_reference == "UAAIU1QQ2T"
     assert result.amount == Decimal("15000")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.flow_direction is ProviderFlowDirection.MONEY_OUT
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.counterparty == "SAMPLE RECIPIENT"
     assert result.fee == Decimal("100")
     assert result.resulting_balance == Decimal("4071.5")
@@ -50,7 +54,8 @@ def test_parses_airtel_incoming_transfer():
 
     assert result.external_reference == "C3PNETUEDSF"
     assert result.network_reference == "UAAHD2385T"
-    assert result.direction is TransactionDirection.INCOME
+    assert result.flow_direction is ProviderFlowDirection.MONEY_IN
+    assert result.suggested_classification is TransactionClassification.INCOME
     assert result.description == "Received from SAMPLE SENDER"
     assert result.fee is None
     assert result.resulting_balance == Decimal("19171.5")
@@ -83,7 +88,7 @@ def test_parses_airtime_topup_without_retaining_recipient_phone():
     assert result.provider == "airtel_money"
     assert result.external_reference == "29813220000"
     assert result.amount == Decimal("300")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.provider_transaction_type == "airtime_topup"
     assert result.description == "Airtel airtime top up"
     assert result.counterparty == "Airtel subscriber"
@@ -105,7 +110,7 @@ def test_parses_airtime_topup_for_line_without_retaining_recipient_line():
     assert result.provider == "airtel_money"
     assert result.external_reference == "29148245185"
     assert result.amount == Decimal("20")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.provider_transaction_type == "airtime_topup"
     assert result.description == "Airtel airtime top up"
     assert result.counterparty == "Airtel subscriber"

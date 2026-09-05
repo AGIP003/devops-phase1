@@ -1,7 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 
-from app.importers.contracts import TransactionDirection
+from app.importers.contracts import (
+    ProviderFlowDirection,
+    TransactionClassification,
+)
 from app.importers.mpesa import parse_mpesa_message, MpesaMessageParseError
 import pytest
 from zoneinfo import ZoneInfo
@@ -26,7 +29,8 @@ def test_parses_sent_money_message():
     assert result.external_reference == "THT7ABC123"
     assert result.amount == Decimal("1250.00")
     assert result.currency == "KES"
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.flow_direction is ProviderFlowDirection.MONEY_OUT
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.counterparty == "JANE DOE"
     assert result.fee == Decimal("23.00")
     assert result.resulting_balance == Decimal("4500.25")
@@ -45,7 +49,8 @@ def test_parses_received_money_message():
     assert result.external_reference == "THT8DEF456"
     assert result.amount == Decimal("2500.00")
     assert result.currency == "KES"
-    assert result.direction is TransactionDirection.INCOME
+    assert result.flow_direction is ProviderFlowDirection.MONEY_IN
+    assert result.suggested_classification is TransactionClassification.INCOME
     assert result.counterparty == "JOHN DOE"
     assert result.description == "Received from JOHN DOE"
     assert result.fee is None
@@ -77,7 +82,7 @@ def test_parses_paybill_message_without_exposing_account_number():
 
     assert result.external_reference == "UAAIU33DWG"
     assert result.amount == Decimal("1000.00")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.counterparty == "NCBA BANK KENYA PLC"
     assert result.description == "Paid NCBA BANK KENYA PLC"
     assert "0000000000" not in result.description
@@ -115,7 +120,7 @@ def test_parses_airtime_purchase_message():
 
     assert result.external_reference == "UAAIU30XE9"
     assert result.amount == Decimal("50.00")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.description == "Safaricom airtime"
     assert result.counterparty == "Safaricom"
     assert result.fee == Decimal("0.00")
@@ -134,7 +139,7 @@ def test_parses_withdrawal_as_transfer_without_exposing_agent_number():
     result = parse_mpesa_message(message)
 
     assert result.amount == Decimal("100.00")
-    assert result.direction is TransactionDirection.TRANSFER
+    assert result.suggested_classification is TransactionClassification.TRANSFER
     assert result.provider_transaction_type == "withdrawal"
     assert result.counterparty == "SAMPLE AGENT"
     assert "000000" not in result.description
@@ -152,7 +157,7 @@ def test_parses_kcb_mpesa_loan_repayment_as_expense():
     result = parse_mpesa_message(message)
 
     assert result.amount == Decimal("12345.00")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.provider_transaction_type == "loan_repayment"
     assert result.counterparty == "KCB M-PESA"
     assert result.description == "KCB M-PESA loan repayment"
@@ -168,10 +173,26 @@ def test_parses_received_money_with_masked_phone_and_ignores_link():
 
     result = parse_mpesa_message(message)
 
-    assert result.direction is TransactionDirection.INCOME
+    assert result.suggested_classification is TransactionClassification.INCOME
     assert result.counterparty == "SAMPLE SENDER"
     assert "0100" not in result.description
     assert result.provider_transaction_type == "received_money"
+
+
+def test_received_money_ignores_changing_promotion_and_short_sender_code():
+    message = (
+        "UI5IU5CAIF Confirmed.You have received Ksh10,000.00 from "
+        "SAMPLE BANK 222112 on 5/9/26 at 11:53 PM New M-PESA balance "
+        "is Ksh10,810.28. A changing provider promotion appears here."
+    )
+
+    result = parse_mpesa_message(message)
+
+    assert result.provider == "mpesa"
+    assert result.flow_direction is ProviderFlowDirection.MONEY_IN
+    assert result.suggested_classification is TransactionClassification.INCOME
+    assert result.counterparty == "SAMPLE BANK"
+    assert "promotion" not in result.description.casefold()
 
 
 def test_parses_sent_money_with_optional_daily_limit_and_link():
@@ -184,7 +205,7 @@ def test_parses_sent_money_with_optional_daily_limit_and_link():
 
     result = parse_mpesa_message(message)
 
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.counterparty == "SAMPLE PERSON"
     assert "0117000000" not in result.description
     assert result.provider_transaction_type == "send_money"
@@ -201,7 +222,7 @@ def test_parses_buy_goods_without_exposing_till_or_phone():
     result = parse_mpesa_message(message)
 
     assert result.amount == Decimal("100.00")
-    assert result.direction is TransactionDirection.EXPENSE
+    assert result.suggested_classification is TransactionClassification.EXPENSE
     assert result.counterparty == "SAMPLE MERCHANT LTD"
     assert result.description == "Paid SAMPLE MERCHANT LTD"
     assert result.provider_transaction_type == "buy_goods"

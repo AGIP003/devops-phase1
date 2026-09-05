@@ -88,6 +88,46 @@ def test_transaction_list_contains_only_authenticated_users_transactions(
     assert intruder_create.get_json()["data"]["id"] not in listed_ids
 
 
+def test_transaction_type_update_uses_a_category_with_the_new_type(
+    app,
+    client,
+    register_user,
+    payment_method,
+    internal_user_id,
+):
+    owner = register_user("type-editor", "type-editor@example.com")
+    headers = authorization(owner["token"])
+    user_id = internal_user_id(owner)
+    create_payload = transaction_payload("loan funds received")
+    create_payload.update({"type": "income", "category": "loan"})
+    created = client.post(
+        "/api/transactions",
+        headers=headers,
+        json=create_payload,
+    )
+    assert created.status_code == 201, created.get_json()
+
+    updated = client.put(
+        f"/api/transactions/{created.get_json()['data']['id']}",
+        headers=headers,
+        json={"type": "expense", "category": "loan"},
+    )
+
+    assert updated.status_code == 200, updated.get_json()
+    assert updated.get_json()["data"]["type"] == "expense"
+    assert updated.get_json()["data"]["category"] == "Loan"
+    with app.app_context():
+        category_types = set(
+            db.session.scalars(
+                select(Category.type).where(
+                    Category.user_id == user_id,
+                    Category.name == "Loan",
+                )
+            ).all()
+        )
+        assert category_types == {"income", "expense"}
+
+
 @pytest.mark.critical
 def test_user_cannot_read_another_users_transaction(client, register_user, payment_method):
     # Arrange

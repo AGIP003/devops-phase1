@@ -4,10 +4,17 @@ from decimal import Decimal
 from enum import StrEnum
 
 
-class TransactionDirection(StrEnum):
+class TransactionClassification(StrEnum):
     INCOME = "income"
     EXPENSE = "expense"
     TRANSFER = "transfer"
+
+
+class ProviderFlowDirection(StrEnum):
+    """The movement explicitly reported by the provider message."""
+
+    MONEY_IN = "money_in"
+    MONEY_OUT = "money_out"
 
 
 class FulizaNoticeType(StrEnum):
@@ -22,7 +29,8 @@ class ParsedTransactionMessage:
     occurred_at: datetime | None
     amount: Decimal
     currency: str
-    direction: TransactionDirection
+    flow_direction: ProviderFlowDirection
+    suggested_classification: TransactionClassification
     description: str
     counterparty: str | None = None
     fee: Decimal | None = None

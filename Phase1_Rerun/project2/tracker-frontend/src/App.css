@@ -3106,6 +3106,10 @@ body.public-screen {
   color: var(--expense);
 }
 
+.recent-amount-transfer {
+  color: #315f78;
+}
+
 .recent-row {
   align-items: center;
   border-bottom: 1px solid rgba(223, 229, 220, 0.75);
@@ -3577,6 +3581,11 @@ body.public-screen {
   color: var(--expense);
 }
 
+.type-pill-transfer {
+  background: #e8f2f6;
+  color: #315f78;
+}
+
 .amount-cell {
   font-weight: 800;
   text-align: right !important;
@@ -3589,6 +3598,10 @@ body.public-screen {
 
 .amount-expense {
   color: var(--expense);
+}
+
+.amount-transfer {
+  color: #315f78;
 }
 
 .actions-cell {

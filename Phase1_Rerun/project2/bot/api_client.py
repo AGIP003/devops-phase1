@@ -152,6 +152,7 @@ def import_transaction_message(
     message,
     description,
     category,
+    transaction_type,
     transaction_date=None,
     remember_alias=None,
     preview_token=None,
@@ -160,6 +161,7 @@ def import_transaction_message(
         "message": message,
         "description": description,
         "category": category,
+        "type": transaction_type,
     }
     if remember_alias:
         payload["rememberAlias"] = remember_alias

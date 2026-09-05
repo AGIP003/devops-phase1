@@ -80,5 +80,43 @@ describe("Transactions analytics drill-down", () => {
     expect(screen.getByText("Weekly groceries")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Filter transactions by category" })).toHaveValue("all");
   });
-});
 
+  it("clears an incompatible category and saves a transfer classification", async () => {
+    const user = userEvent.setup();
+    const editable = {
+      ...transactions[0],
+      category: "Rent",
+      provider_flow: "money_in",
+    };
+    api.get.mockImplementation((url) => Promise.resolve({
+      data: url === "/transactions" ? [editable] : editable,
+    }));
+    api.put.mockResolvedValue({
+      data: { data: { ...editable, type: "transfer", category: "Internal Transfer" } },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/transactions"]}>
+        <Transactions />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit August rent" }));
+    const type = await screen.findByRole("combobox", { name: "Type" });
+    const category = screen.getByRole("combobox", { name: "Category" });
+    expect(category).toHaveValue("rent");
+
+    await user.selectOptions(type, "transfer");
+    expect(category).toHaveValue("");
+    await user.selectOptions(category, "internal transfer");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(api.put).toHaveBeenCalledWith(
+      "/transactions/1",
+      expect.objectContaining({
+        type: "transfer",
+        category: "internal transfer",
+      }),
+    );
+  });
+});

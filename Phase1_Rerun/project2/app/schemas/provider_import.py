@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.money import AIMoney
-from app.schemas.parsed_transaction import TransactionKind
+from app.importers.contracts import ProviderFlowDirection
 
 
 class ProviderImportSuggestion(BaseModel):
@@ -17,7 +17,7 @@ class ProviderImportSuggestion(BaseModel):
     occurred_at: datetime | None
     amount: AIMoney = Field(gt=0, max_digits=12, decimal_places=2)
     currency: Literal["KES"]
-    direction: TransactionKind
+    flow_direction: ProviderFlowDirection
     description: str = Field(min_length=1, max_length=200)
     counterparty: str | None = Field(default=None, max_length=100)
     fee: AIMoney | None = Field(
