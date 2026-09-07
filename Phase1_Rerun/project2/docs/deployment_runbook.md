@@ -64,3 +64,77 @@ production_sha="$(
 )"
 
 test "$main_sha" = "$production_sha"
+```
+
+## 1. CI failure response
+
+1. Do not merge the pull request.
+2. Open the failed GitHub Actions job.
+3. Identify the first meaningful failure.
+4. Reproduce it locally.
+5. Fix the problem on the feature branch.
+6. Push the correction.
+7. Wait for all checks to pass.
+
+Never bypass a required check merely to deploy faster.
+
+## 2. Deployment health-check failure
+
+1. Production remains on the previous healthy deployment.
+2. Inspect Railway build, pre-deploy and application logs.
+3. Confirm Gunicorn listens on Railway's `PORT`.
+4. Confirm `/health` returns HTTP 2xx.
+5. Check required environment variables.
+6. Fix the problem through a new pull request.
+
+## 3. Migration failure
+
+1. Railway must not activate the new application release.
+2. Inspect the Alembic error.
+3. Do not manually mark a migration as applied.
+4. Correct the migration and test it against a disposable database.
+5. Submit the correction through CI.
+
+Production migrations should be backward-compatible whenever possible.
+
+## 4. Application rollback
+
+1. Open the Railway service's deployment history.
+2. Locate the last known-good deployment.
+3. Confirm its Git SHA.
+4. Select Railway's rollback action.
+5. Wait for the health check.
+6. Verify `/health` reports the expected SHA.
+7. Run a non-destructive application smoke test.
+8. Record the incident and reason for rollback.
+
+Application rollback does not reverse database migrations.
+
+## 5. Database recovery
+
+The production PostgreSQL backup must be:
+
+1. Created with PostgreSQL 18 tooling.
+2. Stored in custom archive format.
+3. Protected with restrictive permissions.
+4. Accompanied by a SHA-256 checksum.
+5. Restored into an isolated PostgreSQL 18 database.
+6. Verified through schema, constraints, indexes, migration revision and row
+   counts.
+7. Tested through the Moneytiq SQLAlchemy application layer.
+
+Never test restoration against the production database.
+
+## 6. Secrets and sensitive data
+
+1. Never commit `.env` files or database dumps.
+2. Never print production connection strings.
+3. Treat restored databases as production-sensitive data.
+4. Keep backup files owner-readable only.
+5. Store an encrypted copy off the development machine.
+
+## 7. Current limitations
+
+1. The manual backup is currently stored locally.
+2. Automated encrypted off-device backups remain a production-hardening task.
+3. Railway's deployment health check does not provide continuous monitoring.
