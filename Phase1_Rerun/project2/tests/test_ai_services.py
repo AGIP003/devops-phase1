@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 import json
 from types import SimpleNamespace
@@ -16,6 +17,7 @@ from app.schemas import (
 from app.services import (
     ai_budget_service,
     ai_parser,
+    analytics_tools,
     receipt_parser,
     telegram_assistant,
     finance_assistant,
@@ -97,6 +99,85 @@ def test_analytics_plan_distinguishes_last_month_from_this_month():
 
     assert plan.offset == -1
     assert plan.query == "Pamela Wandera"
+
+
+def test_adjustment_areas_plan_needs_no_invented_target_or_percentage():
+    plan = AnalyticsQuestionPlan.model_validate({
+        "tool": "find_adjustment_areas",
+        "period": "week",
+        "offset": -1,
+    })
+
+    assert plan.query is None
+    assert plan.reduction_percent is None
+
+
+def test_incomplete_what_if_falls_back_to_adjustment_areas():
+    plan = AnalyticsQuestionPlan.model_validate({
+        "tool": "run_what_if_scenario",
+        "period": "week",
+        "offset": -1,
+        "query": None,
+        "reduction_percent": None,
+    })
+
+    assert plan.tool.value == "find_adjustment_areas"
+    assert plan.query is None
+    assert plan.reduction_percent is None
+
+
+def test_adjustment_areas_returns_bounded_spending_evidence(monkeypatch):
+    plan = AnalyticsQuestionPlan.model_validate({
+        "tool": "find_adjustment_areas",
+        "period": "week",
+        "offset": -1,
+    })
+    snapshot = {
+        "period": {"start": "2026-08-24", "end": "2026-08-30"},
+        "income": "5000.00",
+        "recordedExpenses": "1700.00",
+        "confirmedFees": "50.00",
+        "estimatedFees": "10.00",
+        "totalExpenses": "1760.00",
+        "net": "3240.00",
+        "transactionCount": 4,
+        "topExpenseCategories": [{"category": "Food", "amount": "900.00"}],
+        "topDescriptions": [{"description": "Lunch", "amount": "600.00"}],
+        "topMerchants": [{"merchant": "Sample Shop", "amount": "500.00"}],
+        "recordedHistory": {"hasRecordedOverlap": True},
+    }
+    captured = {}
+
+    def fake_cashflow(user_id, period, *, anchor=None, offset=0):
+        captured.update({
+            "user_id": user_id,
+            "period": period,
+            "anchor": anchor,
+            "offset": offset,
+        })
+        return snapshot
+
+    monkeypatch.setattr(
+        analytics_tools,
+        "build_calendar_cashflow",
+        fake_cashflow,
+    )
+    result = analytics_tools.execute_analytics_tool(
+        42,
+        plan,
+        today=date(2026, 9, 1),
+    )
+
+    assert captured == {
+        "user_id": 42,
+        "period": "week",
+        "anchor": date(2026, 9, 1),
+        "offset": -1,
+    }
+    assert result["topExpenseCategories"][0]["category"] == "Food"
+    assert result["topDescriptions"][0]["description"] == "Lunch"
+    assert result["topMerchants"][0]["merchant"] == "Sample Shop"
+    assert "income" not in result
 
 
 def test_all_time_analytics_rejects_a_period_offset():

@@ -76,6 +76,16 @@ GET /api/analytics/description-trend?query=Pamela%20Wandera&period=month&offset=
 All queries derive `user_id` from the validated JWT and exclude soft-deleted
 transactions. A merchant name is not an authorization key.
 
+## Grounded assistant operations
+
+The assistant chooses only from allow-listed, ownership-scoped analytics
+operations. Broad questions such as “where could I adjust spending last week?”
+use `find_adjustment_areas`, which returns the selected period's leading
+categories, descriptions, merchants, fees and recorded-data coverage. It does
+not require or invent a reduction target. `run_what_if_scenario` is reserved
+for questions that provide both a specific spending target and a percentage;
+an incomplete what-if request safely falls back to the evidence-only review.
+
 ## Calendar
 
 The ECharts calendar shows one selected month on every screen size. Every date

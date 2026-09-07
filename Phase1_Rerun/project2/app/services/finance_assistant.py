@@ -42,6 +42,8 @@ question. Never produce SQL and never request or infer a user ID.
 
 Operations:
 - search_spending: count or total purchases matching any description or merchant.
+- find_adjustment_areas: review broad spending areas without requiring a named
+  category or an invented reduction target.
 - compare_periods: compare current and previous week, month or year.
 - get_fee_summary: confirmed and estimated provider or financing fees.
 - get_cashflow_summary: income, spending, fees and net cash flow.
@@ -57,6 +59,10 @@ offset=0 for "ever", "all time" or "since I started". A calendar month is not
 a rolling 30-day period. Use month with offset 0 when no period is stated.
 Preserve the user's search wording in query, including a merchant or person's
 name; merchant totals are valid spending searches.
+Use find_adjustment_areas for broad questions such as "where could I adjust
+spending?" when the user has not named one target and a reduction percentage.
+Use run_what_if_scenario only when the user supplies both a specific spending
+target and a percentage to illustrate.
 This plan only reads data; it must never create, edit or delete anything.
 """.strip()
 

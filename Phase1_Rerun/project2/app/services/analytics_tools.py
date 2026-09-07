@@ -34,6 +34,23 @@ def execute_analytics_tool(
             user_id, plan.period, anchor=anchor, offset=plan.offset
         )
 
+    if plan.tool == AnalyticsToolName.ADJUSTMENT_AREAS:
+        snapshot = build_calendar_cashflow(
+            user_id, plan.period, anchor=anchor, offset=plan.offset
+        )
+        return {
+            "period": snapshot["period"],
+            "recordedExpenses": snapshot["recordedExpenses"],
+            "confirmedFees": snapshot["confirmedFees"],
+            "estimatedFees": snapshot["estimatedFees"],
+            "totalExpenses": snapshot["totalExpenses"],
+            "transactionCount": snapshot["transactionCount"],
+            "topExpenseCategories": snapshot["topExpenseCategories"],
+            "topDescriptions": snapshot["topDescriptions"],
+            "topMerchants": snapshot["topMerchants"],
+            "recordedHistory": snapshot["recordedHistory"],
+        }
+
     if plan.tool == AnalyticsToolName.FEE_SUMMARY:
         snapshot = build_calendar_cashflow(
             user_id, plan.period, anchor=anchor, offset=plan.offset

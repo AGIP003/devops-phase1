@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class AnalyticsToolName(StrEnum):
     SEARCH_SPENDING = "search_spending"
+    ADJUSTMENT_AREAS = "find_adjustment_areas"
     COMPARE_PERIODS = "compare_periods"
     FEE_SUMMARY = "get_fee_summary"
     CASHFLOW_SUMMARY = "get_cashflow_summary"
@@ -27,6 +28,24 @@ class AnalyticsQuestionPlan(BaseModel):
     offset: int = Field(default=0, ge=-120, le=0)
     query: str | None = Field(default=None, max_length=100)
     reduction_percent: int | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="before")
+    @classmethod
+    def use_safe_fallback_for_incomplete_what_if(cls, value):
+        """Turn an underspecified what-if into an evidence-only review."""
+        if not isinstance(value, dict):
+            return value
+        if value.get("tool") != AnalyticsToolName.WHAT_IF:
+            return value
+        query = value.get("query")
+        has_query = isinstance(query, str) and len(query.strip()) >= 2
+        if has_query and value.get("reduction_percent") is not None:
+            return value
+        normalized = dict(value)
+        normalized["tool"] = AnalyticsToolName.ADJUSTMENT_AREAS
+        normalized["query"] = None
+        normalized["reduction_percent"] = None
+        return normalized
 
     @model_validator(mode="after")
     def validate_tool_arguments(self):
